@@ -33,7 +33,9 @@ export async function POST(request: NextRequest) {
       'week_x3_customer', 
       'week_x4_customer',
       'per_hour',
-      'per_hour_luxury'
+      'per_hour_luxury',
+      'three_nights_customer',
+      'weekly'
     ]
 
     const productsToImport = revenueCatProducts.filter(product => 
