@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AIAssistant } from '@/components/AIAssistant/AIAssistant'
 import { 
   Dialog, 
   DialogContent, 
@@ -116,6 +117,7 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
         {PACKAGE_TEMPLATES.map(template => {
           const pkg = packages.find(p => p.revenueCatId === template.revenueCatId);
           return (
+            
             <Card key={template.revenueCatId}>
               <CardHeader>
                 <CardTitle>{pkg?.name || template.defaultName}</CardTitle>
@@ -177,7 +179,7 @@ function useHostPackages(postId: string) {
       });
   }, [postId]);
 
-  return { packages, loading, error, setPackages };
+  return { packages, loading, error, setPackages }; <AIAssistant />
 }
 
 const PACKAGE_TEMPLATES = [

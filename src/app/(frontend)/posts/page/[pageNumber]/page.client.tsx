@@ -1,4 +1,5 @@
 'use client'
+import { AIAssistant } from '@/components/AIAssistant/AIAssistant'
 import { useHeaderTheme } from '@/providers/HeaderTheme'
 import React, { useEffect } from 'react'
 
@@ -9,7 +10,11 @@ const PageClient: React.FC = () => {
   useEffect(() => {
     setHeaderTheme('light')
   }, [setHeaderTheme])
-  return <React.Fragment />
+  return (
+    <>
+      <AIAssistant />
+    </>
+  )
 }
 
 export default PageClient

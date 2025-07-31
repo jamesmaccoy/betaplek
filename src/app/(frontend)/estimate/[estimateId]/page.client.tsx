@@ -28,7 +28,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { DateRange } from 'react-day-picker'
 import Link from 'next/link'
 import { format } from 'date-fns'
-
+import { AIAssistant } from '@/components/AIAssistant/AIAssistant'
 // Import package suggestion system
 import {
   getCustomerEntitlement,
@@ -377,6 +377,7 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
   }
 
   return (
+    
     <div className="container py-16">
       <div className="mx-auto max-w-4xl">
         <div className="flex items-center space-x-4 mb-8">
@@ -615,7 +616,7 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
                   `Complete Estimate - ${formatPrice(_bookingTotal)}`
                 )}
               </Button>
-              
+              <AIAssistant />
               {paymentError && (
                 <div className="mt-4 p-3 text-sm text-destructive bg-destructive/10 rounded-md">
                   {paymentError}
