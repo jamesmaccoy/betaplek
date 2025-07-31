@@ -319,3 +319,40 @@ You can also deploy your app manually, check out the [deployment documentation](
 ## Questions
 
 If you have any issues or questions, reach out to us on [Discord](https://discord.com/invite/payload) or start a [GitHub discussion](https://github.com/payloadcms/payload/discussions).
+
+# AI Assistant Package Features
+
+The AI Assistant now has full context about all packages in the system and can help you with:
+
+## Package Information
+- **Package Status**: Ask about which packages are enabled or disabled
+- **Package Details**: Get information about pricing, features, and durations
+- **Property-Specific Packages**: Find packages available for specific properties
+- **Recommendations**: Get package suggestions based on your booking history
+
+## Example Questions
+
+### Package Status
+- "Which packages are currently enabled?"
+- "What packages are disabled for The Shack property?"
+- "Show me all Studio Space packages"
+
+### Package Details
+- "What features does the Monthly Escape package include?"
+- "How much does the World Explorer package cost?"
+- "What's the duration for the Three Night Getaway package?"
+
+### Package Recommendations
+- "What package would you recommend for a 7-night stay?"
+- "Which packages include VIP treatment?"
+- "Show me luxury packages for business travelers"
+
+The AI Assistant will provide detailed information including:
+- ✅ **Enabled/Disabled Status**
+- 💰 **Pricing and Multipliers** 
+- 🏠 **Property Names**
+- ⏰ **Duration Requirements**
+- 🌟 **Package Features**
+- 📋 **Categories (Standard, Hosted, Special)**
+
+Try asking the AI Assistant about packages using the chat widget!

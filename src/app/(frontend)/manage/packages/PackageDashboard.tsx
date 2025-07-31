@@ -6,8 +6,9 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, RefreshCw, AlertCircle } from "lucide-react";
+import { Loader2, RefreshCw, AlertCircle, Sparkles, Check, Star, Crown } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 
 interface Package {
   id: string;
@@ -24,15 +25,32 @@ interface Package {
   features?: Array<{ feature: string }>;
 }
 
+interface AvailableProduct {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  currency: string;
+  period: 'hour' | 'day' | 'week' | 'month' | 'year';
+  periodCount: number;
+  category: 'standard' | 'hosted' | 'addon' | 'special';
+  features: string[];
+  entitlement?: 'standard' | 'pro';
+  icon?: string;
+}
+
 interface PackageDashboardProps {
   postId: string;
 }
 
 export default function PackageDashboard({ postId }: PackageDashboardProps) {
   const [packages, setPackages] = useState<Package[]>([]);
+  const [availableProducts, setAvailableProducts] = useState<AvailableProduct[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -92,8 +110,59 @@ export default function PackageDashboard({ postId }: PackageDashboardProps) {
     }
   };
 
+  const loadAvailableProducts = async () => {
+    try {
+      // Fetch products from RevenueCat service via API
+      const response = await fetch('/api/packages/available-products')
+      if (!response.ok) {
+        throw new Error('Failed to fetch available products')
+      }
+      
+      const products = await response.json()
+      setAvailableProducts(products)
+      
+      console.log(`Loaded ${products.length} available products from RevenueCat`)
+    } catch (err: any) {
+      console.error('Failed to load available products:', err)
+      
+      // Fallback to a minimal set if API fails
+      const fallbackProducts: AvailableProduct[] = [
+        {
+          id: 'week_x2_customer',
+          title: '🏖️ Two Week Paradise',
+          description: 'Perfect for a refreshing getaway',
+          price: 299.99,
+          currency: 'USD',
+          period: 'week',
+          periodCount: 2,
+          category: 'standard',
+          features: ['Standard accommodation', 'Basic amenities', 'Free WiFi'],
+          entitlement: 'standard',
+          icon: '🏖️',
+        },
+        {
+          id: 'per_hour_luxury',
+          title: '✨ Luxury Hours',
+          description: 'Premium hourly service with VIP treatment',
+          price: 75.00,
+          currency: 'USD',
+          period: 'hour',
+          periodCount: 1,
+          category: 'hosted',
+          features: ['Premium service', 'Enhanced amenities', 'Dedicated support', 'VIP treatment'],
+          entitlement: 'pro',
+          icon: '✨',
+        }
+      ]
+      
+      setAvailableProducts(fallbackProducts)
+      console.warn('Using fallback products due to API error')
+    }
+  };
+
   useEffect(() => {
     loadPackages();
+    loadAvailableProducts();
   }, [postId]);
 
   const handleToggle = (id: string) => {
@@ -110,6 +179,49 @@ export default function PackageDashboard({ postId }: PackageDashboardProps) {
         pkg.id === id ? { ...pkg, [field]: value } : pkg
       )
     );
+  };
+
+  const handleProductSelection = (productId: string) => {
+    setSelectedProducts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(productId)) {
+        newSet.delete(productId);
+      } else {
+        newSet.add(productId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSetupProducts = async () => {
+    setSyncing(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      const res = await fetch('/api/packages/sync-revenuecat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          postId,
+          selectedProducts: Array.from(selectedProducts)
+        }),
+      });
+      
+      if (!res.ok) throw new Error('Failed to setup selected packages');
+      
+      const result = await res.json();
+      setSuccess(`Successfully setup ${result.importedPackages?.length || 0} packages!`);
+      
+      // Close setup and reload packages
+      setShowSetup(false);
+      setSelectedProducts(new Set());
+      await loadPackages();
+    } catch (e: any) {
+      setError(e.message || 'Failed to setup packages');
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const handleSave = async () => {
@@ -161,35 +273,13 @@ export default function PackageDashboard({ postId }: PackageDashboardProps) {
       if (!postUpdateRes.ok) throw new Error("Failed to save package settings");
       
       setSuccess("All package changes saved successfully!");
+      
+      // Refresh the data to show actual saved values
+      await loadPackages();
     } catch (e: any) {
       setError(e.message || "Failed to save");
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleSyncRevenueCat = async () => {
-    setSyncing(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      const res = await fetch('/api/packages/sync-revenuecat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postId }),
-      });
-      
-      if (!res.ok) throw new Error('Failed to sync RevenueCat packages');
-      
-      const result = await res.json();
-      setSuccess(`Successfully imported ${result.importedPackages?.length || 0} packages from RevenueCat`);
-      
-      // Reload packages after sync
-      await loadPackages();
-    } catch (e: any) {
-      setError(e.message || 'Failed to sync RevenueCat packages');
-    } finally {
-      setSyncing(false);
     }
   };
 
@@ -200,17 +290,131 @@ export default function PackageDashboard({ postId }: PackageDashboardProps) {
     </div>
   );
 
+  if (showSetup) {
+    return (
+      <div className="container py-10 max-w-7xl">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              ✨ Package Setup
+            </h1>
+            <p className="text-lg text-gray-600 mt-2">Choose your magical experiences like selecting Disney movies</p>
+          </div>
+          <Button 
+            onClick={() => setShowSetup(false)} 
+            variant="outline"
+          >
+            Back to Dashboard
+          </Button>
+        </div>
+
+        {error && (
+          <Alert className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {availableProducts.map(product => (
+            <Card 
+              key={product.id}
+              className={`cursor-pointer transition-all duration-300 hover:shadow-xl ${
+                selectedProducts.has(product.id) 
+                  ? 'ring-2 ring-purple-500 shadow-lg bg-gradient-to-br from-purple-50 to-pink-50' 
+                  : 'hover:shadow-md'
+              }`}
+              onClick={() => handleProductSelection(product.id)}
+            >
+              <CardHeader className="relative">
+                <div className="flex justify-between items-start">
+                  <div className="text-4xl mb-2">{product.icon}</div>
+                  {selectedProducts.has(product.id) && (
+                    <div className="absolute top-4 right-4 bg-purple-500 text-white rounded-full p-1">
+                      <Check className="h-4 w-4" />
+                    </div>
+                  )}
+                </div>
+                <CardTitle className="text-xl text-gray-800">
+                  {product.title}
+                </CardTitle>
+                <div className="flex gap-2 flex-wrap">
+                  <Badge variant={product.entitlement === 'pro' ? 'default' : 'secondary'} className="text-xs">
+                    {product.entitlement === 'pro' ? (
+                      <>
+                        <Crown className="h-3 w-3 mr-1" />
+                        Pro
+                      </>
+                    ) : (
+                      <>
+                        <Star className="h-3 w-3 mr-1" />
+                        Standard
+                      </>
+                    )}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs capitalize">
+                    {product.category}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 text-sm mb-3">{product.description}</p>
+                <div className="text-2xl font-bold text-purple-600 mb-3">
+                  ${product.price} <span className="text-sm text-gray-500">/ {product.periodCount} {product.period}{product.periodCount > 1 ? 's' : ''}</span>
+                </div>
+                <div className="space-y-1">
+                  {product.features.slice(0, 3).map((feature, idx) => (
+                    <div key={idx} className="flex items-center text-sm text-gray-600">
+                      <Sparkles className="h-3 w-3 mr-2 text-purple-400" />
+                      {feature}
+                    </div>
+                  ))}
+                  {product.features.length > 3 && (
+                    <div className="text-xs text-gray-400">
+                      +{product.features.length - 3} more features
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="flex justify-center">
+          <Button 
+            onClick={handleSetupProducts}
+            disabled={selectedProducts.size === 0 || syncing}
+            size="lg"
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-3"
+          >
+            {syncing ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                Setting up magic...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-5 w-5 mr-2" />
+                Setup {selectedProducts.size} Selected Package{selectedProducts.size !== 1 ? 's' : ''}
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container py-10 max-w-6xl">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Manage Packages</h1>
         <Button 
-          onClick={handleSyncRevenueCat} 
-          disabled={syncing}
-          variant="outline"
+          onClick={() => setShowSetup(true)} 
+          variant="default"
+          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
         >
-          {syncing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-          Sync RevenueCat
+          <Sparkles className="h-4 w-4 mr-2" />
+          Setup New Packages
         </Button>
       </div>
       
@@ -359,18 +563,29 @@ export default function PackageDashboard({ postId }: PackageDashboardProps) {
       </div>
       
       {packages.length === 0 && (
-        <div className="text-center py-10 text-gray-500">
-          <p>No packages found for this post.</p>
-          <p className="text-sm mt-2">Click "Sync RevenueCat" to import packages from RevenueCat.</p>
+        <div className="text-center py-16">
+          <div className="text-6xl mb-4">🎬</div>
+          <h3 className="text-2xl font-semibold text-gray-700 mb-2">Ready for Your First Setup?</h3>
+          <p className="text-gray-500 mb-6">Create magical experiences for your guests by setting up your first packages.</p>
+          <Button 
+            onClick={() => setShowSetup(true)}
+            size="lg"
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+          >
+            <Sparkles className="h-5 w-5 mr-2" />
+            Start Package Setup
+          </Button>
         </div>
       )}
       
-      <CardFooter className="justify-end mt-6">
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-          Save All Changes
-        </Button>
-      </CardFooter>
+      {packages.length > 0 && (
+        <CardFooter className="justify-end mt-6">
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            Save All Changes
+          </Button>
+        </CardFooter>
+      )}
     </div>
   );
 } 

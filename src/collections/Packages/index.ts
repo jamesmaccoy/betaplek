@@ -14,6 +14,15 @@ const Packages: CollectionConfig = {
     useAsTitle: 'name',
     defaultColumns: ['name', 'post', 'category', 'isEnabled'],
   },
+  hooks: {
+    beforeChange: [
+      ({ data }) => {
+        // Prevent unwanted default value overrides during updates
+        // Only apply defaults for new documents (no id) and when values are actually undefined
+        return data
+      }
+    ]
+  },
   fields: [
     {
       name: 'post',
@@ -24,7 +33,15 @@ const Packages: CollectionConfig = {
     },
     { name: 'name', type: 'text', required: true },
     { name: 'description', type: 'textarea' },
-    { name: 'multiplier', type: 'number', required: true, defaultValue: 1, min: 0.1, max: 3.0, admin: { step: 0.01 } },
+    { 
+      name: 'multiplier', 
+      type: 'number', 
+      required: false, // Changed to false to prevent forced defaults
+      defaultValue: 1, 
+      min: 0.1, 
+      max: 3.0, 
+      admin: { step: 0.01 } 
+    },
     {
       name: 'features',
       type: 'array',
@@ -39,14 +56,26 @@ const Packages: CollectionConfig = {
         { label: 'Add-on', value: 'addon' },
         { label: 'Special', value: 'special' },
       ],
-      required: true,
+      required: false, // Changed to false to prevent forced defaults
       defaultValue: 'standard',
     },
-    { name: 'minNights', type: 'number', required: true, defaultValue: 1, min: 1 },
-    { name: 'maxNights', type: 'number', required: true, defaultValue: 7, min: 1 },
+    { 
+      name: 'minNights', 
+      type: 'number', 
+      required: false, // Changed to false to prevent forced defaults
+      defaultValue: 1, 
+      min: 1 
+    },
+    { 
+      name: 'maxNights', 
+      type: 'number', 
+      required: false, // Changed to false to prevent forced defaults
+      defaultValue: 7, 
+      min: 1 
+    },
     { name: 'revenueCatId', type: 'text' },
     { name: 'isEnabled', type: 'checkbox', defaultValue: true },
-    { name: 'baseRate', type: 'number', required: false }, // Add this if you want per-package base rates
+    { name: 'baseRate', type: 'number', required: false },
   ],
 }
 

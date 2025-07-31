@@ -14,6 +14,7 @@ import { Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useUserContext } from '@/context/UserContext'
 import { useSubscription } from '@/hooks/useSubscription'
+import { AIAssistant } from '@/components/AIAssistant/AIAssistant'
 
 // Add type for RevenueCat error with code
 interface RevenueCatError extends Error {
@@ -536,7 +537,7 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
   return (
     <div className="container py-10">
       <h1 className="text-4xl font-bold tracking-tighter mb-8">Start your curated stay</h1>
-
+      <AIAssistant />
       {/* User role info */}
       <div className="mb-4">
         {isUserLoading || isSubscriptionLoading ? (

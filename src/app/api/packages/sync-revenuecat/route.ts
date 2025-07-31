@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { postId } = body
+    const { postId, selectedProducts } = body
 
     if (!postId) {
       return NextResponse.json({ error: 'Post ID is required' }, { status: 400 })
@@ -27,16 +27,27 @@ export async function POST(request: NextRequest) {
     // Fetch products from RevenueCat
     const revenueCatProducts = await revenueCatService.getProducts()
     
-    // Filter to only the requested products
-    const requestedProducts = [
-      'week_x2_customer',
-      'week_x3_customer', 
-      'week_x4_customer',
-      'per_hour',
-      'per_hour_luxury',
-      'three_nights_customer',
-      'weekly'
-    ]
+    // If selectedProducts is provided, use those; otherwise use the default list
+    const requestedProducts = selectedProducts && selectedProducts.length > 0 
+      ? selectedProducts 
+      : [
+          'week_x2_customer',
+          'week_x3_customer', 
+          'week_x4_customer',
+          'per_hour',
+          'per_hour_guest',
+          'per_hour_luxury',
+          'three_nights_customer',
+          '3nights',
+          'weekly',
+          'hosted7nights',
+          'hosted3nights',
+          'per_night_customer',
+          'per_night_luxury',
+          'weekly_customer',
+          'monthly',
+          'gathering'
+        ]
 
     const productsToImport = revenueCatProducts.filter(product => 
       requestedProducts.includes(product.id)

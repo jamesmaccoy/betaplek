@@ -84,25 +84,29 @@ export async function POST(request: NextRequest) {
       pkg = allPackages.find((p: any) => p.id === packageType)
       
       if (pkg) {
-        multiplier = typeof pkg.multiplier === 'number' ? pkg.multiplier : 1
-        baseRate = typeof pkg.baseRate === 'number' ? pkg.baseRate : 150
+        console.log('Found package:', {
+          id: pkg.id,
+          name: pkg.name,
+          source: pkg.source,
+          packageType
+        })
+        multiplier = pkg.multiplier || 1
+        baseRate = pkg.baseRate || 150
         
-        // Check for custom name in packageSettings
-        if (postData?.packageSettings && Array.isArray(postData.packageSettings)) {
+        // Check if there's a custom name in package settings
+        if (postData?.packageSettings) {
           const packageSetting = postData.packageSettings.find((setting: any) => {
-            const pkgId = typeof setting.package === 'object' ? setting.package.id : setting.package
-            return pkgId === pkg.id
+            const settingPackageId = typeof setting.package === 'object' ? setting.package.id : setting.package
+            return settingPackageId === pkg.id
           })
           if (packageSetting?.customName) {
             customName = packageSetting.customName
-            console.log('Found custom name for package:', customName)
           }
         }
-        
-        console.log('Found package in combined list:', customName || pkg.name)
       }
     } catch (error) {
-      console.log('Failed to fetch combined packages, falling back to individual lookups:', error)
+      console.error('Error fetching packages:', error)
+      // Continue with default values
     }
 
     // If not found, try database lookup by ID
@@ -114,7 +118,10 @@ export async function POST(request: NextRequest) {
         })
         
         if (packageResult && packageResult.post === postId) {
-          pkg = packageResult
+          pkg = {
+            ...packageResult,
+            source: 'database'
+          }
           if (pkg) {
             multiplier = typeof pkg.multiplier === 'number' ? pkg.multiplier : 1
             baseRate = typeof pkg.baseRate === 'number' ? pkg.baseRate : 150
@@ -152,7 +159,10 @@ export async function POST(request: NextRequest) {
       })
       
       if (packageResult.docs.length > 0) {
-        pkg = packageResult.docs[0]
+        pkg = {
+          ...packageResult.docs[0],
+          source: 'database'
+        }
         if (pkg) {
           multiplier = typeof pkg.multiplier === 'number' ? pkg.multiplier : 1
           baseRate = typeof pkg.baseRate === 'number' ? pkg.baseRate : 150
@@ -240,52 +250,70 @@ export async function POST(request: NextRequest) {
         post: { equals: postId },
         customer: { equals: user.id },
         fromDate: { equals: fromDate },
-        toDate: { equals: toDate }
+        toDate: { equals: toDate },
       },
       limit: 1,
     })
 
-    let estimate: Estimate
+    let estimate: any
     if (existing.docs.length && existing.docs[0]) {
       // Update
+      const updateData: any = {
+        total: calculatedTotal,
+        guests,
+        fromDate,
+        toDate,
+        customer: user.id,
+        packageType: displayName, // Use custom name if available
+      }
+
+      // Only add selectedPackage if it's a database package (has valid ObjectId)
+      if (pkg.source === 'database') {
+        console.log('Adding selectedPackage relationship for database package:', pkg.id)
+        updateData.selectedPackage = {
+          package: pkg.id,
+          customName: displayName,
+          enabled: true
+        }
+      } else {
+        console.log('Skipping selectedPackage relationship for RevenueCat package:', pkg.id, 'source:', pkg.source)
+      }
+
       estimate = await payload.update({
         collection: 'estimates',
         id: existing.docs[0].id,
-        data: {
-          total: calculatedTotal,
-          guests,
-          fromDate,
-          toDate,
-          customer: user.id,
-          packageType: displayName, // Use custom name if available
-          selectedPackage: {
-            package: pkg.id,
-            customName: displayName, // Store the display name
-            enabled: true
-          }
-        },
-        user: user.id
+        data: updateData,
+        user: user
       })
     } else {
       // Create
-      estimate = await payload.create({
-      collection: 'estimates',
-      data: {
-          title: title || `Estimate for ${postId}`,
-          post: postId,
+      const createData: any = {
+        title: title || `Estimate for ${postId}`,
+        post: postId,
         fromDate,
         toDate,
         guests,
-          total: calculatedTotal,
-          customer: user.id,
+        total: calculatedTotal,
+        customer: user.id,
         packageType: displayName, // Use custom name if available
-        selectedPackage: {
+      }
+
+      // Only add selectedPackage if it's a database package (has valid ObjectId)
+      if (pkg.source === 'database') {
+        console.log('Adding selectedPackage relationship for database package:', pkg.id)
+        createData.selectedPackage = {
           package: pkg.id,
-          customName: displayName, // Store the display name
+          customName: displayName,
           enabled: true
         }
-      },
-        user: user.id
+      } else {
+        console.log('Skipping selectedPackage relationship for RevenueCat package:', pkg.id, 'source:', pkg.source)
+      }
+
+      estimate = await payload.create({
+        collection: 'estimates',
+        data: createData,
+        user: user
       })
     }
 

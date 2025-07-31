@@ -31,10 +31,7 @@ import { format } from 'date-fns'
 
 // Import package suggestion system
 import {
-  getSuggestedPackages,
-  getPrimaryPackageRecommendation,
   getCustomerEntitlement,
-  type SuggestedPackage,
   type CustomerEntitlement,
 } from '@/utils/packageSuggestions'
 import { useSubscription } from '@/hooks/useSubscription'
@@ -118,14 +115,13 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
   const { isInitialized } = useRevenueCat()
 
   // Helper function to get display name from either package type
-  const getPackageDisplayName = (pkg: SuggestedPackage | PostPackage | null): string => {
+  const getPackageDisplayName = (pkg: PostPackage | null): string => {
     if (!pkg) return ''
-    if ('title' in pkg) return pkg.title // SuggestedPackage
     return pkg.name // PostPackage (which includes custom name)
   }
 
   // Helper function to check if package is a PostPackage
-  const isPostPackage = (pkg: SuggestedPackage | PostPackage | null): pkg is PostPackage => {
+  const isPostPackage = (pkg: PostPackage | null): pkg is PostPackage => {
     return pkg !== null && 'name' in pkg && !('title' in pkg)
   }
 
@@ -152,8 +148,7 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
   const [paymentSuccess, setPaymentSuccess] = useState(false)
 
   // Package suggestion states
-  const [suggestedPackages, setSuggestedPackages] = useState<SuggestedPackage[]>([])
-  const [selectedPackage, setSelectedPackage] = useState<SuggestedPackage | PostPackage | null>(null)
+  const [selectedPackage, setSelectedPackage] = useState<PostPackage | null>(null)
   const [customerEntitlement, setCustomerEntitlement] = useState<CustomerEntitlement>('none')
   const [isWineSelected, setIsWineSelected] = useState(false)
   const [packagePrice, setPackagePrice] = useState<number | null>(null)
@@ -167,29 +162,68 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
     setCustomerEntitlement(entitlement)
   }, [subscriptionStatus])
 
-  // Update suggested packages when duration, entitlement, or wine selection changes
+  // Update package selection when packages are loaded and duration is available
   useEffect(() => {
-    if (_bookingDuration > 0) {
-      const suggestions = getSuggestedPackages(_bookingDuration, customerEntitlement, true)
-      setSuggestedPackages(suggestions)
-
-      // Auto-select the primary recommendation, considering wine selection
-      let primaryRecommendation = getPrimaryPackageRecommendation(_bookingDuration, customerEntitlement)
+    if (packages.length > 0 && _bookingDuration > 0 && !selectedPackage) {
+      // Find the best package based on duration and enabled status
+      const enabledPackages = packages.filter(pkg => pkg.isEnabled)
       
-      // If wine is selected and we have a hosted option, prefer that
-      if (isWineSelected) {
-        const hostedOption = suggestions.find(pkg => 
-          pkg.entitlementRequired === 'pro' && 
-          pkg.id.includes('hosted')
+      console.log('Available packages:', enabledPackages.map(pkg => ({
+        name: pkg.name,
+        minNights: pkg.minNights,
+        maxNights: pkg.maxNights,
+        revenueCatId: pkg.revenueCatId
+      })))
+      console.log('Booking duration:', _bookingDuration, 'nights')
+      
+      if (enabledPackages.length > 0) {
+        // Find package that best matches the duration
+        let bestPackage = enabledPackages.find(pkg => 
+          _bookingDuration >= pkg.minNights && _bookingDuration <= pkg.maxNights
         )
-        if (hostedOption) {
-          primaryRecommendation = hostedOption
+        
+        console.log('Exact match found:', bestPackage?.name)
+        
+        // If no exact match, find the package that can accommodate this duration
+        // Prefer packages where maxNights >= duration (can handle the stay)
+        if (!bestPackage) {
+          const accommodatingPackages = enabledPackages.filter(pkg => 
+            pkg.maxNights >= _bookingDuration || pkg.maxNights === 1 // Include per-night packages
+          )
+          
+          if (accommodatingPackages.length > 0) {
+            // Sort by how close the minNights is to the duration
+            bestPackage = accommodatingPackages.reduce((best, current) => {
+              const bestScore = Math.abs(best.minNights - _bookingDuration)
+              const currentScore = Math.abs(current.minNights - _bookingDuration)
+              return currentScore < bestScore ? current : best
+            })
+          } else {
+            // Fallback to any enabled package
+            bestPackage = enabledPackages[0]
+          }
         }
+        
+        // If wine is selected and we have a hosted option, prefer that
+        if (isWineSelected) {
+          const hostedOption = enabledPackages.find(pkg => 
+            pkg.category === 'hosted' || pkg.category === 'special'
+          )
+          if (hostedOption) {
+            bestPackage = hostedOption
+          }
+        }
+        
+        setSelectedPackage(bestPackage || null)
+        console.log('Auto-selected package:', bestPackage?.name, 'for duration:', _bookingDuration, 'nights')
+        console.log('Package details:', {
+          minNights: bestPackage?.minNights,
+          maxNights: bestPackage?.maxNights,
+          multiplier: bestPackage?.multiplier
+        })
       }
-      
-      setSelectedPackage(primaryRecommendation)
     }
-  }, [_bookingDuration, customerEntitlement, isWineSelected])
+  }, [packages, _bookingDuration, isWineSelected, selectedPackage])
 
   // Load RevenueCat offerings when initialized
   useEffect(() => {
@@ -203,13 +237,31 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
     try {
       const fetchedOfferings = await Purchases.getSharedInstance().getOfferings()
       console.log('Offerings:', fetchedOfferings)
-      const perNightOffering = fetchedOfferings.all['per_night']
-      if (perNightOffering && perNightOffering.availablePackages.length > 0) {
-        setOfferings(perNightOffering.availablePackages)
-      } else {
-        setOfferings([])
+      
+      // Collect all packages from all offerings instead of just 'per_night'
+      const allPackages: Package[] = []
+      
+      // Add packages from current offering if it exists
+      if (fetchedOfferings.current && fetchedOfferings.current.availablePackages.length > 0) {
+        allPackages.push(...fetchedOfferings.current.availablePackages)
       }
+      
+      // Add packages from all other offerings
+      Object.values(fetchedOfferings.all).forEach(offering => {
+        if (offering && offering.availablePackages.length > 0) {
+          allPackages.push(...offering.availablePackages)
+        }
+      })
+      
+      // Remove duplicates based on identifier
+      const uniquePackages = allPackages.filter((pkg, index, self) => 
+        index === self.findIndex(p => p.webBillingProduct?.identifier === pkg.webBillingProduct?.identifier)
+      )
+      
+      console.log('All available packages:', uniquePackages.map(p => p.webBillingProduct?.identifier))
+      setOfferings(uniquePackages)
     } catch (err) {
+      console.error('Error loading offerings:', err)
       setPaymentError('Failed to load booking options')
     } finally {
       setLoadingOfferings(false)
@@ -250,6 +302,7 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
     return `R${price.toFixed(2)}`
   }
 
+  // Handle estimate completion
   const handleEstimate = async () => {
     if (!areDatesAvailable || !selectedPackage) return
 
@@ -284,7 +337,7 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
           baseRate: packagePrice,
           duration: _bookingDuration,
           customer: user.id,
-          packageType: selectedPackage.id,
+          packageType: selectedPackage.revenueCatId || selectedPackage.id,
         }
         const response = await fetch(`/api/estimates/${data.id}/confirm`, {
           method: 'POST',
@@ -318,20 +371,6 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
       setPaymentLoading(false)
     }
   }
-
-  // Filter packages to show
-  const packagesToShow = suggestedPackages.filter((pkg) => {
-    // Always show wine addon
-    if (pkg.id === 'wine') return true
-    
-    // Show packages that match customer entitlement or show upgrade options
-    return pkg.entitlementRequired === customerEntitlement || 
-           pkg.entitlementRequired === 'none' ||
-           (customerEntitlement === 'none') // Show all options to non-subscribers
-  })
-
-  const winePackage = suggestedPackages.find(pkg => pkg.id === 'wine')
-  const mainPackages = packagesToShow.filter(pkg => pkg.id !== 'wine')
 
   if (!data) {
     return <div className="container py-16">Estimate not found</div>
@@ -386,7 +425,12 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
 
             {/* Package Selection */}
             <div className="mb-8">
-              <h2 className="text-2xl font-semibold mb-4">Suggested Packages</h2>
+              <h2 className="text-2xl font-semibold mb-4">
+                Available Packages 
+                <span className="text-sm text-muted-foreground font-normal ml-2">
+                  ({_bookingDuration} {_bookingDuration === 1 ? 'night' : 'nights'})
+                </span>
+              </h2>
               <div className="grid grid-cols-1 gap-4">
                 {loading ? (
                   <div>Loading packages...</div>
@@ -396,93 +440,126 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
                   <div>No packages available for this post.</div>
                 ) : (
                   <div className="grid grid-cols-1 gap-4">
-                    {packages.map((pkg) => (
-                      <Card
-                        key={pkg.id}
-                        className={cn(
-                          'cursor-pointer transition-all',
-                          selectedPackage?.id === pkg.id
-                            ? 'border-primary bg-primary/5'
-                            : 'border-border hover:border-primary/50'
-                        )}
-                        onClick={() => setSelectedPackage(pkg)}
-                      >
-                        <CardHeader>
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <CardTitle>{pkg.name}</CardTitle>
-                              <CardDescription>{pkg.description}</CardDescription>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-lg font-bold">
-                                {pkg.multiplier === 1
-                                  ? 'Base rate'
-                                  : pkg.multiplier > 1
-                                  ? `+${((pkg.multiplier - 1) * 100).toFixed(0)}%`
-                                  : `-${((1 - pkg.multiplier) * 100).toFixed(0)}%`}
-                              </span>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <ul className="space-y-2">
-                            {pkg.features.map((f, idx) => (
-                              <li key={idx} className="flex items-center text-sm">
-                                <Check className="mr-2 h-4 w-4 text-primary" />
-                                {f.feature}
-                              </li>
-                            ))}
-                          </ul>
-                        </CardContent>
-                        {selectedPackage?.id === pkg.id && (
-                          <CardFooter>
-                            <span className="text-2xl font-bold text-primary">
-                              {formatPrice(packagePrice)}
-                            </span>
-                          </CardFooter>
-                        )}
-                      </Card>
-                    ))}
+                    {packages
+                      .filter(pkg => pkg.isEnabled)
+                      .sort((a, b) => {
+                        // Sort packages by how well they match the duration
+                        const aDurationMatch = _bookingDuration >= a.minNights && _bookingDuration <= a.maxNights
+                        const bDurationMatch = _bookingDuration >= b.minNights && _bookingDuration <= b.maxNights
+                        
+                        if (aDurationMatch && !bDurationMatch) return -1
+                        if (!aDurationMatch && bDurationMatch) return 1
+                        
+                        // If both match or both don't match, sort by minNights closest to duration
+                        const aDistance = Math.abs(a.minNights - _bookingDuration)
+                        const bDistance = Math.abs(b.minNights - _bookingDuration)
+                        return aDistance - bDistance
+                      })
+                      .map((pkg) => {
+                        const isDurationMatch = _bookingDuration >= pkg.minNights && _bookingDuration <= pkg.maxNights
+                        const canAccommodate = pkg.maxNights >= _bookingDuration || pkg.maxNights === 1
+                        
+                        return (
+                          <Card
+                            key={pkg.id}
+                            className={cn(
+                              'cursor-pointer transition-all',
+                              selectedPackage?.id === pkg.id
+                                ? 'border-primary bg-primary/5'
+                                : isDurationMatch
+                                ? 'border-green-500/50 hover:border-green-500'
+                                : canAccommodate
+                                ? 'border-amber-500/50 hover:border-amber-500'
+                                : 'border-border hover:border-primary/50'
+                            )}
+                            onClick={() => setSelectedPackage(pkg)}
+                          >
+                            <CardHeader>
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <CardTitle>{pkg.name}</CardTitle>
+                                    {isDurationMatch && (
+                                      <span className="text-xs bg-green-500/10 text-green-700 px-2 py-1 rounded-full">
+                                        Perfect Match
+                                      </span>
+                                    )}
+                                    {!isDurationMatch && canAccommodate && (
+                                      <span className="text-xs bg-amber-500/10 text-amber-700 px-2 py-1 rounded-full">
+                                        Can Accommodate
+                                      </span>
+                                    )}
+                                  </div>
+                                  <CardDescription>{pkg.description}</CardDescription>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    Duration: {pkg.minNights === pkg.maxNights 
+                                      ? `${pkg.minNights} ${pkg.minNights === 1 ? 'night' : 'nights'}`
+                                      : `${pkg.minNights}-${pkg.maxNights} nights`
+                                    }
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <span className="text-lg font-bold">
+                                    {pkg.multiplier === 1
+                                      ? 'Base rate'
+                                      : pkg.multiplier > 1
+                                      ? `+${((pkg.multiplier - 1) * 100).toFixed(0)}%`
+                                      : `-${((1 - pkg.multiplier) * 100).toFixed(0)}%`}
+                                  </span>
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent>
+                              <ul className="space-y-2">
+                                {pkg.features.map((f, idx) => (
+                                  <li key={idx} className="flex items-center text-sm">
+                                    <Check className="mr-2 h-4 w-4 text-primary" />
+                                    {f.feature}
+                                  </li>
+                                ))}
+                              </ul>
+                            </CardContent>
+                            {selectedPackage?.id === pkg.id && (
+                              <CardFooter>
+                                <span className="text-2xl font-bold text-primary">
+                                  {formatPrice(packagePrice)}
+                                </span>
+                              </CardFooter>
+                            )}
+                          </Card>
+                        )
+                      })}
                   </div>
                 )}
+              </div>
+            </div>
 
-                {/* Wine Package Add-on */}
-                {winePackage && (
-                  <Card
-                    className={cn(
-                      'border-2 border-border shadow-lg transition-all cursor-pointer',
-                      isWineSelected ? 'border-primary bg-primary/5' : 'hover:border-primary/50',
-                    )}
-                    onClick={() => setIsWineSelected(!isWineSelected)}
-                  >
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle>{winePackage.title}</CardTitle>
-                          <CardDescription>{winePackage.description}</CardDescription>
-                        </div>
-                        <Switch
-                          id="wine-package"
-                          checked={isWineSelected}
-                          onCheckedChange={(checked) => {
-                            setIsWineSelected(checked)
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {winePackage.features.map((feature, index) => (
-                          <li key={index} className="flex items-center text-sm">
-                            <Check className="mr-2 h-4 w-4 text-primary" />
-                            {feature}
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
+            {/* Date Selection */}
+            <div className="mb-8">
+              <h2 className="text-2xl font-semibold mb-4">Booking Period</h2>
+              <div className="bg-muted p-4 rounded-lg">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Check-in:</span>
+                    <div className="font-medium">
+                      {data.fromDate ? format(new Date(data.fromDate), 'PPP') : 'Not set'}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Check-out:</span>
+                    <div className="font-medium">
+                      {data.toDate ? format(new Date(data.toDate), 'PPP') : 'Not set'}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Duration:</span>
+                    <div className="font-medium">{_bookingDuration} nights</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Total:</span>
+                    <div className="font-medium">{formatPrice(data.total)}</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

@@ -307,7 +307,7 @@ export const Estimate: CollectionConfig = {
           name: 'package',
           type: 'relationship',
           relationTo: 'packages',
-          required: true,
+          required: false,
         },
         {
           name: 'customName',

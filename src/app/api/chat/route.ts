@@ -16,10 +16,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Fetch user's bookings and estimates
+    // Fetch user's bookings, estimates, and available packages
     const payload = await getPayload({ config: configPromise })
 
-    const [bookings, estimates] = await Promise.all([
+    const [bookings, estimates, packages] = await Promise.all([
       payload.find({
         collection: 'bookings',
         where: {
@@ -35,6 +35,13 @@ export async function POST(req: Request) {
         },
         depth: 2,
         sort: '-createdAt',
+      }),
+      // Fetch all packages to provide recommendations and enabled status
+      payload.find({
+        collection: 'packages',
+        depth: 2,
+        sort: 'name',
+        limit: 100, // Get a good sample of packages
       }),
     ])
 
@@ -60,10 +67,30 @@ export async function POST(req: Request) {
       link: `${process.env.NEXT_PUBLIC_URL}/estimate/${estimate.id}`,
     }))
 
+    // Format packages data for the AI
+    const packagesInfo = packages.docs.map((pkg) => ({
+      id: pkg.id,
+      name: pkg.name,
+      description: pkg.description,
+      isEnabled: pkg.isEnabled,
+      category: pkg.category,
+      multiplier: pkg.multiplier,
+      minNights: pkg.minNights,
+      maxNights: pkg.maxNights,
+      baseRate: pkg.baseRate,
+      revenueCatId: pkg.revenueCatId,
+      features: pkg.features?.map((f: any) => typeof f === 'string' ? f : f.feature).filter(Boolean) || [],
+      postTitle: typeof pkg.post === 'object' && pkg.post ? pkg.post.title : 'Unknown Property',
+      durationText: pkg.minNights === pkg.maxNights 
+        ? `${pkg.minNights} ${pkg.minNights === 1 ? 'night' : 'nights'}`
+        : `${pkg.minNights}-${pkg.maxNights} nights`
+    }))
+
     // Create a context with the user's data
     const context = {
       bookings: bookingsInfo,
       estimates: estimatesInfo,
+      packages: packagesInfo,
       user: {
         id: user.id,
         email: user.email,
@@ -88,7 +115,16 @@ export async function POST(req: Request) {
               Estimates:
               ${JSON.stringify(context.estimates, null, 2)}
               
-              Help users with their bookings and provide information about estimates based on their actual data. Always mention the package name for both bookings and estimates (use the 'packageName' property). For estimate details, never print the raw link; always provide a clickable link as <a href=\"[link]\">click here</a> using the 'link' property. Don't use asterisks in your response, only speak words and skip symbols. Never read out booking or estimate IDs, but remain knowledgeable about the package types and features. If there are duplicate estimates, list only once. Do not mention the post property, only use the title for reference.`,
+              Packages:
+              ${JSON.stringify(context.packages, null, 2)}
+              
+              Help users with their bookings, estimates, and package information based on their actual data. 
+
+              For bookings and estimates: Always mention the package name (use the 'packageName' property). For estimate details, never print the raw link; always provide a clickable link as <a href=\"[link]\">click here</a> using the 'link' property.
+
+              For packages: You can help users understand which packages are available, enabled/disabled status, pricing, features, and durations. When discussing packages, mention the property name (postTitle), whether it's enabled or disabled, the duration, category, and key features. You can recommend packages based on their booking history and preferences.
+
+              Don't use asterisks in your response, only speak words and skip symbols. Never read out booking, estimate, or package IDs, but remain knowledgeable about the package types and features. If there are duplicate estimates, list only once. Do not mention the post property, only use the title for reference.`,
             },
           ],
         },
@@ -96,7 +132,7 @@ export async function POST(req: Request) {
           role: 'model',
           parts: [
             {
-              text: 'I understand. I will help users with their bookings and provide information about estimates based on their actual data. I can assist with checking booking status, viewing estimates, and answering related questions. I will never read out the booking or estimate IDs, but rather use the title, fromDate, toDate, and status to assume an action like "Update booking" or "Update estimate". I will also know the package types and features the user has selected and purchased, and intuativly compare the different package types and features they could still purchase, further improving their bookings experience.',
+              text: 'I understand. I will help users with their bookings, estimates, and package information based on their actual data. I can assist with checking booking status, viewing estimates, and providing detailed information about available packages including their enabled/disabled status, features, pricing, and durations. I will never read out the booking, estimate, or package IDs, but rather use descriptive information like titles, dates, and package names. I can also recommend packages based on booking history and help users understand which packages are available for different properties and durations.',
             },
           ],
         },

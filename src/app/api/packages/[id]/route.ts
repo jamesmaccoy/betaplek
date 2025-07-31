@@ -65,12 +65,18 @@ export async function PATCH(
     console.log('PATCH request for package:', { id, body, user: user?.id || 'admin' })
     
     // Validate the package exists first
+    let existingPackage
     try {
-      const existingPackage = await payload.findByID({
+      existingPackage = await payload.findByID({
         collection: 'packages',
         id,
       })
-      console.log('Existing package found:', existingPackage.id)
+      console.log('Existing package found:', { 
+        id: existingPackage.id, 
+        name: existingPackage.name,
+        currentMultiplier: existingPackage.multiplier,
+        currentCategory: existingPackage.category 
+      })
     } catch (error) {
       console.error('Package not found:', error)
       return NextResponse.json(
@@ -85,6 +91,7 @@ export async function PATCH(
     // Handle isEnabled field
     if (body.isEnabled !== undefined) {
       cleanData.isEnabled = Boolean(body.isEnabled)
+      console.log('Setting isEnabled to:', cleanData.isEnabled)
     }
     
     // Handle name field
@@ -96,11 +103,13 @@ export async function PATCH(
           { status: 400 }
         )
       }
+      console.log('Setting name to:', cleanData.name)
     }
     
     // Handle description field
     if (body.description !== undefined) {
       cleanData.description = body.description ? String(body.description).trim() : null
+      console.log('Setting description to:', cleanData.description)
     }
     
     // Handle multiplier field
@@ -113,11 +122,13 @@ export async function PATCH(
         )
       }
       cleanData.multiplier = multiplier
+      console.log('Setting multiplier to:', cleanData.multiplier)
     }
     
     // Handle other fields
     if (body.category !== undefined) {
       cleanData.category = body.category
+      console.log('Setting category to:', cleanData.category)
     }
     
     if (body.minNights !== undefined) {
@@ -129,6 +140,7 @@ export async function PATCH(
         )
       }
       cleanData.minNights = minNights
+      console.log('Setting minNights to:', cleanData.minNights)
     }
     
     if (body.maxNights !== undefined) {
@@ -140,10 +152,12 @@ export async function PATCH(
         )
       }
       cleanData.maxNights = maxNights
+      console.log('Setting maxNights to:', cleanData.maxNights)
     }
     
     if (body.revenueCatId !== undefined) {
       cleanData.revenueCatId = body.revenueCatId ? String(body.revenueCatId).trim() : null
+      console.log('Setting revenueCatId to:', cleanData.revenueCatId)
     }
     
     if (body.baseRate !== undefined) {
@@ -159,9 +173,16 @@ export async function PATCH(
         }
         cleanData.baseRate = baseRate
       }
+      console.log('Setting baseRate to:', cleanData.baseRate)
     }
     
     console.log('Clean data for update:', cleanData)
+    console.log('Number of fields to update:', Object.keys(cleanData).length)
+    
+    if (Object.keys(cleanData).length === 0) {
+      console.warn('No valid fields to update')
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+    }
     
     // For admin requests, we might not have a user object
     const updateOptions: any = {
@@ -174,9 +195,26 @@ export async function PATCH(
       updateOptions.user = user
     }
     
+    console.log('Calling payload.update with options:', {
+      collection: updateOptions.collection,
+      id: updateOptions.id,
+      data: updateOptions.data,
+      hasUser: !!updateOptions.user
+    })
+    
     const packageDoc = await payload.update(updateOptions)
     
-    console.log('Package updated successfully:', packageDoc)
+    console.log('Package updated successfully with ID:', id)
+    console.log('Update operation completed at:', new Date().toISOString())
+    
+    // Verify the update by refetching the document
+    const verifyDoc = await payload.findByID({
+      collection: 'packages',
+      id,
+    })
+    
+    console.log('Verification fetch shows package exists with name:', verifyDoc.name)
+    
     return NextResponse.json(packageDoc)
   } catch (error) {
     console.error('Error updating package:', error)

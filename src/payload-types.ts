@@ -390,16 +390,16 @@ export interface Package {
   post: string | Post;
   name: string;
   description?: string | null;
-  multiplier: number;
+  multiplier?: number | null;
   features?:
     | {
         feature?: string | null;
         id?: string | null;
       }[]
     | null;
-  category: 'standard' | 'hosted' | 'addon' | 'special';
-  minNights: number;
-  maxNights: number;
+  category?: ('standard' | 'hosted' | 'addon' | 'special') | null;
+  minNights?: number | null;
+  maxNights?: number | null;
   revenueCatId?: string | null;
   isEnabled?: boolean | null;
   baseRate?: number | null;
@@ -417,8 +417,8 @@ export interface Estimate {
   token?: string | null;
   guests?: (string | User)[] | null;
   total: number;
-  selectedPackage: {
-    package: string | Package;
+  selectedPackage?: {
+    package?: (string | null) | Package;
     customName?: string | null;
     enabled?: boolean | null;
   };
