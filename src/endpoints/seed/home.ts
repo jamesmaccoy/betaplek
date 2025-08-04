@@ -47,7 +47,7 @@ export const home: (args: HomeArgs) => RequiredDataFromCollectionSlug<'pages'> =
                   format: 0,
                   mode: 'normal',
                   style: '',
-                  text: 'Maximise dental care',
+                  text: 'A digital design partner for startups and brave businesses',
                   version: 1,
                 },
               ],
