@@ -55,23 +55,13 @@ class RevenueCatService {
     await this.initialize()
     
     try {
-      // For now, we'll fetch from RevenueCat REST API
-      // You'll need to implement this with your RevenueCat app configuration
-      if (this.apiKey) {
-        // Attempt to fetch from RevenueCat REST API
-        // This requires your app's configuration and offerings setup
-        console.log('Fetching products from RevenueCat...')
-        
-        // For now, return enhanced mock data that matches your actual RevenueCat setup
-        // TODO: Replace with actual RevenueCat REST API call when ready
-        return await this.getRevenueCatProducts()
-      }
-      
-      return Object.values(this.getFallbackProducts())
+      // Always return RevenueCat products, never fallback products
+      console.log('Fetching products from RevenueCat...')
+      return await this.getRevenueCatProducts()
     } catch (error) {
       console.error('Failed to fetch RevenueCat products:', error)
-      // Return comprehensive fallback data
-      return Object.values(this.getFallbackProducts())
+      // Return empty array instead of fallback products
+      return []
     }
   }
 
@@ -519,14 +509,14 @@ class RevenueCatService {
       },
       'monthly_gathering': {
         id: 'gathering_monthly',
-        title: '✍️ Monthly Gathering',
+        title: '✍️ Monthly Retainer',
         description: 'Perfect for group events and gatherings',
         price: 5000.00,
         currency: 'USD',
         period: 'day',
         periodCount: 1,
         category: 'special',
-        features: ['Event space', 'Group amenities', 'Catering support', 'Entertainment setup'],
+        features: ['Team building', 'Quad bike tour', 'Catering support', 'Entertainment setup'],
         isEnabled: true,
         entitlement: 'standard',
         icon: '✍️',
