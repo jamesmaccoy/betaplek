@@ -155,6 +155,25 @@ export const allPackages: SuggestedPackage[] = [
     isPrimary: true,
   },
 
+  // Gathering monthly package (special)
+  {
+    id: 'gathering_monthly',
+    title: '✍️ Monthly Retainer',
+    description: 'Perfect for group events and gatherings',
+    minNights: 1,
+    maxNights: 30,
+    multiplier: 1.0,
+    features: [
+      'Team building',
+      'Quad bike tour',
+      'Catering support',
+      'Entertainment setup',
+    ],
+    revenueCatId: 'gathering_monthly',
+    entitlementRequired: 'standard',
+    isPrimary: true,
+  },
+
   // Wine package add-on (available to all)
   {
     id: 'wine',

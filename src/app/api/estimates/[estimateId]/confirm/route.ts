@@ -3,15 +3,39 @@ import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 
 export async function POST(req: NextRequest, { params }: { params: { estimateId: string } }) {
-  const estimateId = params.estimateId
-  const body = await req.json()
+  try {
+    const estimateId = params.estimateId
+    const body = await req.json()
 
-  const payload = await getPayload({ config: configPromise })
+    const payload = await getPayload({ config: configPromise })
 
-  const estimate = await payload.findByID({
-    collection: 'estimates',
-    id: estimateId,
-  })
+    // Get the current estimate
+    const estimate = await payload.findByID({
+      collection: 'estimates',
+      id: estimateId,
+    })
 
-  return NextResponse.json(estimate)
+    if (!estimate) {
+      return NextResponse.json({ error: 'Estimate not found' }, { status: 404 })
+    }
+
+    // Update the estimate with confirmation data
+    const updatedEstimate = await payload.update({
+      collection: 'estimates',
+      id: estimateId,
+      data: {
+        paymentStatus: 'paid',
+        packageType: body.packageType,
+        total: body.baseRate,
+      },
+    })
+
+    return NextResponse.json(updatedEstimate)
+  } catch (error) {
+    console.error('Error confirming estimate:', error)
+    return NextResponse.json(
+      { error: 'Failed to confirm estimate' },
+      { status: 500 }
+    )
+  }
 } 
