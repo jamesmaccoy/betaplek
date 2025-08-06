@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import configPromise from '@payload-config'
 
-export async function POST(req: NextRequest, { params }: { params: { estimateId: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ estimateId: string }> }) {
   try {
-    const estimateId = params.estimateId
+    const { estimateId } = await params
     const body = await req.json()
 
     const payload = await getPayload({ config: configPromise })

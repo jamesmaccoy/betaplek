@@ -11,7 +11,7 @@ export interface RevenueCatProduct {
   category: 'standard' | 'hosted' | 'addon' | 'special'
   features: string[]
   isEnabled: boolean
-  entitlement?: 'standard' | 'pro' // Added for tier-based access
+  entitlement?: 'standard' | 'pro' | string // Allow string for custom entitlement IDs
   icon?: string // Added for Disney-style visual appeal
 }
 

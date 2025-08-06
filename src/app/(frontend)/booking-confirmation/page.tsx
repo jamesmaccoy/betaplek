@@ -1,36 +1,36 @@
 // app/(frontend)/booking-confirmation/page.tsx
-import { getMeUser } from "@/utilities/getMeUser"
-import { redirect } from "next/navigation"
-import { getPayload } from "payload"
-import config from "@payload-config"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
+import { getPayload } from 'payload'
+import configPromise from '@payload-config'
+import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 
 export default async function BookingConfirmationPage({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined }
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
-  const currentUser = await getMeUser()
+  const resolvedSearchParams = await searchParams
   
-  if (!currentUser) {
-    return redirect("/login")
+  // Get the current user
+  const payload = await getPayload({ config: configPromise })
+  const { user } = await payload.auth({ headers: headers() })
+  
+  if (!user) {
+    redirect('/login')
   }
-  
-  const payload = await getPayload({ config })
-  
-  // Get the user's most recent booking
+
+  // Get the most recent booking for this user
   const bookings = await payload.find({
-    collection: "bookings",
+    collection: 'bookings',
     where: {
-      customer: {
-        equals: currentUser.user.id,
-      },
+      customer: { equals: user.id }
     },
-    sort: "-createdAt",
+    sort: '-createdAt',
     limit: 1,
   })
-  
+
   const booking = bookings.docs[0]
   
   // Calculate dates and duration
@@ -48,8 +48,8 @@ export default async function BookingConfirmationPage({
   }
   
   // Fallback to search params if booking not found
-  const bookingTotal = typeof searchParams.total === "string" ? searchParams.total : "N/A"
-  const bookingDuration = booking ? duration : (typeof searchParams.duration === "string" ? searchParams.duration : "N/A")
+  const bookingTotal = typeof resolvedSearchParams.total === "string" ? resolvedSearchParams.total : "N/A"
+  const bookingDuration = booking ? duration : (typeof resolvedSearchParams.duration === "string" ? resolvedSearchParams.duration : "N/A")
   const totalAmount = 
     !isNaN(Number(bookingTotal)) && !isNaN(Number(bookingDuration)) 
       ? Number(bookingTotal) * Number(bookingDuration) 
