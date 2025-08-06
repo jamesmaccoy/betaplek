@@ -10,6 +10,7 @@ import { CalendarIcon } from 'lucide-react'
 import type { EstimateBlockType } from './types'
 import { useUserContext } from '@/context/UserContext'
 import { useSubscription } from '@/hooks/useSubscription'
+import { getCustomerEntitlement, type CustomerEntitlement } from '@/utils/packageSuggestions'
 
 import { calculateTotal } from '@/lib/calculateTotal'
 import { hasUnavailableDateBetween } from '@/utilities/hasUnavailableDateBetween'
@@ -80,6 +81,15 @@ export const EstimateBlock: React.FC<EstimateBlockProps> = ({
   const subscriptionStatus = useSubscription()
   const isCustomer = !!currentUser
   const canSeeDiscount = isCustomer && subscriptionStatus.isSubscribed
+  
+  // Get customer entitlement for package filtering
+  const [customerEntitlement, setCustomerEntitlement] = useState<CustomerEntitlement>('none')
+  
+  // Update customer entitlement when subscription status changes
+  useEffect(() => {
+    const entitlement = getCustomerEntitlement(subscriptionStatus)
+    setCustomerEntitlement(entitlement)
+  }, [subscriptionStatus])
 
   // Calculate pricing
   const packageTotal = selectedPackage
@@ -165,11 +175,32 @@ export const EstimateBlock: React.FC<EstimateBlockProps> = ({
   }
 
   // Filter packages to show only suitable ones for the selected duration
-  const suitablePackages = packages.filter(pkg => 
-    pkg.isEnabled && 
-    selectedDuration >= pkg.minNights && 
-    selectedDuration <= pkg.maxNights
-  )
+  // Also filter out pro-only packages for non-pro users
+  const suitablePackages = packages.filter(pkg => {
+    // Basic filtering for enabled packages that match duration
+    const isSuitable = pkg.isEnabled && 
+      selectedDuration >= pkg.minNights && 
+      selectedDuration <= pkg.maxNights
+    
+    if (!isSuitable) return false
+    
+    // Filter out pro-only packages for non-pro users
+    if (pkg.revenueCatId === 'gathering_monthly' && customerEntitlement !== 'pro') {
+      console.log('🚫 Filtering out gathering_monthly package for non-pro user. Entitlement:', customerEntitlement)
+      return false
+    }
+    
+    return true
+  })
+  
+  // Debug logging
+  console.log('📦 EstimateBlock Package Filtering:', {
+    totalPackages: packages.length,
+    suitablePackages: suitablePackages.length,
+    customerEntitlement,
+    selectedDuration,
+    gatheringMonthlyVisible: suitablePackages.some(pkg => pkg.revenueCatId === 'gathering_monthly')
+  })
 
   return (
     <div
