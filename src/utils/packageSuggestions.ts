@@ -155,10 +155,10 @@ export const allPackages: SuggestedPackage[] = [
     isPrimary: true,
   },
 
-  // Gathering monthly package (special)
+  // Gathering monthly package (special) - Pro only
   {
     id: 'gathering_monthly',
-    title: '✍️ Monthly Retainer',
+    title: '🏘️ Starter Pack',
     description: 'Perfect for group events and gatherings',
     minNights: 1,
     maxNights: 30,
@@ -170,7 +170,7 @@ export const allPackages: SuggestedPackage[] = [
       'Entertainment setup',
     ],
     revenueCatId: 'gathering_monthly',
-    entitlementRequired: 'standard',
+    entitlementRequired: 'pro',
     isPrimary: true,
   },
 

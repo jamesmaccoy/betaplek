@@ -575,7 +575,7 @@ export const BASE_PACKAGE_TEMPLATES: BasePackageConfig[] = [
       }
     ],
     revenueCatId: 'gathering_monthly',
-    customerTierRequired: 'standard',
+    customerTierRequired: 'pro',
     canBeRenamed: true,
     canBeDisabled: true
   }

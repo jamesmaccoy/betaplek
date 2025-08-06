@@ -222,7 +222,7 @@ class RevenueCatService {
         },
         {
           id: 'gathering_monthly',
-          title: '✍️ Monthly Retainer',
+          title: '🏘️ Starter Pack',
           description: 'Perfect for group events and gatherings',
           price: 5000.00,
           currency: 'USD',
@@ -231,8 +231,8 @@ class RevenueCatService {
           category: 'special' as const,
           features: ['Team building', 'Quad bike tour', 'Catering support', 'Entertainment setup'],
           isEnabled: true,
-          entitlement: 'standard' as const,
-          icon: '✍️',
+          entitlement: 'pro' as const,
+          icon: '🏘️',
         },
         {
           id: 'weekly',
@@ -320,7 +320,7 @@ class RevenueCatService {
     return [
       {
         id: 'gathering_monthly',
-        title: '✍️ Monthly Retainer',
+        title: '🏘️ Starter Pack',
         description: 'Perfect for group events and gatherings',
         price: 5000.00,
         currency: 'USD',
@@ -329,8 +329,8 @@ class RevenueCatService {
         category: 'special' as const,
         features: ['Team building', 'Quad bike tour', 'Catering support', 'Entertainment setup'],
         isEnabled: true,
-        entitlement: 'standard' as const,
-        icon: '✍️',
+        entitlement: 'pro' as const,
+        icon: '🏘️',
       },
       // Add other essential products here as fallback
     ]
@@ -536,7 +536,7 @@ class RevenueCatService {
       },
       'monthly_gathering': {
         id: 'gathering_monthly',
-        title: '✍️ Monthly Retainer',
+        title: '🏘️ Starter Pack',
         description: 'Perfect for group events and gatherings',
         price: 5000.00,
         currency: 'USD',
@@ -545,8 +545,8 @@ class RevenueCatService {
         category: 'special',
         features: ['Team building', 'Quad bike tour', 'Catering support', 'Entertainment setup'],
         isEnabled: true,
-        entitlement: 'standard',
-        icon: '✍️',
+        entitlement: 'pro',
+        icon: '🏘️',
       },
     }
   }

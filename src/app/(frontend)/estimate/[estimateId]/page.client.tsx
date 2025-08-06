@@ -333,13 +333,19 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
       console.log('Available offerings count:', offerings.length)
       console.log('Available offerings:', offerings.map(p => p.webBillingProduct?.identifier))
       
-      // Special handling for gathering_monthly package (standard entitlement)
+      // Special handling for gathering_monthly package (pro entitlement only)
       if (selectedPackage.revenueCatId === 'gathering_monthly') {
-        console.log('🎯 Special handling for gathering_monthly package (standard entitlement)')
+        console.log('🎯 Special handling for gathering_monthly package (pro entitlement only)')
         console.log('🔍 Available offerings:', offerings.map(p => ({
           identifier: p.webBillingProduct?.identifier,
           title: p.webBillingProduct?.title
         })))
+        
+        // Check if user has pro subscription first
+        if (customerEntitlement !== 'pro') {
+          console.warn('⚠️ User does not have pro entitlement required for gathering_monthly')
+          throw new Error('This package requires a pro subscription. Please upgrade your account.')
+        }
         
         // For gathering_monthly, we should go through RevenueCat payment flow
         console.log('🔍 Looking for gathering_monthly product in RevenueCat offerings')
