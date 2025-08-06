@@ -338,8 +338,7 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
         console.log('🎯 Special handling for gathering_monthly package (standard entitlement)')
         console.log('🔍 Available offerings:', offerings.map(p => ({
           identifier: p.webBillingProduct?.identifier,
-          title: p.webBillingProduct?.title,
-          price: p.webBillingProduct?.price
+          title: p.webBillingProduct?.title
         })))
         
         // For gathering_monthly, we should go through RevenueCat payment flow
