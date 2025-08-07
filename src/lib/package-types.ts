@@ -540,6 +540,44 @@ export const BASE_PACKAGE_TEMPLATES: BasePackageConfig[] = [
     customerTierRequired: 'none',
     canBeRenamed: true,
     canBeDisabled: true
+  },
+  {
+    id: 'gathering_monthly_special',
+    category: 'special',
+    durationTier: 'monthly',
+    minNights: 1,
+    maxNights: 30,
+    baseMultiplier: 1.0,
+    features: [
+      {
+        id: 'team_building',
+        label: 'Team Building',
+        description: 'Organized team building activities',
+        category: 'special'
+      },
+      {
+        id: 'quad_bike_tour',
+        label: 'Quad Bike Tour',
+        description: 'Adventure quad bike experience',
+        category: 'special'
+      },
+      {
+        id: 'catering_support',
+        label: 'Catering Support',
+        description: 'Professional catering services',
+        category: 'service'
+      },
+      {
+        id: 'entertainment_setup',
+        label: 'Entertainment Setup',
+        description: 'Complete entertainment and event setup',
+        category: 'service'
+      }
+    ],
+    revenueCatId: 'gathering_monthly',
+    customerTierRequired: 'pro',
+    canBeRenamed: true,
+    canBeDisabled: true
   }
 ]
 

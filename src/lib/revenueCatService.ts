@@ -11,7 +11,7 @@ export interface RevenueCatProduct {
   category: 'standard' | 'hosted' | 'addon' | 'special'
   features: string[]
   isEnabled: boolean
-  entitlement?: 'standard' | 'pro' // Added for tier-based access
+  entitlement?: 'standard' | 'pro' | string // Allow string for custom entitlement IDs
   icon?: string // Added for Disney-style visual appeal
 }
 
@@ -55,29 +55,25 @@ class RevenueCatService {
     await this.initialize()
     
     try {
-      // For now, we'll fetch from RevenueCat REST API
-      // You'll need to implement this with your RevenueCat app configuration
-      if (this.apiKey) {
-        // Attempt to fetch from RevenueCat REST API
-        // This requires your app's configuration and offerings setup
-        console.log('Fetching products from RevenueCat...')
-        
-        // For now, return enhanced mock data that matches your actual RevenueCat setup
-        // TODO: Replace with actual RevenueCat REST API call when ready
-        return await this.getRevenueCatProducts()
-      }
-      
-      return Object.values(this.getFallbackProducts())
+      // Always return RevenueCat products, never fallback products
+      console.log('Fetching products from RevenueCat...')
+      return await this.getRevenueCatProducts()
     } catch (error) {
       console.error('Failed to fetch RevenueCat products:', error)
-      // Return comprehensive fallback data
-      return Object.values(this.getFallbackProducts())
+      // Return empty array instead of fallback products
+      return []
     }
   }
 
   // Method to fetch from actual RevenueCat API
   private async getRevenueCatProducts(): Promise<RevenueCatProduct[]> {
     try {
+      // If API key is not configured, return mock data
+      if (!this.apiKey) {
+        console.warn('RevenueCat API key not configured, using mock data')
+        return this.getMockProducts()
+      }
+
       // TODO: Implement actual RevenueCat REST API call
       // For now, return the products that should match your RevenueCat dashboard
       
@@ -226,17 +222,17 @@ class RevenueCatService {
         },
         {
           id: 'gathering_monthly',
-          title: '✍️ Monthly Gathering',
+          title: '🏘️ Starter Pack',
           description: 'Perfect for group events and gatherings',
           price: 5000.00,
           currency: 'USD',
           period: 'day' as const,
           periodCount: 1,
           category: 'special' as const,
-          features: ['Event space', 'Group amenities', 'Catering support', 'Entertainment setup'],
+          features: ['Team building', 'Quad bike tour', 'Catering support', 'Entertainment setup'],
           isEnabled: true,
-          entitlement: 'standard' as const,
-          icon: '✍️',
+          entitlement: 'pro' as const,
+          icon: '🏘️',
         },
         {
           id: 'weekly',
@@ -312,11 +308,32 @@ class RevenueCatService {
 
       console.log(`Loaded ${actualProducts.length} products from RevenueCat configuration`)
       return actualProducts
-      
     } catch (error) {
       console.error('Failed to fetch from RevenueCat API:', error)
-      throw error
+      // Fallback to mock products if API call fails
+      return this.getMockProducts()
     }
+  }
+
+  // Helper method to get mock products
+  private getMockProducts(): RevenueCatProduct[] {
+    return [
+      {
+        id: 'gathering_monthly',
+        title: '🏘️ Starter Pack',
+        description: 'Perfect for group events and gatherings',
+        price: 5000.00,
+        currency: 'USD',
+        period: 'day' as const,
+        periodCount: 1,
+        category: 'special' as const,
+        features: ['Team building', 'Quad bike tour', 'Catering support', 'Entertainment setup'],
+        isEnabled: true,
+        entitlement: 'pro' as const,
+        icon: '🏘️',
+      },
+      // Add other essential products here as fallback
+    ]
   }
 
   private getFallbackProducts(): Record<string, RevenueCatProduct> {
@@ -519,17 +536,17 @@ class RevenueCatService {
       },
       'monthly_gathering': {
         id: 'gathering_monthly',
-        title: '✍️ Monthly Gathering',
+        title: '🏘️ Starter Pack',
         description: 'Perfect for group events and gatherings',
         price: 5000.00,
         currency: 'USD',
         period: 'day',
         periodCount: 1,
         category: 'special',
-        features: ['Event space', 'Group amenities', 'Catering support', 'Entertainment setup'],
+        features: ['Team building', 'Quad bike tour', 'Catering support', 'Entertainment setup'],
         isEnabled: true,
-        entitlement: 'standard',
-        icon: '✍️',
+        entitlement: 'pro',
+        icon: '🏘️',
       },
     }
   }
