@@ -110,7 +110,7 @@ export default function SubscribePage() {
         </div>
       )}
       <div className="mx-auto max-w-2xl text-center mb-12 sm:mb-16">
-        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">Maximise dental care</h1>
+        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">Join a booking at one of our pleks</h1>
         <p className="mt-4 text-lg leading-8 text-muted-foreground">
         Become a member to see the calendar</p>
       </div>
@@ -176,14 +176,14 @@ export default function SubscribePage() {
         return (
           <div 
             className="mt-16 pt-16 pb-16 md:border-t border-border bg-cover bg-center relative rounded-lg shadow-md"
-            style={{ backgroundImage: `url('https://www.thanks.digital/_next/image?url=https%3A%2F%2Fwww.thanks.digital%2Fapi%2Fmedia%2Ffile%2Fsusu.gif%3F2025-04-13T11%3A15%3A26.277Z&w=1920&q=100')` }}
+            style={{ backgroundImage: `url('https://www.simpleplek.co.za/api/media/file/Gallery%20shack%205.jpg.jpg')` }}
           >
             <div className="absolute inset-0 bg-black/30 rounded-lg"></div> 
 
             <div className="relative max-w-4xl mx-auto px-4 flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12"> 
               
               <div className="text-center lg:text-left text-white">
-                 <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Host a dental practice</h2>
+                 <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Create your own packages</h2>
               </div>
 
               <div className="w-full max-w-md">
