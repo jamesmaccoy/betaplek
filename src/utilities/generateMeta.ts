@@ -27,8 +27,8 @@ export const generateMeta = async (args: {
   const ogImage = getImageURL(doc?.meta?.image)
 
   const title = doc?.meta?.title
-    ? doc?.meta?.title + ' | Maximise dental care'
-    : 'Maximise dental care'
+    ? doc?.meta?.title + ' | Join a booking at one of our pleks'
+    : 'Join a booking at one of our pleks'
 
   return {
     description: doc?.meta?.description,
