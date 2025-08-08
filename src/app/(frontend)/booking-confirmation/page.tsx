@@ -15,7 +15,7 @@ export default async function BookingConfirmationPage({
   
   // Get the current user
   const payload = await getPayload({ config: configPromise })
-  const { user } = await payload.auth({ headers: headers() })
+  const { user } = await payload.auth({ headers: await headers() })
   
   if (!user) {
     redirect('/login')
@@ -74,6 +74,13 @@ export default async function BookingConfirmationPage({
               </div>
             )}
             
+            {booking?.title && (
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Property</span>
+                <span className="font-medium">{booking.title}</span>
+              </div>
+            )}
+            
             {booking?.fromDate && (
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Check-in Date:</span>
@@ -109,6 +116,13 @@ export default async function BookingConfirmationPage({
                 <span className="font-medium text-green-600">
                   {booking.paymentStatus === "paid" ? "Paid" : "Pending"}
                 </span>
+              </div>
+            )}
+            
+            {booking?.token && (
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Booking Token</span>
+                <span className="font-medium text-xs">{booking.token}</span>
               </div>
             )}
           </div>
