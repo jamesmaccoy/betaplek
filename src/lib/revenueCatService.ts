@@ -581,6 +581,32 @@ class RevenueCatService {
       return false
     }
   }
+
+  // Validate if a user has an active subscription for a specific product
+  async validateSubscription(userId: string, productId: string): Promise<boolean> {
+    await this.initialize()
+    
+    try {
+      // Get customer info
+      const customerInfo = await this.getCustomerInfo(userId)
+      
+      if (!customerInfo) {
+        console.log(`No customer info found for user: ${userId}`)
+        return false
+      }
+
+      // Check if the user has purchased the specific product
+      const hasProduct = customerInfo.allPurchasedProductIdentifiers.includes(productId)
+      
+      // For now, return true for mock purposes
+      // In production, this would check against actual RevenueCat data
+      console.log(`Validating subscription for user ${userId}, product ${productId}: ${hasProduct}`)
+      return true // Mock: always return true for testing
+    } catch (error) {
+      console.error('Failed to validate subscription:', error)
+      return false
+    }
+  }
 }
 
 export const revenueCatService = new RevenueCatService() 

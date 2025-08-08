@@ -55,7 +55,8 @@ export default function RegisterPage() {
       })
 
       if (!res.ok) {
-        throw new Error('Invalid email or password')
+        const errorData = await res.json()
+        throw new Error(errorData.error || 'Registration failed')
       }
 
       const validatedNext = validateRedirect(next)
@@ -69,7 +70,7 @@ export default function RegisterPage() {
       router.push('/login')
     } catch (err) {
       console.error(err)
-      setError(err.message)
+      setError(err instanceof Error ? err.message : 'Registration failed')
     }
   }
 
@@ -116,7 +117,7 @@ export default function RegisterPage() {
         <div className="mt-5">
           <p className="text-center text-sm tracking-wide font-medium">
             Already have an account?{' '}
-            <Link href="/register" className="text-primary underline">
+            <Link href="/login" className="text-primary underline">
               Log in
             </Link>
           </p>
