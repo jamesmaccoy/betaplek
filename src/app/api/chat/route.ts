@@ -9,7 +9,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 export async function POST(req: Request) {
   try {
-    const { message } = await req.json()
+    const { message, bookingContext } = await req.json()
     const { user } = await getMeUser()
 
     if (!user) {
@@ -45,14 +45,28 @@ export async function POST(req: Request) {
       }),
     ])
 
+    // Get post details if context provided
+    let postDetails = null
+    if (bookingContext?.postId) {
+      try {
+        const post = await payload.findByID({
+          collection: 'posts',
+          id: bookingContext.postId,
+          depth: 1
+        })
+        postDetails = post
+      } catch (error) {
+        console.error('Error fetching post details:', error)
+      }
+    }
+
     // Format bookings and estimates data for the AI
     const bookingsInfo = bookings.docs.map((booking) => ({
       id: booking.id,
       title: booking.title,
       fromDate: new Date(booking.fromDate).toLocaleDateString(),
       toDate: new Date(booking.toDate).toLocaleDateString(),
-      status: booking.paymentStatus,
-      packageName: booking.packageDetails?.name || booking.packageType || '',
+      status: booking.paymentStatus || 'unknown',
     }))
 
     const estimatesInfo = estimates.docs.map((estimate) => ({
@@ -87,7 +101,7 @@ export async function POST(req: Request) {
     }))
 
     // Create a context with the user's data
-    const context = {
+    const userContext = {
       bookings: bookingsInfo,
       estimates: estimatesInfo,
       packages: packagesInfo,
@@ -95,46 +109,78 @@ export async function POST(req: Request) {
         id: user.id,
         email: user.email,
       },
+      // Add booking context if provided
+      currentBooking: bookingContext ? {
+        postId: bookingContext.postId,
+        postTitle: bookingContext.postTitle || postDetails?.title || 'this property',
+        postDescription: bookingContext.postDescription || postDetails?.meta?.description || '',
+        baseRate: bookingContext.baseRate || 150,
+        duration: bookingContext.duration || 1,
+        availablePackages: bookingContext.packages || 0,
+        customerEntitlement: bookingContext.customerEntitlement || 'none',
+        selectedPackage: bookingContext.selectedPackage || null,
+        postDetails: postDetails ? {
+          title: postDetails.title,
+          description: postDetails.meta?.description || ''
+        } : null
+      } : null
     }
 
     // Get the generative model
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+
+    // Create enhanced prompt for booking assistant
+    const systemPrompt = bookingContext ? `You are a helpful AI booking assistant for ${userContext.currentBooking?.postTitle}. 
+
+CURRENT BOOKING CONTEXT:
+- Property: ${userContext.currentBooking?.postTitle}
+- Base Rate: R${userContext.currentBooking?.baseRate}/night
+- Customer Entitlement: ${userContext.currentBooking?.customerEntitlement}
+- Available Packages: ${userContext.currentBooking?.availablePackages}
+${userContext.currentBooking?.selectedPackage ? `- Selected Package: ${userContext.currentBooking.selectedPackage}` : ''}
+${userContext.currentBooking?.postDetails?.description ? `- Description: ${userContext.currentBooking.postDetails.description}` : ''}
+
+USER'S BOOKING HISTORY:
+- Total Bookings: ${userContext.bookings.length}
+- Recent Estimates: ${userContext.estimates.length}
+
+AVAILABLE PACKAGES FOR THIS PROPERTY:
+${packagesInfo.filter(pkg => pkg.isEnabled).map(pkg => 
+  `- ${pkg.name} (${pkg.durationText}): ${pkg.description} - Features: ${pkg.features.join(', ')}`
+).join('\n')}
+
+INSTRUCTIONS:
+1. Be conversational and helpful
+2. Recommend packages based on duration and customer needs
+3. Explain package benefits clearly
+4. For pro-only packages (like "🏘️ Starter Pack"), mention they require a pro subscription if user isn't pro
+5. Help with date selection and duration planning
+6. Provide pricing estimates when relevant
+7. Guide users through the booking process step by step
+8. Keep responses concise but informative
+9. Use emojis sparingly for a friendly tone
+
+Respond to the user's message naturally, as if you're a knowledgeable booking assistant who knows this property well.` 
+    : 
+    `You are a helpful AI assistant for a booking platform. You have access to the user's booking history and can help with general questions about properties, packages, and bookings.
+
+USER'S DATA:
+- Total Bookings: ${userContext.bookings.length}
+- Recent Estimates: ${userContext.estimates.length}
+- Available Packages: ${packagesInfo.length}
+
+Be helpful, concise, and guide users to make great booking decisions.`
 
     // Create a chat context with the user's data
     const chat = model.startChat({
       history: [
         {
           role: 'user',
-          parts: [
-            {
-              text: `You are a helpful AI assistant for a booking and estimates system. Here is the user's data:
-              
-              Bookings:
-              ${JSON.stringify(context.bookings, null, 2)}
-              
-              Estimates:
-              ${JSON.stringify(context.estimates, null, 2)}
-              
-              Packages:
-              ${JSON.stringify(context.packages, null, 2)}
-              
-              Help users with their bookings, estimates, and package information based on their actual data. 
-
-              For bookings and estimates: Always mention the package name (use the 'packageName' property). For estimate details, never print the raw link; always provide a clickable link as <a href=\"[link]\">click here</a> using the 'link' property.
-
-              For packages: You can help users understand which packages are available, enabled/disabled status, pricing, features, and durations. When discussing packages, mention the property name (postTitle), whether it's enabled or disabled, the duration, category, and key features. You can recommend packages based on their booking history and preferences.
-
-              Don't use asterisks in your response, only speak words and skip symbols. Never read out booking, estimate, or package IDs, but remain knowledgeable about the package types and features. If there are duplicate estimates, list only once. Do not mention the post property, only use the title for reference.`,
-            },
-          ],
+          parts: [{ text: systemPrompt }],
         },
         {
           role: 'model',
-          parts: [
-            {
-              text: 'I understand. I will help users with their bookings, estimates, and package information based on their actual data. I can assist with checking booking status, viewing estimates, and providing detailed information about available packages including their enabled/disabled status, features, pricing, and durations. I will never read out the booking, estimate, or package IDs, but rather use descriptive information like titles, dates, and package names. I can also recommend packages based on booking history and help users understand which packages are available for different properties and durations.',
-            },
-          ],
+          parts: [{ text: 'I understand. I\'m ready to help with booking assistance.' }],
         },
       ],
     })
