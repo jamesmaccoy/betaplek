@@ -13,6 +13,7 @@ const PACKAGE_RATES = {
 export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get('userId')
   const slug = req.nextUrl.searchParams.get('slug')
+  const postId = req.nextUrl.searchParams.get('postId')
   const payload = await getPayload({ config: configPromise })
 
   const where: any[] = []
@@ -26,7 +27,10 @@ export async function GET(req: NextRequest) {
     })
     const post = postResult.docs[0]
     if (!post) return NextResponse.json({ error: 'Post not found' }, { status: 404 })
-    const postId = post.id
+    const resolvedPostId = post.id
+    where.push({ post: { equals: resolvedPostId } })
+  } else if (postId) {
+    // Use postId directly if provided
     where.push({ post: { equals: postId } })
   }
 

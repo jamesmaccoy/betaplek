@@ -191,28 +191,99 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   const [bookingError, setBookingError] = useState<string | null>(null)
   const [offerings, setOfferings] = useState<RevenueCatPackage[]>([])
   
+  // Latest estimate state
+  const [latestEstimate, setLatestEstimate] = useState<any>(null)
+  const [loadingEstimate, setLoadingEstimate] = useState(false)
+  
   const subscriptionStatus = useSubscription()
   const [customerEntitlement, setCustomerEntitlement] = useState<CustomerEntitlement>('none')
   
   const scrollRef = useRef<HTMLDivElement>(null)
   const recognitionRef = useRef<any>(null)
+
+  // Load latest estimate for this post and user
+  const loadLatestEstimate = async () => {
+    if (!currentUser || !isLoggedIn) return
+    
+    setLoadingEstimate(true)
+    try {
+      const response = await fetch(`/api/estimates/latest?userId=${currentUser.id}&postId=${postId}`)
+      if (response.ok) {
+        const estimate = await response.json()
+        if (estimate && estimate.post && (
+          (typeof estimate.post === 'string' && estimate.post === postId) ||
+          (typeof estimate.post === 'object' && estimate.post.id === postId)
+        )) {
+          console.log('Loaded latest estimate:', estimate)
+          setLatestEstimate(estimate)
+          
+          // Pre-populate dates from estimate if available
+          if (estimate.fromDate && estimate.toDate) {
+            const from = new Date(estimate.fromDate)
+            const to = new Date(estimate.toDate)
+            setStartDate(from)
+            setEndDate(to)
+            
+            // Calculate duration
+            const calcDuration = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24))
+            setDuration(calcDuration)
+            
+            console.log('Pre-populated dates from estimate:', { from, to, duration: calcDuration })
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading latest estimate:', error)
+    } finally {
+      setLoadingEstimate(false)
+    }
+  }
   
   // Initialize booking journey on component mount
   useEffect(() => {
     const restored = loadBookingJourney()
     
     if (!restored) {
-      // Set initial welcome message if no journey was restored
+      // Load latest estimate first, then set initial message
+      if (isLoggedIn) {
+        loadLatestEstimate().then(() => {
+          // Check if we need to set an initial message after loading estimate
+          if (messages.length === 0) {
+            const initialMessage: Message = {
+              role: 'assistant',
+              content: latestEstimate ? 
+                `Welcome back! I see you have an existing estimate for ${postTitle}. I've pre-loaded your previous dates. Feel free to modify them or ask me anything about your booking.` :
+                `Hi! I'm here to help you book ${postTitle}. I can help you find the perfect dates, recommend packages based on your needs, and handle your booking. What would you like to know?`,
+              type: 'text'
+            }
+            setMessages([initialMessage])
+          }
+        })
+      } else {
+        const initialMessage: Message = {
+          role: 'assistant',
+          content: `Welcome to ${postTitle}! I can show you available packages and help you get started. Please log in to access the full AI booking experience and complete your reservation.`,
+          type: 'text'
+        }
+        setMessages([initialMessage])
+      }
+    } else if (isLoggedIn) {
+      // Even if journey was restored, still load latest estimate to sync data
+      loadLatestEstimate()
+    }
+  }, [isLoggedIn, postTitle, postId])
+
+  // Separate effect to handle initial message after estimate loads
+  useEffect(() => {
+    if (latestEstimate && messages.length === 0 && isLoggedIn) {
       const initialMessage: Message = {
         role: 'assistant',
-        content: isLoggedIn 
-          ? `Hi! I'm here to help you book ${postTitle}. I can help you find the perfect dates, recommend packages based on your needs, and handle your booking. What would you like to know?`
-          : `Welcome to ${postTitle}! I can show you available packages and help you get started. Please log in to access the full AI booking experience and complete your reservation.`,
+        content: `Welcome back! I see you have an existing estimate for ${postTitle}. I've pre-loaded your previous dates (${format(new Date(latestEstimate.fromDate), 'MMM dd')} to ${format(new Date(latestEstimate.toDate), 'MMM dd, yyyy')}). Feel free to modify them or ask me anything about your booking.`,
         type: 'text'
       }
       setMessages([initialMessage])
     }
-  }, [isLoggedIn, postTitle])
+  }, [latestEstimate, messages.length, isLoggedIn, postTitle])
 
   // Save booking journey when state changes
   useEffect(() => {
@@ -494,9 +565,21 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
     
     switch (action) {
       case 'select_dates':
+        // If dates are already populated, acknowledge them
+        if (startDate && endDate) {
+          const acknowledgmentMessage: Message = {
+            role: 'assistant',
+            content: `I see you already have dates selected: ${format(startDate, 'MMM dd')} to ${format(endDate, 'MMM dd, yyyy')} (${duration} ${duration === 1 ? 'night' : 'nights'}). You can modify them below or ask me to suggest packages for these dates.`,
+            type: 'text'
+          }
+          setMessages(prev => [...prev, acknowledgmentMessage])
+        }
+        
         const dateMessage: Message = {
           role: 'assistant',
-          content: 'Please select your check-in and check-out dates:',
+          content: startDate && endDate ? 
+            'You can modify your dates below if needed:' : 
+            'Please select your check-in and check-out dates:',
           type: 'date_selection'
         }
         setMessages(prev => [...prev, dateMessage])
@@ -509,14 +592,30 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
           `What duration are you thinking of? I can help you find the perfect package.`
         break
       case 'show_packages':
-        showAvailablePackages()
-        return
+        if (startDate && endDate) {
+          showAvailablePackages()
+          return
+        } else {
+          message = `I'd love to show you the best packages! To give you personalized recommendations, please select your dates first using the "Select Dates" button above.`
+        }
+        break
       case 'get_recommendation':
-        message = `Based on ${postTitle}, here are my top recommendations:\n\n` +
-          `• For couples: Romantic packages with premium amenities\n` +
-          `• For families: Spacious options with kid-friendly features\n` +
-          `• For business: Professional packages with work amenities\n\n` +
-          `What type of experience are you looking for?`
+        if (startDate && endDate) {
+          message = `Based on your ${duration} ${duration === 1 ? 'night' : 'nights'} stay at ${postTitle}, here are my top recommendations:\n\n` +
+            `• For couples: Romantic packages with premium amenities\n` +
+            `• For families: Spacious options with kid-friendly features\n` +
+            `• For business: Professional packages with work amenities\n\n` +
+            `Let me show you the specific packages available for your dates!`
+          
+          const assistantMessage: Message = { role: 'assistant', content: message, type: 'text' }
+          setMessages(prev => [...prev, assistantMessage])
+          
+          // Show packages after the recommendation message
+          setTimeout(() => showAvailablePackages(), 1000)
+          return
+        } else {
+          message = `I'd love to give you personalized recommendations! To suggest the best packages for your needs, please select your travel dates first using the "Select Dates" button above.`
+        }
         break
       default:
         message = 'I can help you with that! What would you like to know?'
@@ -660,7 +759,9 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
             duration,
             packages: packages.length,
             customerEntitlement,
-            selectedPackage: selectedPackage?.name
+            selectedPackage: selectedPackage?.name,
+            fromDate: startDate?.toISOString(),
+            toDate: endDate?.toISOString()
           }
         })
       })
@@ -746,6 +847,11 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         <div key={index} className="space-y-4">
           <div className="bg-muted p-3 rounded-lg">
             <p className="text-sm">{message.content}</p>
+            {startDate && endDate && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Current selection: {format(startDate, 'MMM dd')} - {format(endDate, 'MMM dd, yyyy')} ({duration} {duration === 1 ? 'night' : 'nights'})
+              </p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -808,6 +914,23 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
             >
               Next Week (5 Nights)
             </Button>
+            {startDate && endDate && (
+              <Button 
+                size="sm" 
+                variant="default"
+                onClick={() => {
+                  const confirmMessage: Message = {
+                    role: 'assistant',
+                    content: `Perfect! I've confirmed your dates: ${format(startDate, 'MMM dd')} to ${format(endDate, 'MMM dd, yyyy')} (${duration} ${duration === 1 ? 'night' : 'nights'}). Let me show you the best packages for your stay!`,
+                    type: 'text'
+                  }
+                  setMessages(prev => [...prev, confirmMessage])
+                  setTimeout(() => showAvailablePackages(), 500)
+                }}
+              >
+                Confirm Dates
+              </Button>
+            )}
           </div>
         </div>
       )
@@ -906,32 +1029,57 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   // Auto-suggest packages after date selection
   const suggestPackagesAfterDateSelection = () => {
     if (startDate && endDate) {
+      const suggestionMessage: Message = {
+        role: 'assistant',
+        content: `Great! I see you've selected ${duration} ${duration === 1 ? 'night' : 'nights'} from ${format(startDate, 'MMM dd')} to ${format(endDate, 'MMM dd, yyyy')}. Let me find the perfect packages for your stay...`,
+        type: 'text'
+      }
+      setMessages(prev => [...prev, suggestionMessage])
+      
+      // Show packages after a brief delay
       setTimeout(() => {
-        const suggestionMessage: Message = {
-          role: 'assistant',
-          content: `Great! I see you've selected ${duration} ${duration === 1 ? 'night' : 'nights'} from ${format(startDate, 'MMM dd')} to ${format(endDate, 'MMM dd, yyyy')}. Let me find the perfect packages for your stay...`,
-          type: 'text'
-        }
-        setMessages(prev => [...prev, suggestionMessage])
-        
-        // Show packages after a brief delay
-        setTimeout(() => {
-          showAvailablePackages()
-        }, 1000)
-      }, 500)
+        showAvailablePackages()
+      }, 1000)
     }
   }
 
-  // Update duration when dates change
+  // Update duration when dates change and auto-suggest packages
   useEffect(() => {
     if (startDate && endDate) {
       const newDuration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
       setDuration(newDuration)
       
-      // Auto-suggest packages after date selection
-      suggestPackagesAfterDateSelection()
+      // Check if this is from pre-populated data (latestEstimate) or user selection
+      if (latestEstimate && latestEstimate.fromDate && latestEstimate.toDate) {
+        const estimateFrom = new Date(latestEstimate.fromDate)
+        const estimateTo = new Date(latestEstimate.toDate)
+        const isFromEstimate = startDate.getTime() === estimateFrom.getTime() && 
+                               endDate.getTime() === estimateTo.getTime()
+        
+        if (isFromEstimate && messages.length > 0) {
+          // This is from pre-populated estimate data, suggest packages immediately
+          setTimeout(() => {
+            const welcomeBackMessage: Message = {
+              role: 'assistant',
+              content: `I've loaded your previous booking for ${duration} ${duration === 1 ? 'night' : 'nights'} from ${format(startDate, 'MMM dd')} to ${format(endDate, 'MMM dd, yyyy')}. Here are the available packages for your stay:`,
+              type: 'text'
+            }
+            setMessages(prev => [...prev, welcomeBackMessage])
+            
+            setTimeout(() => {
+              showAvailablePackages()
+            }, 500)
+          }, 1000)
+        } else {
+          // This is from user interaction, use normal flow
+          suggestPackagesAfterDateSelection()
+        }
+      } else {
+        // No estimate data, use normal flow
+        suggestPackagesAfterDateSelection()
+      }
     }
-  }, [startDate, endDate])
+  }, [startDate, endDate, latestEstimate, messages.length])
   
   return (
     <Card className={cn("w-full max-w-2xl mx-auto", className)}>

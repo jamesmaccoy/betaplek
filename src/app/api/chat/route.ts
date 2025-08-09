@@ -119,6 +119,8 @@ export async function POST(req: Request) {
         availablePackages: bookingContext.packages || 0,
         customerEntitlement: bookingContext.customerEntitlement || 'none',
         selectedPackage: bookingContext.selectedPackage || null,
+        fromDate: bookingContext.fromDate || null,
+        toDate: bookingContext.toDate || null,
         postDetails: postDetails ? {
           title: postDetails.title,
           description: postDetails.meta?.description || ''
@@ -138,6 +140,10 @@ CURRENT BOOKING CONTEXT:
 - Customer Entitlement: ${userContext.currentBooking?.customerEntitlement}
 - Available Packages: ${userContext.currentBooking?.availablePackages}
 ${userContext.currentBooking?.selectedPackage ? `- Selected Package: ${userContext.currentBooking.selectedPackage}` : ''}
+${userContext.currentBooking?.fromDate && userContext.currentBooking?.toDate ? 
+  `- Selected Dates: ${new Date(userContext.currentBooking.fromDate).toLocaleDateString()} to ${new Date(userContext.currentBooking.toDate).toLocaleDateString()} (${userContext.currentBooking.duration} ${userContext.currentBooking.duration === 1 ? 'night' : 'nights'})` : 
+  '- Dates: Not yet selected'
+}
 ${userContext.currentBooking?.postDetails?.description ? `- Description: ${userContext.currentBooking.postDetails.description}` : ''}
 
 USER'S BOOKING HISTORY:
@@ -151,14 +157,17 @@ ${packagesInfo.filter(pkg => pkg.isEnabled).map(pkg =>
 
 INSTRUCTIONS:
 1. Be conversational and helpful
-2. Recommend packages based on duration and customer needs
-3. Explain package benefits clearly
-4. For pro-only packages (like "🏘️ Starter Pack"), mention they require a pro subscription if user isn't pro
-5. Help with date selection and duration planning
-6. Provide pricing estimates when relevant
-7. Guide users through the booking process step by step
-8. Keep responses concise but informative
-9. Use emojis sparingly for a friendly tone
+2. If dates are already selected, acknowledge them and focus on package recommendations or other aspects
+3. If dates are not selected, guide users to select dates first
+4. Recommend packages based on duration and customer needs
+5. Explain package benefits clearly
+6. For pro-only packages (like "🏘️ Starter Pack"), mention they require a pro subscription if user isn't pro
+7. Help with date selection and duration planning when needed
+8. Provide pricing estimates when relevant
+9. Guide users through the booking process step by step
+10. Keep responses concise but informative
+11. Use emojis sparingly for a friendly tone
+12. When user asks about packages without dates, suggest they select dates first for better recommendations
 
 Respond to the user's message naturally, as if you're a knowledgeable booking assistant who knows this property well.` 
     : 
