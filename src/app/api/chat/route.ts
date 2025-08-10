@@ -7,63 +7,6 @@ import { getMeUser } from '@/utilities/getMeUser'
 // Use the GEMINI_API_KEY environment variable defined in your .env file
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
-// Utility function to extract dates from natural language text
-function extractDatesFromMessage(message: string): { fromDate?: string, toDate?: string, duration?: number } | null {
-  const dateRegex = /(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})|(\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2})/g
-  const monthDayRegex = /(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+(\d{1,2})/gi
-  const durationRegex = /(\d+)\s*(night|nights|day|days)/gi
-  
-  const dates = message.match(dateRegex) || []
-  const monthDayMatches = message.match(monthDayRegex) || []
-  const durationMatch = message.match(durationRegex)
-  
-  let extractedData: { fromDate?: string, toDate?: string, duration?: number } = {}
-  
-  // Extract duration if mentioned
-  if (durationMatch) {
-    const durationStr = durationMatch[0]
-    const durationNum = parseInt(durationStr.match(/\d+/)?.[0] || '0')
-    if (durationNum > 0) {
-      extractedData.duration = durationNum
-    }
-  }
-  
-  // Try to parse explicit dates
-  if (dates.length >= 2) {
-    try {
-      const firstDate = dates[0]
-      const secondDate = dates[1]
-      if (firstDate && secondDate) {
-        const fromDate = new Date(firstDate)
-        const toDate = new Date(secondDate)
-        if (!isNaN(fromDate.getTime()) && !isNaN(toDate.getTime())) {
-          extractedData.fromDate = fromDate.toISOString()
-          extractedData.toDate = toDate.toISOString()
-        }
-      }
-    } catch (error) {
-      console.log('Error parsing dates:', error)
-    }
-  } else if (dates.length === 1 && extractedData.duration) {
-    // If we have one date and a duration, calculate the end date
-    try {
-      const firstDate = dates[0]
-      if (firstDate) {
-        const fromDate = new Date(firstDate)
-        if (!isNaN(fromDate.getTime())) {
-          const toDate = new Date(fromDate.getTime() + extractedData.duration * 24 * 60 * 60 * 1000)
-          extractedData.fromDate = fromDate.toISOString()
-          extractedData.toDate = toDate.toISOString()
-        }
-      }
-    } catch (error) {
-      console.log('Error calculating end date:', error)
-    }
-  }
-  
-  return Object.keys(extractedData).length > 0 ? extractedData : null
-}
-
 export async function POST(req: Request) {
   try {
     const { message, bookingContext } = await req.json()
@@ -72,10 +15,6 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-
-    // Extract dates from the user message
-    const extractedDates = extractDatesFromMessage(message)
-    console.log('Extracted dates from message:', extractedDates)
 
     // Fetch user's bookings, estimates, and available packages
     const payload = await getPayload({ config: configPromise })
@@ -89,26 +28,13 @@ export async function POST(req: Request) {
         depth: 2,
         sort: '-fromDate',
       }),
-      // Only get the latest estimate for the current post to reduce context noise
-      bookingContext?.postId ? payload.find({
-        collection: 'estimates',
-        where: {
-          and: [
-            { customer: { equals: user.id } },
-            { post: { equals: bookingContext.postId } }
-          ]
-        },
-        depth: 2,
-        sort: '-createdAt',
-        limit: 1, // Only get the most recent estimate for this post
-      }) : payload.find({
+      payload.find({
         collection: 'estimates',
         where: {
           customer: { equals: user.id },
         },
         depth: 2,
         sort: '-createdAt',
-        limit: 1, // Limit to just the latest estimate
       }),
       // Fetch all packages to provide recommendations and enabled status
       payload.find({
@@ -220,10 +146,9 @@ ${userContext.currentBooking?.fromDate && userContext.currentBooking?.toDate ?
 }
 ${userContext.currentBooking?.postDetails?.description ? `- Description: ${userContext.currentBooking.postDetails.description}` : ''}
 
-${userContext.estimates.length > 0 && userContext.estimates[0] ? 
-  `LATEST ESTIMATE: ${userContext.estimates[0].fromDate} to ${userContext.estimates[0].toDate} (${userContext.estimates[0].packageName || 'No package'})` : 
-  ''
-}
+USER'S BOOKING HISTORY:
+- Total Bookings: ${userContext.bookings.length}
+- Recent Estimates: ${userContext.estimates.length}
 
 AVAILABLE PACKAGES FOR THIS PROPERTY:
 ${packagesInfo.filter(pkg => pkg.isEnabled).map(pkg => 
@@ -232,18 +157,17 @@ ${packagesInfo.filter(pkg => pkg.isEnabled).map(pkg =>
 
 INSTRUCTIONS:
 1. Be conversational and helpful
-2. When user mentions specific dates, acknowledge them and use them for recommendations
-3. If dates are already selected in the UI, acknowledge them and focus on package recommendations  
-4. If no dates are selected, guide users to select dates first
-5. Recommend packages based on duration and customer needs
-6. Explain package benefits clearly
-7. For pro-only packages, mention they require a pro subscription if user isn't pro
-8. Help with date selection and duration planning when needed
-9. Provide pricing estimates when relevant
-10. Guide users through the booking process step by step
-11. Keep responses concise but informative (2-3 sentences max)
-12. Use emojis sparingly for a friendly tone
-13. Don't repeat old date information - focus on current conversation
+2. If dates are already selected, acknowledge them and focus on package recommendations or other aspects
+3. If dates are not selected, guide users to select dates first
+4. Recommend packages based on duration and customer needs
+5. Explain package benefits clearly
+6. For pro-only packages (like "🏘️ Starter Pack"), mention they require a pro subscription if user isn't pro
+7. Help with date selection and duration planning when needed
+8. Provide pricing estimates when relevant
+9. Guide users through the booking process step by step
+10. Keep responses concise but informative
+11. Use emojis sparingly for a friendly tone
+12. When user asks about packages without dates, suggest they select dates first for better recommendations
 
 Respond to the user's message naturally, as if you're a knowledgeable booking assistant who knows this property well.` 
     : 
@@ -275,10 +199,7 @@ Be helpful, concise, and guide users to make great booking decisions.`
     const response = await result.response
     const text = response.text()
 
-    return NextResponse.json({ 
-      message: text,
-      extractedDates: extractedDates || undefined
-    })
+    return NextResponse.json({ message: text })
   } catch (error) {
     console.error('Error in chat API:', error)
     return NextResponse.json({ error: 'Failed to process your request' }, { status: 500 })
