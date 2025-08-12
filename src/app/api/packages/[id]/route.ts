@@ -131,6 +131,11 @@ export async function PATCH(
       console.log('Setting category to:', cleanData.category)
     }
     
+    if (body.entitlement !== undefined) {
+      cleanData.entitlement = body.entitlement
+      console.log('Setting entitlement to:', cleanData.entitlement)
+    }
+    
     if (body.minNights !== undefined) {
       const minNights = Number(body.minNights)
       if (isNaN(minNights) || minNights < 1) {

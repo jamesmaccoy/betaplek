@@ -59,6 +59,16 @@ const Packages: CollectionConfig = {
       required: false, // Changed to false to prevent forced defaults
       defaultValue: 'standard',
     },
+    {
+      name: 'entitlement',
+      type: 'select',
+      options: [
+        { label: 'Standard', value: 'standard' },
+        { label: 'Pro', value: 'pro' },
+      ],
+      required: false,
+      defaultValue: 'standard',
+    },
     { 
       name: 'minNights', 
       type: 'number', 
