@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { cn } from '@/utilities/cn'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -195,6 +195,10 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   const [latestEstimate, setLatestEstimate] = useState<any>(null)
   const [loadingEstimate, setLoadingEstimate] = useState(false)
   
+  // Package loading state to prevent multiple API calls
+  const [loadingPackages, setLoadingPackages] = useState(false)
+  const [packagesLoaded, setPackagesLoaded] = useState(false)
+  
   const subscriptionStatus = useSubscription()
   const [customerEntitlement, setCustomerEntitlement] = useState<CustomerEntitlement>('none')
   
@@ -203,43 +207,29 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
 
   // Helper function to filter packages based on customer entitlement
   // This ensures that pro-only packages (like gathering_monthly) are only shown to pro users
-  const filterPackagesByEntitlement = (packages: Package[]): Package[] => {
-    console.log('🔍 Filtering packages by entitlement:', {
-      totalPackages: packages.length,
-      customerEntitlement,
-      packages: packages.map(pkg => ({ id: pkg.id, name: pkg.name, revenueCatId: pkg.revenueCatId, isEnabled: pkg.isEnabled }))
-    })
-    
+  const filterPackagesByEntitlement = useCallback((packages: Package[]): Package[] => {
+    // Reduce logging to prevent performance issues
     const filtered = packages.filter((pkg: Package) => {
       if (!pkg.isEnabled) {
-        console.log(`🚫 Filtering out disabled package: ${pkg.name} (${pkg.revenueCatId})`)
         return false
       }
       
       // Filter out pro-only packages for non-pro users
       if (pkg.revenueCatId === 'gathering_monthly' && customerEntitlement !== 'pro') {
-        console.log('🚫 Filtering out gathering_monthly package for non-pro user. Entitlement:', customerEntitlement)
         return false
       }
       
       // Filter out other pro-only packages
       const proOnlyPackages = ['gathering_monthly', 'hosted3nights', 'hosted7nights', 'hosted_extended', 'per_night_luxury']
       if (proOnlyPackages.includes(pkg.revenueCatId || '') && customerEntitlement !== 'pro') {
-        console.log(`🚫 Filtering out pro-only package ${pkg.revenueCatId} for non-pro user. Entitlement:`, customerEntitlement)
         return false
       }
       
       return true
     })
     
-    console.log('✅ Filtered packages result:', {
-      originalCount: packages.length,
-      filteredCount: filtered.length,
-      remainingPackages: filtered.map(pkg => ({ id: pkg.id, name: pkg.name, revenueCatId: pkg.revenueCatId }))
-    })
-    
     return filtered
-  }
+  }, [customerEntitlement])
 
   // Load latest estimate for this post and user
   const loadLatestEstimate = async () => {
@@ -584,7 +574,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         setPackages(filteredPackages)
       })
       .catch(console.error)
-  }, [postId, customerEntitlement])
+  }, [postId, customerEntitlement, filterPackagesByEntitlement])
   
   // Auto-scroll messages
   useEffect(() => {
@@ -659,83 +649,146 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   }
 
   const showAvailablePackages = () => {
-    // Load packages from API
-    fetch(`/api/packages/post/${postId}`)
-      .then(res => res.json())
-      .then(data => {
-        // Apply entitlement filtering first
-        const allPackages = filterPackagesByEntitlement((data.packages || []).filter((pkg: any) => pkg.isEnabled))
+    // Use existing packages instead of making new API calls
+    if (packages.length > 0) {
+      // Filter packages by duration if dates are selected
+      let suitablePackages = packages
+      if (startDate && endDate) {
+        const selectedDuration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+        setDuration(selectedDuration)
         
-        // Filter packages by duration if dates are selected
-        let suitablePackages = allPackages
-        if (startDate && endDate) {
-          const selectedDuration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
-          setDuration(selectedDuration)
-          
-          // Filter packages that match the duration
-          suitablePackages = allPackages.filter((pkg: any) => {
-            return selectedDuration >= pkg.minNights && selectedDuration <= pkg.maxNights
-          })
-          
-          // If no exact matches, include packages that can accommodate the duration
-          if (suitablePackages.length === 0) {
-            suitablePackages = allPackages.filter((pkg: any) => {
-              return pkg.maxNights >= selectedDuration || pkg.maxNights === 1 // Include per-night packages
-            })
-          }
-        }
-        
-        // Sort packages by relevance and select top 3
-        const sortedPackages = suitablePackages.sort((a: any, b: any) => {
-          // Prioritize packages that exactly match the duration
-          const aExactMatch = startDate && endDate ? 
-            (duration >= a.minNights && duration <= a.maxNights) : false
-          const bExactMatch = startDate && endDate ? 
-            (duration >= b.minNights && duration <= b.maxNights) : false
-          
-          if (aExactMatch && !bExactMatch) return -1
-          if (!aExactMatch && bExactMatch) return 1
-          
-          // Then sort by category priority (special > hosted > standard)
-          const categoryPriority: Record<string, number> = { special: 3, hosted: 2, standard: 1 }
-          const aPriority = categoryPriority[a.category as string] || 1
-          const bPriority = categoryPriority[b.category as string] || 1
-          
-          if (aPriority !== bPriority) return bPriority - aPriority
-          
-          // Finally sort by multiplier (higher first)
-          return (b.multiplier || 1) - (a.multiplier || 1)
+        // Filter packages that match the duration
+        suitablePackages = packages.filter((pkg: any) => {
+          return selectedDuration >= pkg.minNights && selectedDuration <= pkg.maxNights
         })
         
-        // Take top 3 packages
-        const suggestedPackages = sortedPackages.slice(0, 3)
-        setPackages(suggestedPackages)
+        // If no exact matches, include packages that can accommodate the duration
+        if (suitablePackages.length === 0) {
+          suitablePackages = packages.filter((pkg: any) => {
+            return pkg.maxNights >= selectedDuration || pkg.maxNights === 1 // Include per-night packages
+          })
+        }
+      }
+      
+      // Sort packages by relevance and select top 3
+      const sortedPackages = suitablePackages.sort((a: any, b: any) => {
+        // Prioritize packages that exactly match the duration
+        const aExactMatch = startDate && endDate ? 
+          (duration >= a.minNights && duration <= a.maxNights) : false
+        const bExactMatch = startDate && endDate ? 
+          (duration >= b.minNights && duration <= b.maxNights) : false
         
-        // Create personalized message based on duration
-        let message = ''
-        if (startDate && endDate) {
-          message = `Based on your ${duration} ${duration === 1 ? 'night' : 'nights'} stay from ${format(startDate, 'MMM dd')} to ${format(endDate, 'MMM dd, yyyy')}, here are my top 3 recommendations:`
-        } else {
-          message = `Here are my top 3 package recommendations for ${postTitle}:`
-        }
+        if (aExactMatch && !bExactMatch) return -1
+        if (!aExactMatch && bExactMatch) return 1
         
-        const packageMessage: Message = {
-          role: 'assistant',
-          content: message,
-          type: 'package_suggestion',
-          data: { packages: suggestedPackages }
-        }
-        setMessages(prev => [...prev, packageMessage])
+        // Then sort by category priority (special > hosted > standard)
+        const categoryPriority: Record<string, number> = { special: 3, hosted: 2, standard: 1 }
+        const aPriority = categoryPriority[a.category as string] || 1
+        const bPriority = categoryPriority[b.category as string] || 1
+        
+        if (aPriority !== bPriority) return bPriority - aPriority
+        
+        // Finally sort by multiplier (higher first)
+        return (b.multiplier || 1) - (a.multiplier || 1)
       })
-      .catch(err => {
-        console.error('Error loading packages:', err)
-        const errorMessage: Message = {
-          role: 'assistant',
-          content: 'Sorry, I encountered an error loading packages. Please try again.',
-          type: 'text'
-        }
-        setMessages(prev => [...prev, errorMessage])
-      })
+      
+      // Take top 3 packages
+      const suggestedPackages = sortedPackages.slice(0, 3)
+      
+      // Create personalized message based on duration
+      let message = ''
+      if (startDate && endDate) {
+        message = `Based on your ${duration} ${duration === 1 ? 'night' : 'nights'} stay from ${format(startDate, 'MMM dd')} to ${format(endDate, 'MMM dd, yyyy')}, here are my top 3 recommendations:`
+      } else {
+        message = `Here are my top 3 package recommendations for ${postTitle}:`
+      }
+      
+      const packageMessage: Message = {
+        role: 'assistant',
+        content: message,
+        type: 'package_suggestion',
+        data: { packages: suggestedPackages }
+      }
+      setMessages(prev => [...prev, packageMessage])
+    } else {
+      // Fallback: load packages if none exist
+      fetch(`/api/packages/post/${postId}`)
+        .then(res => res.json())
+        .then(data => {
+          // Apply entitlement filtering first
+          const allPackages = filterPackagesByEntitlement((data.packages || []).filter((pkg: any) => pkg.isEnabled))
+          
+          // Filter packages by duration if dates are selected
+          let suitablePackages = allPackages
+          if (startDate && endDate) {
+            const selectedDuration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+            setDuration(selectedDuration)
+            
+            // Filter packages that match the duration
+            suitablePackages = allPackages.filter((pkg: any) => {
+              return selectedDuration >= pkg.minNights && selectedDuration <= pkg.maxNights
+            })
+            
+            // If no exact matches, include packages that can accommodate the duration
+            if (suitablePackages.length === 0) {
+              suitablePackages = allPackages.filter((pkg: any) => {
+                return pkg.maxNights >= selectedDuration || pkg.maxNights === 1 // Include per-night packages
+              })
+            }
+          }
+          
+          // Sort packages by relevance and select top 3
+          const sortedPackages = suitablePackages.sort((a: any, b: any) => {
+            // Prioritize packages that exactly match the duration
+            const aExactMatch = startDate && endDate ? 
+              (duration >= a.minNights && duration <= a.maxNights) : false
+            const bExactMatch = startDate && endDate ? 
+              (duration >= b.minNights && duration <= b.maxNights) : false
+            
+            if (aExactMatch && !bExactMatch) return -1
+            if (!aExactMatch && bExactMatch) return 1
+            
+            // Then sort by category priority (special > hosted > standard)
+            const categoryPriority: Record<string, number> = { special: 3, hosted: 2, standard: 1 }
+            const aPriority = categoryPriority[a.category as string] || 1
+            const bPriority = categoryPriority[b.category as string] || 1
+            
+            if (aPriority !== bPriority) return bPriority - aPriority
+            
+            // Finally sort by multiplier (higher first)
+            return (b.multiplier || 1) - (a.multiplier || 1)
+          })
+          
+          // Take top 3 packages
+          const suggestedPackages = sortedPackages.slice(0, 3)
+          setPackages(suggestedPackages)
+          
+          // Create personalized message based on duration
+          let message = ''
+          if (startDate && endDate) {
+            message = `Based on your ${duration} ${duration === 1 ? 'night' : 'nights'} stay from ${format(startDate, 'MMM dd')} to ${format(endDate, 'MMM dd, yyyy')}, here are my top 3 recommendations:`
+          } else {
+            message = `Here are my top 3 package recommendations for ${postTitle}:`
+          }
+          
+          const packageMessage: Message = {
+            role: 'assistant',
+            content: message,
+            type: 'package_suggestion',
+            data: { packages: suggestedPackages }
+          }
+          setMessages(prev => [...prev, packageMessage])
+        })
+        .catch(err => {
+          console.error('Error loading packages:', err)
+          const errorMessage: Message = {
+            role: 'assistant',
+            content: 'Sorry, I encountered an error loading packages. Please try again.',
+            type: 'text'
+          }
+          setMessages(prev => [...prev, errorMessage])
+        })
+    }
   }
   
   const handleAIRequest = async (message: string) => {

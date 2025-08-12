@@ -20,7 +20,8 @@ export async function GET(
         depth: 1,
       })
     } catch (error) {
-      console.log('Failed to fetch post data for custom names:', error)
+      // Don't log the full error to reduce noise, just continue without custom names
+      console.log('Failed to fetch post data for custom names, continuing without custom names')
     }
 
     // Get packages from database
@@ -90,10 +91,16 @@ export async function GET(
       })
     ]
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       packages: allPackages,
       total: allPackages.length
     })
+
+    // Add caching headers to prevent excessive API calls
+    response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300') // Cache for 1 minute client-side, 5 minutes CDN
+    response.headers.set('ETag', `packages-${postId}-${Date.now()}`)
+
+    return response
   } catch (error) {
     console.error('Error fetching packages:', error)
     return NextResponse.json(
