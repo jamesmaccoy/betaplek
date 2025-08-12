@@ -201,6 +201,46 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   const scrollRef = useRef<HTMLDivElement>(null)
   const recognitionRef = useRef<any>(null)
 
+  // Helper function to filter packages based on customer entitlement
+  // This ensures that pro-only packages (like gathering_monthly) are only shown to pro users
+  const filterPackagesByEntitlement = (packages: Package[]): Package[] => {
+    console.log('🔍 Filtering packages by entitlement:', {
+      totalPackages: packages.length,
+      customerEntitlement,
+      packages: packages.map(pkg => ({ id: pkg.id, name: pkg.name, revenueCatId: pkg.revenueCatId, isEnabled: pkg.isEnabled }))
+    })
+    
+    const filtered = packages.filter((pkg: Package) => {
+      if (!pkg.isEnabled) {
+        console.log(`🚫 Filtering out disabled package: ${pkg.name} (${pkg.revenueCatId})`)
+        return false
+      }
+      
+      // Filter out pro-only packages for non-pro users
+      if (pkg.revenueCatId === 'gathering_monthly' && customerEntitlement !== 'pro') {
+        console.log('🚫 Filtering out gathering_monthly package for non-pro user. Entitlement:', customerEntitlement)
+        return false
+      }
+      
+      // Filter out other pro-only packages
+      const proOnlyPackages = ['gathering_monthly', 'hosted3nights', 'hosted7nights', 'hosted_extended', 'per_night_luxury']
+      if (proOnlyPackages.includes(pkg.revenueCatId || '') && customerEntitlement !== 'pro') {
+        console.log(`🚫 Filtering out pro-only package ${pkg.revenueCatId} for non-pro user. Entitlement:`, customerEntitlement)
+        return false
+      }
+      
+      return true
+    })
+    
+    console.log('✅ Filtered packages result:', {
+      originalCount: packages.length,
+      filteredCount: filtered.length,
+      remainingPackages: filtered.map(pkg => ({ id: pkg.id, name: pkg.name, revenueCatId: pkg.revenueCatId }))
+    })
+    
+    return filtered
+  }
+
   // Load latest estimate for this post and user
   const loadLatestEstimate = async () => {
     if (!currentUser || !isLoggedIn) return
@@ -540,14 +580,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
     fetch(`/api/packages/post/${postId}`)
       .then(res => res.json())
       .then(data => {
-        const filteredPackages = (data.packages || []).filter((pkg: Package) => {
-          if (!pkg.isEnabled) return false
-          // Filter out pro-only packages for non-pro users
-          if (pkg.revenueCatId === 'gathering_monthly' && customerEntitlement !== 'pro') {
-            return false
-          }
-          return true
-        })
+        const filteredPackages = filterPackagesByEntitlement(data.packages || [])
         setPackages(filteredPackages)
       })
       .catch(console.error)
@@ -630,7 +663,8 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
     fetch(`/api/packages/post/${postId}`)
       .then(res => res.json())
       .then(data => {
-        const allPackages = (data.packages || []).filter((pkg: any) => pkg.isEnabled)
+        // Apply entitlement filtering first
+        const allPackages = filterPackagesByEntitlement((data.packages || []).filter((pkg: any) => pkg.isEnabled))
         
         // Filter packages by duration if dates are selected
         let suitablePackages = allPackages
