@@ -203,6 +203,12 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   const loadingRef = useRef(false)
   const loadedRef = useRef(false)
   
+  // Ref to prevent infinite loops in booking journey
+  const journeyLoadedRef = useRef(false)
+  
+  // Debounce ref for saving booking journey
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
   const subscriptionStatus = useSubscription()
   const [customerEntitlement, setCustomerEntitlement] = useState<CustomerEntitlement>('none')
   
@@ -248,7 +254,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
           (typeof estimate.post === 'string' && estimate.post === postId) ||
           (typeof estimate.post === 'object' && estimate.post.id === postId)
         )) {
-          console.log('Loaded latest estimate:', estimate)
           setLatestEstimate(estimate)
           
           // Pre-populate dates from estimate if available
@@ -262,7 +267,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
             const calcDuration = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24))
             setDuration(calcDuration)
             
-            console.log('Pre-populated dates from estimate:', { from, to, duration: calcDuration })
           }
         }
       }
@@ -342,7 +346,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   const loadOfferings = async () => {
     try {
       const fetchedOfferings = await Purchases.getSharedInstance().getOfferings()
-      console.log('Offerings:', fetchedOfferings)
       
       // Collect all packages from all offerings
       const allPackages: RevenueCatPackage[] = []
@@ -374,14 +377,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
     setBookingError(null)
     
     try {
-      console.log('=== BOOKING PROCESS DEBUG ===')
-      console.log('Selected package:', {
-        id: selectedPackage.id,
-        name: selectedPackage.name,
-        revenueCatId: selectedPackage.revenueCatId,
-        source: selectedPackage.source
-      })
-      
       const total = calculateTotal(baseRate, duration, selectedPackage.multiplier)
       
       // Create estimate first
@@ -395,8 +390,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         customer: currentUser?.id,
         packageType: selectedPackage.revenueCatId || selectedPackage.id,
       }
-      
-      console.log('Creating estimate with data:', estimateData)
       
       const estimateResponse = await fetch('/api/estimates', {
         method: 'POST',
@@ -412,7 +405,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       }
       
       const estimate = await estimateResponse.json()
-      console.log('Estimate created:', estimate)
       
       // Find the package in RevenueCat offerings
       const revenueCatPackage = offerings.find((pkg) => 
@@ -420,14 +412,11 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       )
       
       if (revenueCatPackage) {
-        console.log('Found package in RevenueCat, proceeding with payment')
         
         try {
           const purchaseResult = await Purchases.getSharedInstance().purchase({
             rcPackage: revenueCatPackage,
           })
-          
-          console.log('Purchase successful:', purchaseResult)
           
           // Create booking record after successful payment
           await createBookingRecord()
@@ -456,7 +445,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
           }
           
           const confirmedEstimate = await confirmResponse.json()
-          console.log('Estimate confirmed:', confirmedEstimate)
           
           // Clear booking journey after successful booking
           clearBookingJourney()
@@ -491,8 +479,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
           throw new Error('Payment failed. Please try again with a valid payment method.')
         }
       } else {
-        console.log('Package not found in RevenueCat, using fallback')
-        
         // Fallback: create booking without payment (for testing)
         await createBookingRecord()
         
@@ -520,7 +506,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         }
         
         const confirmedEstimate = await confirmResponse.json()
-        console.log('Estimate confirmed (fallback):', confirmedEstimate)
         
         // Clear booking journey after successful booking
         clearBookingJourney()
@@ -549,8 +534,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       toDate: endDate.toISOString(),
     }
 
-    console.log('Creating booking record:', bookingData)
-
     const bookingResponse = await fetch('/api/bookings', {
       method: 'POST',
       headers: {
@@ -565,7 +548,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
     }
 
     const booking = await bookingResponse.json()
-    console.log('Booking created:', booking)
     return booking
   }
   
@@ -1067,26 +1049,34 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   const saveBookingJourney = () => {
     if (typeof window === 'undefined') return
     
-    const journeyData = {
-      messages,
-      selectedPackage,
-      duration,
-      startDate: startDate?.toISOString(),
-      endDate: endDate?.toISOString(),
-      timestamp: Date.now()
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
     }
     
-    try {
-      sessionStorage.setItem(sessionKey, JSON.stringify(journeyData))
-      console.log('Saved booking journey:', journeyData)
-    } catch (error) {
-      console.error('Error saving booking journey:', error)
-    }
+    // Debounce the save operation
+    saveTimeoutRef.current = setTimeout(() => {
+      const journeyData = {
+        messages,
+        selectedPackage,
+        duration,
+        startDate: startDate?.toISOString(),
+        endDate: endDate?.toISOString(),
+        timestamp: Date.now()
+      }
+      
+      try {
+        sessionStorage.setItem(sessionKey, JSON.stringify(journeyData))
+        // Removed excessive logging
+      } catch (error) {
+        console.error('Error saving booking journey:', error)
+      }
+    }, 1000) // Save after 1 second of inactivity
   }
 
   // Load booking journey from session storage
   const loadBookingJourney = () => {
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined' || journeyLoadedRef.current) return
     
     try {
       const savedData = sessionStorage.getItem(sessionKey)
@@ -1097,7 +1087,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         
         // Only restore if data is less than 1 hour old
         if (now - journeyData.timestamp < oneHour) {
-          console.log('Restoring booking journey:', journeyData)
+          journeyLoadedRef.current = true
           
           setMessages(journeyData.messages || [])
           setSelectedPackage(journeyData.selectedPackage || null)
@@ -1117,7 +1107,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
           
           return true
         } else {
-          console.log('Booking journey expired, starting fresh')
           sessionStorage.removeItem(sessionKey)
         }
       }
@@ -1133,7 +1122,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   const clearBookingJourney = () => {
     if (typeof window === 'undefined') return
     sessionStorage.removeItem(sessionKey)
-    console.log('Cleared booking journey')
   }
   
   // Auto-suggest packages after date selection
