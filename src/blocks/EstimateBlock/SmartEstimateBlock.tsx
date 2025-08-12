@@ -199,6 +199,10 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   const [loadingPackages, setLoadingPackages] = useState(false)
   const [packagesLoaded, setPackagesLoaded] = useState(false)
   
+  // Ref to track loading state to prevent infinite loops
+  const loadingRef = useRef(false)
+  const loadedRef = useRef(false)
+  
   const subscriptionStatus = useSubscription()
   const [customerEntitlement, setCustomerEntitlement] = useState<CustomerEntitlement>('none')
   
@@ -565,16 +569,35 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
     return booking
   }
   
-  // Load packages
+  // Load packages - simplified to prevent infinite loops
   useEffect(() => {
-    fetch(`/api/packages/post/${postId}`)
-      .then(res => res.json())
-      .then(data => {
-        const filteredPackages = filterPackagesByEntitlement(data.packages || [])
-        setPackages(filteredPackages)
-      })
-      .catch(console.error)
-  }, [postId, customerEntitlement, filterPackagesByEntitlement])
+    if (!loadedRef.current && !loadingRef.current) {
+      loadingRef.current = true
+      fetch(`/api/packages/post/${postId}`)
+        .then(res => res.json())
+        .then(data => {
+          // Filter packages inline to avoid dependency issues
+          const filtered = (data.packages || []).filter((pkg: Package) => {
+            if (!pkg.isEnabled) return false
+            
+            // Filter out pro-only packages for non-pro users
+            if (pkg.revenueCatId === 'gathering_monthly' && customerEntitlement !== 'pro') return false
+            
+            // Filter out other pro-only packages
+            const proOnlyPackages = ['gathering_monthly', 'hosted3nights', 'hosted7nights', 'hosted_extended', 'per_night_luxury']
+            if (proOnlyPackages.includes(pkg.revenueCatId || '') && customerEntitlement !== 'pro') return false
+            
+            return true
+          })
+          setPackages(filtered)
+          loadedRef.current = true
+        })
+        .catch(console.error)
+        .finally(() => {
+          loadingRef.current = false
+        })
+    }
+  }, [postId, customerEntitlement])
   
   // Auto-scroll messages
   useEffect(() => {
