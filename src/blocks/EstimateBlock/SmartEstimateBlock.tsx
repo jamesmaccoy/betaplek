@@ -209,6 +209,9 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   // Debounce ref for saving booking journey
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   
+  // Ref to prevent loadLatestEstimate from being called repeatedly
+  const estimateLoadedRef = useRef(false)
+  
   const subscriptionStatus = useSubscription()
   const [customerEntitlement, setCustomerEntitlement] = useState<CustomerEntitlement>('none')
   
@@ -241,39 +244,34 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
     return filtered
   }, [customerEntitlement])
 
-  // Load latest estimate for this post and user
+  // Load latest estimate for the user
   const loadLatestEstimate = async () => {
-    if (!currentUser || !isLoggedIn) return
+    if (!isLoggedIn || estimateLoadedRef.current) return
     
-    setLoadingEstimate(true)
     try {
-      const response = await fetch(`/api/estimates/latest?userId=${currentUser.id}&postId=${postId}`)
+      estimateLoadedRef.current = true
+      const response = await fetch(`/api/estimates/latest?userId=${currentUser?.id}&postId=${postId}`)
       if (response.ok) {
         const estimate = await response.json()
-        if (estimate && estimate.post && (
-          (typeof estimate.post === 'string' && estimate.post === postId) ||
-          (typeof estimate.post === 'object' && estimate.post.id === postId)
-        )) {
+        if (estimate) {
           setLatestEstimate(estimate)
+          // Removed excessive logging
           
-          // Pre-populate dates from estimate if available
+          // Pre-populate dates if available
           if (estimate.fromDate && estimate.toDate) {
             const from = new Date(estimate.fromDate)
             const to = new Date(estimate.toDate)
+            const calcDuration = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24))
+            
             setStartDate(from)
             setEndDate(to)
-            
-            // Calculate duration
-            const calcDuration = Math.ceil((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24))
             setDuration(calcDuration)
-            
+            // Removed excessive logging
           }
         }
       }
     } catch (error) {
       console.error('Error loading latest estimate:', error)
-    } finally {
-      setLoadingEstimate(false)
     }
   }
   
@@ -309,11 +307,11 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       // Even if journey was restored, still load latest estimate to sync data
       loadLatestEstimate()
     }
-  }, [isLoggedIn, postTitle, postId])
+  }, [isLoggedIn]) // Removed postTitle and postId from dependencies to prevent infinite loops
 
   // Separate effect to handle initial message after estimate loads
   useEffect(() => {
-    if (latestEstimate && messages.length === 0 && isLoggedIn) {
+    if (latestEstimate && messages.length === 0 && isLoggedIn && !estimateLoadedRef.current) {
       const initialMessage: Message = {
         role: 'assistant',
         content: `Welcome back! I see you have an existing estimate for ${postTitle}. I've pre-loaded your previous dates (${format(new Date(latestEstimate.fromDate), 'MMM dd')} to ${format(new Date(latestEstimate.toDate), 'MMM dd, yyyy')}). Feel free to modify them or ask me anything about your booking.`,
@@ -321,11 +319,11 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       }
       setMessages([initialMessage])
     }
-  }, [latestEstimate, messages.length, isLoggedIn, postTitle])
+  }, [latestEstimate, isLoggedIn]) // Removed messages.length and postTitle from dependencies
 
   // Save booking journey when state changes
   useEffect(() => {
-    if (messages.length > 0) {
+    if (messages.length > 0 && !journeyLoadedRef.current) {
       saveBookingJourney()
     }
   }, [messages, selectedPackage, duration, startDate, endDate])
