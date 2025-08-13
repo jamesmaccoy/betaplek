@@ -212,6 +212,9 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   // Ref to prevent loadLatestEstimate from being called repeatedly
   const estimateLoadedRef = useRef(false)
   
+  // Ref to prevent package suggestions from being triggered repeatedly
+  const packagesSuggestedRef = useRef(false)
+  
   const subscriptionStatus = useSubscription()
   const [customerEntitlement, setCustomerEntitlement] = useState<CustomerEntitlement>('none')
   
@@ -654,20 +657,23 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   const showAvailablePackages = () => {
     // Use existing packages instead of making new API calls
     if (packages.length > 0) {
+      // Apply entitlement filtering first
+      const filteredPackages = filterPackagesByEntitlement(packages)
+      
       // Filter packages by duration if dates are selected
-      let suitablePackages = packages
+      let suitablePackages = filteredPackages
       if (startDate && endDate) {
         const selectedDuration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
         setDuration(selectedDuration)
         
         // Filter packages that match the duration
-        suitablePackages = packages.filter((pkg: any) => {
+        suitablePackages = filteredPackages.filter((pkg: any) => {
           return selectedDuration >= pkg.minNights && selectedDuration <= pkg.maxNights
         })
         
         // If no exact matches, include packages that can accommodate the duration
         if (suitablePackages.length === 0) {
-          suitablePackages = packages.filter((pkg: any) => {
+          suitablePackages = filteredPackages.filter((pkg: any) => {
             return pkg.maxNights >= selectedDuration || pkg.maxNights === 1 // Include per-night packages
           })
         }
@@ -987,6 +993,8 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
                 const endDate = new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000) // 3 nights
                 setStartDate(tomorrow)
                 setEndDate(endDate)
+                // Reset to allow new package suggestions
+                packagesSuggestedRef.current = false
               }}
             >
               Quick 3 Nights
@@ -1000,6 +1008,8 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
                 const endDate = new Date(nextWeek.getTime() + 5 * 24 * 60 * 60 * 1000) // 5 nights
                 setStartDate(nextWeek)
                 setEndDate(endDate)
+                // Reset to allow new package suggestions
+                packagesSuggestedRef.current = false
               }}
             >
               Next Week (5 Nights)
@@ -1141,7 +1151,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
 
   // Update duration when dates change and auto-suggest packages
   useEffect(() => {
-    if (startDate && endDate) {
+    if (startDate && endDate && !packagesSuggestedRef.current) {
       const newDuration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
       setDuration(newDuration)
       
@@ -1154,10 +1164,11 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         
         if (isFromEstimate && messages.length > 0) {
           // This is from pre-populated estimate data, suggest packages immediately
+          packagesSuggestedRef.current = true
           setTimeout(() => {
             const welcomeBackMessage: Message = {
               role: 'assistant',
-              content: `I've loaded your previous booking for ${duration} ${duration === 1 ? 'night' : 'nights'} from ${format(startDate, 'MMM dd')} to ${format(endDate, 'MMM dd, yyyy')}. Here are the available packages for your stay:`,
+              content: `I've loaded your previous booking for ${newDuration} ${newDuration === 1 ? 'night' : 'nights'} from ${format(startDate, 'MMM dd')} to ${format(endDate, 'MMM dd, yyyy')}. Here are the available packages for your stay:`,
               type: 'text'
             }
             setMessages(prev => [...prev, welcomeBackMessage])
@@ -1168,14 +1179,16 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
           }, 1000)
         } else {
           // This is from user interaction, use normal flow
+          packagesSuggestedRef.current = true
           suggestPackagesAfterDateSelection()
         }
       } else {
         // No estimate data, use normal flow
+        packagesSuggestedRef.current = true
         suggestPackagesAfterDateSelection()
       }
     }
-  }, [startDate, endDate, latestEstimate, messages.length])
+  }, [startDate, endDate, latestEstimate]) // Removed messages.length from dependencies
   
   return (
     <Card className={cn("w-full max-w-2xl mx-auto", className)}>
@@ -1201,6 +1214,10 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
                 setEndDate(null)
                 setDuration(1)
                 setBookingError(null)
+                // Reset refs to allow new package suggestions
+                packagesSuggestedRef.current = false
+                estimateLoadedRef.current = false
+                journeyLoadedRef.current = false
               }}
               className="text-xs"
             >
