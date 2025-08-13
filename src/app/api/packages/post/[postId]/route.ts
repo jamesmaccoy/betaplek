@@ -49,6 +49,18 @@ export async function GET(
       return packageSetting?.customName || null
     }
     
+    // Helper function to check if package is enabled for this post
+    const isPackageEnabledForPost = (packageId: string) => {
+      if (!postData?.packageSettings || !Array.isArray(postData.packageSettings)) {
+        return true // Default to enabled if no settings exist
+      }
+      const packageSetting = postData.packageSettings.find((setting: any) => {
+        const pkgId = typeof setting.package === 'object' ? setting.package.id : setting.package
+        return pkgId === packageId
+      })
+      return packageSetting?.enabled !== false // Default to true if not explicitly set to false
+    }
+    
     // Combine database packages with RevenueCat products
     const allPackages = [
       ...dbPackages.docs.map(pkg => {
@@ -64,7 +76,7 @@ export async function GET(
           maxNights: pkg.maxNights,
           revenueCatId: pkg.revenueCatId,
           baseRate: pkg.baseRate,
-          isEnabled: pkg.isEnabled,
+          isEnabled: pkg.isEnabled && isPackageEnabledForPost(pkg.id),
           features: pkg.features?.map((f: any) => f.feature) || [],
           source: 'database',
           hasCustomName: !!customName
@@ -83,13 +95,13 @@ export async function GET(
           maxNights: product.period === 'hour' ? 1 : product.periodCount,
           revenueCatId: product.id,
           baseRate: product.price,
-          isEnabled: product.isEnabled,
+          isEnabled: product.isEnabled && isPackageEnabledForPost(product.id),
           features: product.features,
           source: 'revenuecat',
           hasCustomName: !!customName
         }
       })
-    ]
+    ].filter(pkg => pkg.isEnabled) // Only include enabled packages
 
     const response = NextResponse.json({
       packages: allPackages,

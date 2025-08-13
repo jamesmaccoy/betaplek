@@ -33,6 +33,18 @@ export async function POST(request: NextRequest) {
       console.log('Failed to fetch post data:', error)
     }
 
+    // Helper function to check if package is enabled for this post
+    const isPackageEnabledForPost = (packageId: string) => {
+      if (!postData?.packageSettings || !Array.isArray(postData.packageSettings)) {
+        return true // Default to enabled if no settings exist
+      }
+      const packageSetting = postData.packageSettings.find((setting: any) => {
+        const pkgId = typeof setting.package === 'object' ? setting.package.id : setting.package
+        return pkgId === packageId
+      })
+      return packageSetting?.enabled !== false // Default to true if not explicitly set to false
+    }
+
     // First, get all available packages for this post (including RevenueCat)
     try {
       // Get database packages
@@ -60,7 +72,7 @@ export async function POST(request: NextRequest) {
           maxNights: pkg.maxNights,
           revenueCatId: pkg.revenueCatId,
           baseRate: pkg.baseRate,
-          isEnabled: pkg.isEnabled,
+          isEnabled: pkg.isEnabled && isPackageEnabledForPost(pkg.id),
           features: pkg.features?.map((f: any) => f.feature) || [],
           source: 'database'
         })),
@@ -74,11 +86,11 @@ export async function POST(request: NextRequest) {
           maxNights: product.period === 'hour' ? 1 : product.periodCount,
           revenueCatId: product.id,
           baseRate: product.price,
-          isEnabled: product.isEnabled,
+          isEnabled: product.isEnabled && isPackageEnabledForPost(product.id),
           features: product.features,
           source: 'revenuecat'
         }))
-      ]
+      ].filter(pkg => pkg.isEnabled) // Only include enabled packages
 
       // Find the package by ID (works for both database and RevenueCat packages)
       pkg = allPackages.find((p: any) => p.id === packageType)
@@ -201,7 +213,7 @@ export async function POST(request: NextRequest) {
             minNights: revenueCatProduct.period === 'hour' ? 1 : revenueCatProduct.periodCount,
             maxNights: revenueCatProduct.period === 'hour' ? 1 : revenueCatProduct.periodCount,
             revenueCatId: revenueCatProduct.id,
-            isEnabled: revenueCatProduct.isEnabled,
+            isEnabled: revenueCatProduct.isEnabled && isPackageEnabledForPost(revenueCatProduct.id),
             features: revenueCatProduct.features,
             source: 'revenuecat'
           }
