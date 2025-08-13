@@ -13,16 +13,17 @@ import { Badge } from "@/components/ui/badge";
 interface Package {
   id: string;
   name: string;
-  description?: string;
+  description: string;
   isEnabled: boolean;
   customName?: string;
   minNights: number;
   maxNights: number;
   revenueCatId?: string;
   baseRate?: number;
-  category?: string;
+  category: 'standard' | 'hosted' | 'addon' | 'special';
   multiplier: number;
-  features?: Array<{ feature: string }>;
+  features: string[];
+  entitlement?: 'standard' | 'pro';
 }
 
 interface AvailableProduct {
@@ -100,6 +101,7 @@ export default function PackageDashboard({ postId }: PackageDashboardProps) {
             category: pkg.category,
             multiplier: pkg.multiplier || 1,
             features: pkg.features || [],
+            entitlement: pkg.entitlement || 'standard',
           };
         })
       );
@@ -245,6 +247,7 @@ export default function PackageDashboard({ postId }: PackageDashboardProps) {
             maxNights: pkg.maxNights,
             baseRate: pkg.baseRate,
             isEnabled: pkg.isEnabled,
+            entitlement: pkg.entitlement,
           }),
         });
         
@@ -266,6 +269,7 @@ export default function PackageDashboard({ postId }: PackageDashboardProps) {
             package: pkg.id,
             enabled: pkg.isEnabled,
             customName: pkg.customName,
+            entitlement: pkg.entitlement,
           })),
         }),
       });
@@ -487,6 +491,25 @@ export default function PackageDashboard({ postId }: PackageDashboardProps) {
                 </div>
                 
                 <div>
+                  <label className="text-xs font-medium text-gray-600">Entitlement</label>
+                  <Select
+                    value={pkg.entitlement || 'standard'}
+                    onValueChange={value => handleFieldChange(pkg.id, 'entitlement', value)}
+                    disabled={!pkg.isEnabled}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="standard">Standard</SelectItem>
+                      <SelectItem value="pro">Pro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
                   <label className="text-xs font-medium text-gray-600">Multiplier</label>
                   <Input
                     type="number"
@@ -499,9 +522,7 @@ export default function PackageDashboard({ postId }: PackageDashboardProps) {
                     className="mt-1"
                   />
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3">
+                
                 <div>
                   <label className="text-xs font-medium text-gray-600">Min Nights</label>
                   <Input
@@ -513,18 +534,18 @@ export default function PackageDashboard({ postId }: PackageDashboardProps) {
                     className="mt-1"
                   />
                 </div>
-                
-                <div>
-                  <label className="text-xs font-medium text-gray-600">Max Nights</label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={pkg.maxNights}
-                    onChange={e => handleFieldChange(pkg.id, 'maxNights', parseInt(e.target.value) || 7)}
-                    disabled={!pkg.isEnabled}
-                    className="mt-1"
-                  />
-                </div>
+              </div>
+              
+              <div>
+                <label className="text-xs font-medium text-gray-600">Max Nights</label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={pkg.maxNights}
+                  onChange={e => handleFieldChange(pkg.id, 'maxNights', parseInt(e.target.value) || 7)}
+                  disabled={!pkg.isEnabled}
+                  className="mt-1"
+                />
               </div>
               
               <div>

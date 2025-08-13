@@ -398,6 +398,7 @@ export interface Package {
       }[]
     | null;
   category?: ('standard' | 'hosted' | 'addon' | 'special') | null;
+  entitlement?: ('standard' | 'pro') | null;
   minNights?: number | null;
   maxNights?: number | null;
   revenueCatId?: string | null;
@@ -1503,6 +1504,7 @@ export interface PackagesSelect<T extends boolean = true> {
         id?: T;
       };
   category?: T;
+  entitlement?: T;
   minNights?: T;
   maxNights?: T;
   revenueCatId?: T;
