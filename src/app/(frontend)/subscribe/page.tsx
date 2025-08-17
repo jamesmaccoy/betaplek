@@ -176,7 +176,7 @@ export default function SubscribePage() {
         return (
           <div 
             className="mt-16 pt-16 pb-16 md:border-t border-border bg-cover bg-center relative rounded-lg shadow-md"
-            style={{ backgroundImage: `url('https://www.thanks.digital/_next/image?url=https%3A%2F%2Fwww.thanks.digital%2Fapi%2Fmedia%2Ffile%2Fsusu.gif%3F2025-04-13T11%3A15%3A26.277Z&w=1920&q=100')` }}
+            style={{ backgroundImage: `url('https://www.simpleplek.co.za/api/media/file/Gallery%20shack%205.jpg.jpg')` }}
           >
             <div className="absolute inset-0 bg-black/30 rounded-lg"></div> 
 
