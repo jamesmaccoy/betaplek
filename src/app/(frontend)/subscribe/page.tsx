@@ -110,8 +110,7 @@ export default function SubscribePage() {
         </div>
       )}
       <div className="mx-auto max-w-2xl text-center mb-12 sm:mb-16">
-        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">A digital design partner for
-        startups and brave businesses</h1>
+        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">Stay at a self built plek</h1>
         <p className="mt-4 text-lg leading-8 text-muted-foreground">
         Become a member to see the calendar</p>
       </div>
@@ -184,7 +183,7 @@ export default function SubscribePage() {
             <div className="relative max-w-4xl mx-auto px-4 flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12"> 
               
               <div className="text-center lg:text-left text-white">
-                 <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Host a dental practice</h2>
+                 <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Host a plek</h2>
               </div>
 
               <div className="w-full max-w-md">
@@ -205,7 +204,7 @@ export default function SubscribePage() {
                     onClick={() => handlePurchase(professional_plan)}
                     className="mt-8 block w-full rounded-md bg-secondary px-3.5 py-2.5 text-center text-sm font-semibold text-secondary-foreground shadow-sm hover:bg-secondary/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                   >
-                    Host a practice
+                    Host a plek
                   </button>
                 </div>
               </div>
