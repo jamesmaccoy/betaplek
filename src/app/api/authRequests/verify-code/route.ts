@@ -39,11 +39,16 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: 'User not found' }, { status: 404 })
 		}
 
+		const userDoc = users.docs?.[0]
+		if (!userDoc) {
+			return NextResponse.json({ error: 'User not found' }, { status: 404 })
+		}
+
 		// Set a temporary password and perform a standard login to obtain a session token
 		const tempPassword = randomUUID()
 		await payload.update({
 			collection: 'users',
-			id: users.docs[0].id,
+			id: userDoc.id,
 			data: { password: tempPassword },
 			overrideAccess: true,
 		})

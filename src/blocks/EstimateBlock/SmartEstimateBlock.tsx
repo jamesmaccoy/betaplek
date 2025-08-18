@@ -248,8 +248,8 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   }, [customerEntitlement])
 
   // Load latest estimate for the user
-  const loadLatestEstimate = async () => {
-    if (!isLoggedIn || estimateLoadedRef.current) return
+  const loadLatestEstimate = async (force: boolean = false) => {
+    if (!isLoggedIn || (estimateLoadedRef.current && !force)) return
     
     try {
       estimateLoadedRef.current = true
@@ -258,7 +258,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         const estimate = await response.json()
         if (estimate) {
           setLatestEstimate(estimate)
-          // Removed excessive logging
           
           // Pre-populate dates if available
           if (estimate.fromDate && estimate.toDate) {
@@ -269,7 +268,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
             setStartDate(from)
             setEndDate(to)
             setDuration(calcDuration)
-            // Removed excessive logging
           }
         }
       }
@@ -311,6 +309,14 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       loadLatestEstimate()
     }
   }, [isLoggedIn]) // Removed postTitle and postId from dependencies to prevent infinite loops
+
+  // Refetch latest estimate when post changes
+  useEffect(() => {
+    estimateLoadedRef.current = false
+    if (isLoggedIn && postId) {
+      loadLatestEstimate(true)
+    }
+  }, [postId, isLoggedIn])
 
   // Separate effect to handle initial message after estimate loads
   useEffect(() => {
