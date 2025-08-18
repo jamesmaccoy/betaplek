@@ -61,8 +61,25 @@ export async function POST(request: NextRequest) {
 			requestToken,
 		)}`
 
-		// TODO: Send email containing `magicLink` and `code` via your email provider
-		// For now we return minimal info required by the client to proceed with OTP step
+		// Attempt to send email via Payload's email adapter
+		try {
+			await payload.sendEmail({
+				to: email,
+				subject: 'Your login link and code',
+				html: `
+					<h2>Sign in to Simple Plek</h2>
+					<p>Click the magic link below to sign in:</p>
+					<p><a href="${magicLink}">Sign in</a></p>
+					<hr />
+					<p>Or enter this 6-digit code: <strong style="font-family:monospace;">${code}</strong></p>
+					<p>This link and code expire in ${expiresInMinutes} minutes.</p>
+				`,
+				text: `Sign in: ${magicLink}\nOr use code: ${code}\nThis link and code expire in ${expiresInMinutes} minutes.`,
+			})
+		} catch (e) {
+			console.warn('Magic email send failed (continuing):', e)
+		}
+
 		return NextResponse.json({
 			authRequestId: requestToken,
 			email,
