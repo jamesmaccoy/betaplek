@@ -23,7 +23,7 @@ import {
   Star,
   Loader2
 } from 'lucide-react'
-import { Mic, MicOff, Wand2 } from 'lucide-react'
+import { Mic, MicOff, Wand2, RotateCcw } from 'lucide-react'
 import { useRevenueCat } from "@/providers/RevenueCat"
 import { Purchases, type Package as RevenueCatPackage } from "@revenuecat/purchases-js"
 import { 
@@ -54,7 +54,7 @@ interface PackagePreview {
 }
 
 export default function ManagePackagesPage({ postId }: { postId: string }) {
-  const { packages, loading, error, setPackages } = useHostPackages(postId);
+  const { packages, loading, error, setPackages, reload } = useHostPackages(postId);
 
   // Voice-driven suggestions state
   const [suggestText, setSuggestText] = useState('')
@@ -136,6 +136,13 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
     if (/gathering|offsite|event|team|monthly workspace/.test(t)) picks.add('gathering_monthly')
     if (/per night|nightly|\bnight(s)?\b/.test(t)) picks.add('per_night')
     return PACKAGE_TEMPLATES.filter(tpl => picks.has(tpl.revenueCatId))
+  }
+
+  const handleStartOver = async () => {
+    if (isListening) stopListening()
+    setSuggestText('')
+    setSuggestions([])
+    await reload()
   }
 
   if (loading) {
@@ -259,6 +266,13 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
           );
         })}
       </div>
+
+      <div className="mt-8 flex justify-end">
+        <Button variant="outline" onClick={handleStartOver}>
+          <RotateCcw className="h-4 w-4 mr-2" />
+          Start Over
+        </Button>
+      </div>
     </div>
   );
 }
@@ -268,22 +282,30 @@ function useHostPackages(postId: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchPackages = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/packages?where[post][equals]=${postId}`)
+      const data = await res.json()
+      setPackages(data.docs || [])
+      setLoading(false)
+    } catch (err) {
+      setError('Failed to load packages')
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!postId) return;
-    setLoading(true);
-    fetch(`/api/packages?where[post][equals]=${postId}`)
-      .then(res => res.json())
-      .then(data => {
-        setPackages(data.docs || []);
-        setLoading(false);
-      })
-      .catch(err => {
-        setError('Failed to load packages');
-        setLoading(false);
-      });
+    fetchPackages()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId]);
 
-  return { packages, loading, error, setPackages };
+  const reload = async () => {
+    await fetchPackages()
+  }
+
+  return { packages, loading, error, setPackages, reload };
 }
 
 const PACKAGE_TEMPLATES = BASE_PACKAGE_TEMPLATES.map(t => ({

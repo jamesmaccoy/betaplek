@@ -56,8 +56,8 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
       try {
         const fetchedOfferings = await Purchases.getSharedInstance().getOfferings()
         console.log('Offerings:', fetchedOfferings)
-        // Only show cleaning, bottle of wine, and guided hike
-        const allowed = ['cleaning', 'Bottle_wine', 'Hike']
+        // Only show bathBomb, cleaning, bottle of wine, and guided hike
+        const allowed = [ 'bathBomb', 'cleaning', 'Bottle_wine', 'Hike']
         let allPackages: Package[] = []
         // Prefer the 'add_ons' offering if it exists
         const addOnsOffering = fetchedOfferings.all["add_ons"];
