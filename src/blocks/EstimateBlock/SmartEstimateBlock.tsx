@@ -190,6 +190,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   const [isBooking, setIsBooking] = useState(false)
   const [bookingError, setBookingError] = useState<string | null>(null)
   const [offerings, setOfferings] = useState<RevenueCatPackage[]>([])
+  const [isCreatingEstimate, setIsCreatingEstimate] = useState(false)
   
   // Latest estimate state
   const [latestEstimate, setLatestEstimate] = useState<any>(null)
@@ -556,6 +557,56 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
 
     const booking = await bookingResponse.json()
     return booking
+  }
+
+  // Navigate to estimate details (latest or create then navigate)
+  const handleGoToEstimate = async () => {
+    if (!isLoggedIn) {
+      router.push('/login')
+      return
+    }
+    try {
+      setIsCreatingEstimate(true)
+      // If we already loaded a latest estimate for this post, use it
+      if (latestEstimate && (typeof latestEstimate.post === 'string' ? latestEstimate.post === postId : latestEstimate.post?.id === postId)) {
+        router.push(`/estimate/${latestEstimate.id}`)
+        return
+      }
+
+      // Otherwise, create a minimal estimate and navigate to it
+      const from = startDate ? startDate.toISOString() : new Date().toISOString()
+      const to = endDate
+        ? endDate.toISOString()
+        : new Date(Date.now() + (duration || 1) * 24 * 60 * 60 * 1000).toISOString()
+      const multiplier = selectedPackage?.multiplier ?? 1
+      const total = calculateTotal(baseRate, duration || 1, multiplier)
+
+      const resp = await fetch('/api/estimates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postId,
+          fromDate: from,
+          toDate: to,
+          guests: [],
+          title: `Estimate for ${postId}`,
+          packageType: selectedPackage?.revenueCatId || selectedPackage?.id || 'standard',
+          total
+        })
+      })
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}))
+        throw new Error(err?.error || 'Failed to create estimate')
+      }
+      const created = await resp.json()
+      // Refresh latest estimate state for future actions
+      await loadLatestEstimate(true)
+      router.push(`/estimate/${created.id}`)
+    } catch (e) {
+      console.error('Failed navigating to estimate:', e)
+    } finally {
+      setIsCreatingEstimate(false)
+    }
   }
   
   // Load packages - simplified to prevent infinite loops
@@ -1316,6 +1367,17 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
                       <a href="/login">Log In to Book</a>
                     </Button>
                   )}
+                  {/* Secondary action to create booking via estimate page */}
+                  <Button size="sm" variant="ghost" className="mt-1 ml-2" onClick={handleGoToEstimate} disabled={isCreatingEstimate}>
+                    {isCreatingEstimate ? (
+                      <>
+                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                        Opening...
+                      </>
+                    ) : (
+                      'Share Estimate'
+                    )}
+                  </Button>
                 </div>
               </div>
               {bookingError && (
