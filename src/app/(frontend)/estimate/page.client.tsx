@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils"
 import { useUserContext } from '@/context/UserContext'
 import { useSubscription } from '@/hooks/useSubscription'
 import { AIAssistant } from '@/components/AIAssistant/AIAssistant'
+import { formatAmountToZAR } from "@/lib/currency"
 
 // Add type for RevenueCat error with code
 interface RevenueCatError extends Error {
@@ -345,7 +346,7 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
   // Format price with proper decimal places
   const formatPrice = (price: number | null) => {
     if (price === null) return "N/A"
-    return `R${price.toFixed(2)}`
+    return formatAmountToZAR(price)
   }
 
   useEffect(() => {

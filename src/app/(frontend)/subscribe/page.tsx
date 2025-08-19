@@ -6,6 +6,7 @@ import { useRevenueCat } from '@/providers/RevenueCat'
 import { useSubscription } from '@/hooks/useSubscription'
 import { Purchases, Package, PurchasesError, ErrorCode, Offering } from '@revenuecat/purchases-js'
 import { useRouter } from 'next/navigation'
+import { getZARPriceFromProduct } from '@/lib/currency'
 
 export default function SubscribePage() {
   const router = useRouter()
@@ -123,7 +124,7 @@ export default function SubscribePage() {
               <h2 className="text-lg font-semibold leading-8 text-foreground">{product.displayName}</h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">{product.description || 'Access all standard features.'}</p>
               <p className="mt-6 flex items-baseline gap-x-1">
-                <span className="text-4xl font-bold tracking-tight text-foreground">{product.currentPrice.formattedPrice}</span>
+                <span className="text-4xl font-bold tracking-tight text-foreground">{getZARPriceFromProduct(product)}</span>
                 <span className="text-sm font-semibold leading-6 text-muted-foreground">/month</span>
               </p>
               <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-muted-foreground xl:mt-10">
@@ -151,7 +152,7 @@ export default function SubscribePage() {
               <h2 className="text-lg font-semibold leading-8 text-foreground">{product.displayName}</h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">{product.description || 'Get the best value with annual billing.'}</p>
               <p className="mt-6 flex items-baseline gap-x-1">
-                <span className="text-4xl font-bold tracking-tight text-foreground">{product.currentPrice.formattedPrice}</span>
+                <span className="text-4xl font-bold tracking-tight text-foreground">{getZARPriceFromProduct(product)}</span>
                 <span className="text-sm font-semibold leading-6 text-muted-foreground">/year</span>
               </p>
               <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-muted-foreground xl:mt-10">
@@ -191,7 +192,7 @@ export default function SubscribePage() {
                   <h3 className="text-lg font-semibold leading-8 text-foreground">{product.displayName}</h3>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">{product.description || 'Advanced features for professionals.'}</p>
                   <p className="mt-6 flex items-baseline gap-x-1">
-                    <span className="text-4xl font-bold tracking-tight text-foreground">{product.currentPrice.formattedPrice}</span>
+                    <span className="text-4xl font-bold tracking-tight text-foreground">{getZARPriceFromProduct(product)}</span>
                     <span className="text-sm font-semibold leading-6 text-muted-foreground">/term</span>
                   </p>
                   <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-muted-foreground xl:mt-10">
