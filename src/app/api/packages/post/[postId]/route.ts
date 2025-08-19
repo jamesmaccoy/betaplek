@@ -49,16 +49,32 @@ export async function GET(
       return packageSetting?.customName || null
     }
     
-    // Helper function to check if package is enabled for this post
-    const isPackageEnabledForPost = (packageId: string) => {
+    // Helper function to check if DB package is enabled for this post
+    const isDbPackageEnabledForPost = (packageId: string) => {
       if (!postData?.packageSettings || !Array.isArray(postData.packageSettings)) {
-        return true // Default to enabled if no settings exist
+        return true // Default to enabled if no settings exist for DB packages
       }
       const packageSetting = postData.packageSettings.find((setting: any) => {
         const pkgId = typeof setting.package === 'object' ? setting.package.id : setting.package
         return pkgId === packageId
       })
+      // If not configured, default to true for DB packages
+      if (!packageSetting) return true
       return packageSetting?.enabled !== false // Default to true if not explicitly set to false
+    }
+    
+    // Helper to check if a RevenueCat product is enabled for this post
+    const isRevenueCatEnabledForPost = (productId: string) => {
+      if (!postData?.packageSettings || !Array.isArray(postData.packageSettings)) {
+        return false // Default to disabled unless explicitly configured
+      }
+      const packageSetting = postData.packageSettings.find((setting: any) => {
+        const pkgId = typeof setting.package === 'object' ? setting.package.id : setting.package
+        return pkgId === productId
+      })
+      // Only enabled if explicitly present and not disabled
+      if (!packageSetting) return false
+      return packageSetting?.enabled !== false
     }
     
     // Combine database packages with RevenueCat products
@@ -76,7 +92,7 @@ export async function GET(
           maxNights: pkg.maxNights,
           revenueCatId: pkg.revenueCatId,
           baseRate: pkg.baseRate,
-          isEnabled: pkg.isEnabled && isPackageEnabledForPost(pkg.id),
+          isEnabled: pkg.isEnabled && isDbPackageEnabledForPost(pkg.id),
           features: pkg.features?.map((f: any) => f.feature) || [],
           source: 'database',
           hasCustomName: !!customName
@@ -95,7 +111,7 @@ export async function GET(
           maxNights: product.period === 'hour' ? 1 : product.periodCount,
           revenueCatId: product.id,
           baseRate: product.price,
-          isEnabled: product.isEnabled && isPackageEnabledForPost(product.id),
+          isEnabled: product.isEnabled && isRevenueCatEnabledForPost(product.id),
           features: product.features,
           source: 'revenuecat',
           hasCustomName: !!customName

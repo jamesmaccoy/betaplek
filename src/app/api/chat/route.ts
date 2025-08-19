@@ -157,7 +157,7 @@ ${packagesInfo.filter(pkg => pkg.isEnabled).map(pkg =>
 
 ENTITLEMENT INFORMATION:
 - Customer has ${userContext.currentBooking?.customerEntitlement} entitlement
-- Pro-only packages (like "🏘️ Starter Pack", hosted experiences) require pro subscription
+- Pro-only packages (like "🏘️ Annual agreement", hosted experiences) require pro subscription
 - Standard packages are available to all customers
 - Guests can see all packages but need to log in to book
 
@@ -167,7 +167,7 @@ INSTRUCTIONS:
 3. If dates are not selected, guide users to select dates first
 4. Recommend packages based on duration and customer needs
 5. Explain package benefits clearly
-6. For pro-only packages (like "🏘️ Starter Pack"), mention they require a pro subscription if user isn't pro
+6. For pro-only packages (like "🏘️ Annual agreement"), mention they require a pro subscription if user isn't pro
 7. Help with date selection and duration planning when needed
 8. Provide pricing estimates when relevant
 9. Guide users through the booking process step by step
