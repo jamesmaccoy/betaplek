@@ -34,6 +34,7 @@ import {
   getDisplayDescription,
   getEffectiveMultiplier,
   getEffectiveFeatures,
+  getDefaultPackageTitle,
   type HostPackageConfig,
   type BasePackageConfig,
   type PackageCategory
@@ -58,6 +59,7 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
   // Voice-driven suggestions state
   const [suggestText, setSuggestText] = useState('')
   const [suggestions, setSuggestions] = useState<typeof PACKAGE_TEMPLATES>([])
+  const [suggesting, setSuggesting] = useState(false)
   const { startListening, stopListening, isListening, micError } = useSpeechToText({
     onInterim: (text) => setSuggestText(text),
     onFinal: (text) => {
@@ -96,19 +98,44 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
     }
   };
 
+  const mapIdsToTemplates = (ids: string[]) => {
+    const idSet = new Set(ids)
+    return PACKAGE_TEMPLATES.filter(t => idSet.has(t.revenueCatId))
+  }
+
+  const handleSuggest = async (text: string) => {
+    const trimmed = text.trim()
+    if (!trimmed) {
+      setSuggestions([])
+      return
+    }
+    try {
+      setSuggesting(true)
+      const res = await fetch('/api/packages/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: trimmed, postId, hostContext: true })
+      })
+      const data = await res.json()
+      const ids: string[] = Array.isArray(data.recommendations) ? data.recommendations : []
+      const mapped = mapIdsToTemplates(ids)
+      setSuggestions(mapped.length ? mapped : getSuggestionsFromText(trimmed))
+    } catch (e) {
+      setSuggestions(getSuggestionsFromText(trimmed))
+    } finally {
+      setSuggesting(false)
+    }
+  }
+
   const getSuggestionsFromText = (text: string) => {
     const t = text.toLowerCase()
     const picks = new Set<string>()
-    if (/\bweek(ly)?\b/.test(t)) picks.add('weekly_customer')
-    if (/(three|3).*night|night(s)?.*(three|3)/.test(t)) picks.add('three_nights_customer')
-    if (/\bluxury\b/.test(t)) picks.add('per_night_luxury')
-    if (/per night|nightly|\bnight(s)?\b/.test(t)) picks.add('per_night_customer')
-    const list = PACKAGE_TEMPLATES.filter(tpl => picks.has(tpl.revenueCatId))
-    return list.length > 0 ? list : PACKAGE_TEMPLATES.filter(tpl => tpl.revenueCatId === 'per_night_customer')
-  }
-
-  const handleSuggest = (text: string) => {
-    setSuggestions(getSuggestionsFromText(text))
+    if (/\bweek(ly)?\b/.test(t)) picks.add('Weekly')
+    if (/(three|3).*night|night(s)?.*(three|3)/.test(t)) picks.add('3nights')
+    if (/\bluxury\b|hosted|concierge/.test(t)) picks.add('per_night_luxury')
+    if (/gathering|offsite|event|team|monthly workspace/.test(t)) picks.add('gathering_monthly')
+    if (/per night|nightly|\bnight(s)?\b/.test(t)) picks.add('per_night')
+    return PACKAGE_TEMPLATES.filter(tpl => picks.has(tpl.revenueCatId))
   }
 
   if (loading) {
@@ -129,7 +156,7 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
       <div className="mb-6">
         <div className="flex gap-2">
           <Input
-            placeholder="Describe the package(s) you want (e.g. 'weekly stay with a luxury option')"
+            placeholder="Describe the package(s) you want (e.g. 'weekly, hosted luxury with concierge')"
             value={suggestText}
             onChange={(e) => setSuggestText(e.target.value)}
             className="flex-1"
@@ -144,8 +171,8 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
           >
             {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
           </Button>
-          <Button type="button" onClick={() => handleSuggest(suggestText)}>
-            <Wand2 className="h-4 w-4 mr-2" />
+          <Button type="button" onClick={() => handleSuggest(suggestText)} disabled={suggesting}>
+            {suggesting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
             Suggest
           </Button>
         </div>
@@ -259,10 +286,7 @@ function useHostPackages(postId: string) {
   return { packages, loading, error, setPackages };
 }
 
-const PACKAGE_TEMPLATES = [
-  { revenueCatId: 'per_night_customer', defaultName: 'Per Night (Customer)' },
-  { revenueCatId: 'weekly_customer', defaultName: 'Weekly (Customer)' },
-  { revenueCatId: 'three_nights_customer', defaultName: '3 Nights (Customer)' },
-  { revenueCatId: 'per_night_luxury', defaultName: 'Per Night (Luxury)' },
-  // ...add all your templates
-]; 
+const PACKAGE_TEMPLATES = BASE_PACKAGE_TEMPLATES.map(t => ({
+  revenueCatId: t.revenueCatId,
+  defaultName: getDefaultPackageTitle(t),
+})) 

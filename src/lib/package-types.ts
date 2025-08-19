@@ -621,7 +621,7 @@ export function getEffectiveFeatures(hostPackage: HostPackageConfig): PackageFea
   return hostPackage.hostFeatureOverrides ?? hostPackage.features
 }
 
-function getDefaultPackageTitle(pkg: BasePackageConfig): string {
+export function getDefaultPackageTitle(pkg: BasePackageConfig): string {
   const categoryMap = {
     standard: 'Standard',
     hosted: 'Hosted',
