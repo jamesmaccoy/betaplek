@@ -49,7 +49,7 @@ export async function GET(
       return packageSetting?.customName || null
     }
     
-    // Helper function to check if DB package is enabled for this post
+    // Helper function to check DB package is enabled for this post
     const isDbPackageEnabledForPost = (packageId: string) => {
       if (!postData?.packageSettings || !Array.isArray(postData.packageSettings)) {
         return true // Default to enabled if no settings exist for DB packages
@@ -76,6 +76,25 @@ export async function GET(
       if (!packageSetting) return false
       return packageSetting?.enabled !== false
     }
+
+    // Convert RevenueCat period to nights
+    const getNightsForProduct = (product: any) => {
+      const count = Number(product.periodCount) || 1
+      switch (product.period) {
+        case 'hour':
+          return 1
+        case 'day':
+          return count
+        case 'week':
+          return count * 7
+        case 'month':
+          return count * 30
+        case 'year':
+          return count * 365
+        default:
+          return count
+      }
+    }
     
     // Combine database packages with RevenueCat products
     const allPackages = [
@@ -100,6 +119,7 @@ export async function GET(
       }),
       ...revenueCatProducts.map(product => {
         const customName = getCustomName(product.id)
+        const nights = getNightsForProduct(product)
         return {
           id: product.id,
           name: customName || product.title, // Use custom name if available
@@ -107,8 +127,8 @@ export async function GET(
           description: product.description,
           multiplier: 1, // Default multiplier for RevenueCat products
           category: product.category,
-          minNights: product.period === 'hour' ? 1 : product.periodCount,
-          maxNights: product.period === 'hour' ? 1 : product.periodCount,
+          minNights: nights,
+          maxNights: nights,
           revenueCatId: product.id,
           baseRate: product.price,
           isEnabled: product.isEnabled && isRevenueCatEnabledForPost(product.id),
