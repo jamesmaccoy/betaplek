@@ -24,6 +24,15 @@ import {
   Loader2
 } from 'lucide-react'
 import { Mic, MicOff, Wand2, RotateCcw } from 'lucide-react'
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog"
 import { useRevenueCat } from "@/providers/RevenueCat"
 import { Purchases, type Package as RevenueCatPackage } from "@revenuecat/purchases-js"
 import { 
@@ -67,6 +76,12 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
       handleSuggest(text)
     },
   })
+
+  // Self destruct state
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmText, setConfirmText] = useState('')
+  const [destroying, setDestroying] = useState(false)
+  const [destroyError, setDestroyError] = useState<string | null>(null)
 
   // Add or update a package
   const upsertPackage = async (template: any, updates: any = {}) => {
@@ -145,6 +160,37 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
     await reload()
   }
 
+  const handleSelfDestruct = async () => {
+    setDestroyError(null)
+    setDestroying(true)
+    try {
+      // Load all packages for this post
+      const res = await fetch(`/api/packages?where[post][equals]=${postId}`)
+      const data = await res.json()
+      const ids: string[] = (data.docs || []).map((d: any) => d.id)
+      if (!ids.length) {
+        setConfirmOpen(false)
+        setConfirmText('')
+        setDestroying(false)
+        return
+      }
+      const params = new URLSearchParams()
+      ids.forEach(id => params.append('where[id][in][]', id))
+      const del = await fetch(`/api/packages?${params.toString()}`, { method: 'DELETE' })
+      if (!del.ok) {
+        const errJson = await del.json().catch(() => ({}))
+        throw new Error(errJson?.error || 'Failed to delete packages')
+      }
+      await reload()
+      setConfirmOpen(false)
+      setConfirmText('')
+    } catch (e: any) {
+      setDestroyError(e?.message || 'Failed to self destruct')
+    } finally {
+      setDestroying(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 py-10">
@@ -206,8 +252,8 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
                     </div>
                   </div>
                 </Card>
-              )
-            })}
+              )}
+            )}
           </div>
         )}
       </div>
@@ -267,11 +313,41 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
         })}
       </div>
 
-      <div className="mt-8 flex justify-end">
+      <div className="mt-8 flex flex-col gap-3 md:flex-row md:items-center md:justify-end">
         <Button variant="outline" onClick={handleStartOver}>
           <RotateCcw className="h-4 w-4 mr-2" />
           Start Over
         </Button>
+
+        <Dialog open={confirmOpen} onOpenChange={(o) => { setConfirmOpen(o); if (!o) { setConfirmText(''); setDestroyError(null) } }}>
+          <DialogTrigger asChild>
+            <Button variant="destructive" onClick={() => setConfirmOpen(true)}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Self Destruct (Delete All)
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete all packages for this post?</DialogTitle>
+              <DialogDescription>
+                This action will permanently delete all packages for this post. This cannot be undone.
+                Type DELETE to confirm.
+              </DialogDescription>
+            </DialogHeader>
+            {destroyError && <p className="text-sm text-destructive">{destroyError}</p>}
+            <div className="mt-2">
+              <Label htmlFor="confirm">Confirmation</Label>
+              <Input id="confirm" value={confirmText} onChange={(e) => setConfirmText(e.target.value)} placeholder="Type DELETE" />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={destroying}>Cancel</Button>
+              <Button variant="destructive" onClick={handleSelfDestruct} disabled={confirmText !== 'DELETE' || destroying}>
+                {destroying ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                Delete All
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
