@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils"
 import { useUserContext } from '@/context/UserContext'
 import { useSubscription } from '@/hooks/useSubscription'
 import { AIAssistant } from '@/components/AIAssistant/AIAssistant'
-import { formatAmountToZAR } from "@/lib/currency"
+import { formatAmountToZAR, getZARPriceFromRevenueCatProduct, getDualCurrencyPrice } from "@/lib/currency"
 
 // Add type for RevenueCat error with code
 interface RevenueCatError extends Error {

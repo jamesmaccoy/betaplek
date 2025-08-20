@@ -14,17 +14,96 @@ export function formatFormattedPriceToZAR(formattedPrice: string | null | undefi
   return formattedPrice.replace(/^[^\d\-.,\s]+/, 'R')
 }
 
+// Enhanced function for RevenueCat Purchases API v2
 export function getZARPriceFromProduct(product: any): string {
-  // Attempts to derive a ZAR formatted price from a RevenueCat product-like object
-  // Priority: numeric amount if present -> formattedPrice with symbol swap -> fallback
-  const currentPrice = product?.currentPrice
-  const amount = currentPrice?.amount ?? currentPrice?.price ?? product?.price
+  // For RevenueCat Purchases API v2, the price structure has changed
+  // Priority: currentPrice -> price -> fallback
+  
+  // Check for the new API v2 price structure
+  if (product?.currentPrice) {
+    const currentPrice = product.currentPrice
+    
+    // Try to get the amount first
+    if (typeof currentPrice.amount === 'number') {
+      return formatAmountToZAR(currentPrice.amount)
+    }
+    
+    // Try formatted price
+    if (typeof currentPrice.formattedPrice === 'string') {
+      return formatFormattedPriceToZAR(currentPrice.formattedPrice)
+    }
+  }
+  
+  // Fallback to legacy price structure
+  const amount = product?.price
   if (typeof amount === 'number') {
     return formatAmountToZAR(amount)
   }
-  const formatted = currentPrice?.formattedPrice ?? product?.priceString
+  
+  // Try priceString as last resort
+  const formatted = product?.priceString
   if (typeof formatted === 'string') {
     return formatFormattedPriceToZAR(formatted)
   }
+  
   return 'N/A'
+}
+
+// New function specifically for RevenueCat Purchases API v2
+export function getZARPriceFromRevenueCatProduct(product: any): string {
+  if (!product) return 'N/A'
+  
+  // RevenueCat Purchases API v2 has a more structured price object
+  if (product.currentPrice) {
+    const { amount, currencyCode, formattedPrice } = product.currentPrice
+    
+    // If we have a numeric amount, format it as ZAR
+    if (typeof amount === 'number') {
+      return formatAmountToZAR(amount)
+    }
+    
+    // If we have a formatted price, convert the currency symbol
+    if (typeof formattedPrice === 'string') {
+      return formatFormattedPriceToZAR(formattedPrice)
+    }
+  }
+  
+  // Fallback to legacy structure
+  return getZARPriceFromProduct(product)
+}
+
+// Function to convert USD to ZAR (approximate conversion)
+export function convertUSDToZAR(usdAmount: number): number {
+  // Approximate exchange rate (you might want to use a real-time API)
+  const exchangeRate = 18.5 // 1 USD ≈ 18.5 ZAR
+  return usdAmount * exchangeRate
+}
+
+// Function to get both USD and ZAR prices
+export function getDualCurrencyPrice(product: any): { usd: string; zar: string } {
+  if (!product) return { usd: 'N/A', zar: 'N/A' }
+  
+  let usdAmount: number | null = null
+  
+  // Try to get USD amount from RevenueCat product
+  if (product.currentPrice?.amount) {
+    usdAmount = product.currentPrice.amount
+  } else if (product.price) {
+    usdAmount = product.price
+  }
+  
+  if (usdAmount !== null) {
+    const zarAmount = convertUSDToZAR(usdAmount)
+    return {
+      usd: `$${usdAmount.toFixed(2)}`,
+      zar: formatAmountToZAR(zarAmount)
+    }
+  }
+  
+  // Fallback to string conversion
+  const zarPrice = getZARPriceFromRevenueCatProduct(product)
+  return {
+    usd: product.currentPrice?.formattedPrice || product.priceString || 'N/A',
+    zar: zarPrice
+  }
 } 
