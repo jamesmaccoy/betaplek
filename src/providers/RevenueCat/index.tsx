@@ -37,20 +37,11 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           throw new Error('RevenueCat public SDK key is not defined')
         }
 
-        // Configure RevenueCat with user ID or anonymous ID
-        let userId: string
-        if (currentUser?.id) {
-          userId = String(currentUser.id)
-        } else {
-          // Generate an anonymous ID if no user is logged in
-          userId = Purchases.generateRevenueCatAnonymousAppUserId()
-        }
-        
-        // Initialize RevenueCat with the public key and user ID
-        const purchases = Purchases.configure(
-          process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_SDK_KEY,
-          userId
-        )
+        // Configure RevenueCat with the new API v2
+        const purchases = await Purchases.configure({
+          apiKey: process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_SDK_KEY,
+          appUserId: currentUser?.id ? String(currentUser.id) : '', // Let RevenueCat generate anonymous ID if no user
+        })
         console.log('Purchases instance:', purchases)
         
         setIsInitialized(true)
@@ -61,6 +52,7 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           setError(null)
           return
         }
+        
         const info = await purchases.getCustomerInfo()
         console.log('Customer info:', info)
         setCustomerInfo(info)
@@ -82,7 +74,7 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     try {
       setIsLoading(true)
-      const purchases = Purchases.getSharedInstance()
+      const purchases = await Purchases.getSharedInstance()
       const info = await purchases.getCustomerInfo()
       setCustomerInfo(info)
       return info
@@ -99,7 +91,7 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     
     try {
       setIsLoading(true)
-      const purchases = Purchases.getSharedInstance()
+      const purchases = await Purchases.getSharedInstance()
       const info = await purchases.getCustomerInfo()
       setCustomerInfo(info)
       return info

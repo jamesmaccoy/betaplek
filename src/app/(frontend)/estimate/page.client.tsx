@@ -286,7 +286,8 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
   const loadOfferings = async () => {
     setLoadingOfferings(true)
     try {
-      const fetchedOfferings = await Purchases.getSharedInstance().getOfferings()
+      const purchases = await Purchases.getSharedInstance()
+      const fetchedOfferings = await purchases.getOfferings()
       console.log("All Offerings:", fetchedOfferings.all)
       
       // Get the per_night offering specifically
@@ -425,7 +426,8 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
       
       // Process the purchase with better error handling
       try {
-        const purchaseResult = await Purchases.getSharedInstance().purchase({
+        const purchases = await Purchases.getSharedInstance()
+        const purchaseResult = await purchases.purchase({
           rcPackage: bookingPackage,
         })
         

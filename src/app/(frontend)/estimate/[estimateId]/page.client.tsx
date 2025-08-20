@@ -235,7 +235,8 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
   const loadOfferings = async () => {
     setLoadingOfferings(true)
     try {
-      const fetchedOfferings = await Purchases.getSharedInstance().getOfferings()
+      const purchases = await Purchases.getSharedInstance()
+      const fetchedOfferings = await purchases.getOfferings()
       console.log('Offerings:', fetchedOfferings)
       
       // Collect all packages from all offerings instead of just 'per_night'
@@ -362,7 +363,8 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
           
           // Proceed with normal RevenueCat payment flow
           try {
-            const purchaseResult = await Purchases.getSharedInstance().purchase({
+            const purchases = await Purchases.getSharedInstance()
+            const purchaseResult = await purchases.purchase({
               rcPackage: gatheringPackage,
             })
 

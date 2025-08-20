@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Purchases } from '@revenuecat/purchases-js'
+import { Purchases, PurchasesConfig } from '@revenuecat/purchases-js'
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,10 +17,14 @@ export async function GET(request: NextRequest) {
     const decodedPayload = JSON.parse(Buffer.from(payload, 'base64').toString())
     const userId = decodedPayload.id
 
-    // Initialize RevenueCat with the Web Billing API key
+    // Initialize RevenueCat with the Web Billing API key using new API v2
     const apiKey = process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_SDK_KEY;
     if (!apiKey) throw new Error('RevenueCat public API key is missing');
-    const purchases = Purchases.configure(apiKey, userId)
+    
+    const purchases = await Purchases.configure({
+      apiKey: apiKey,
+      appUserId: userId,
+    })
 
     // Get customer info
     const customerInfo = await purchases.getCustomerInfo()
@@ -52,10 +56,9 @@ export async function GET(request: NextRequest) {
     return response
   } catch (error) {
     console.error('Error checking subscription:', error)
-    // Return 200 with hasActiveSubscription: false instead of 500
     return NextResponse.json({ 
       hasActiveSubscription: false,
       error: error instanceof Error ? error.message : 'Unknown error'
-    })
+    }, { status: 500 })
   }
 } 

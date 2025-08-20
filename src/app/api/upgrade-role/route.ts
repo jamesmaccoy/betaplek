@@ -1,32 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPayload } from 'payload'
-import configPromise from '@payload-config'
+import payload from 'payload'
 import { Purchases } from '@revenuecat/purchases-js'
 
 export async function POST(request: NextRequest) {
   try {
-    const payload = await getPayload({ config: configPromise })
-    
-    // Get the user from the auth token
+    const { targetRole } = await request.json()
+
+    // Get user from auth token
     const authCookie = request.cookies.get('payload-token')
     if (!authCookie?.value) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
     }
 
     const token = authCookie.value
-    const [header, payloadToken, signature] = token.split('.')
-    if (!payloadToken) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
-    }
-    
-    const decodedPayload = JSON.parse(Buffer.from(payloadToken, 'base64').toString())
+    const [header, payloadData, signature] = token.split('.')
+    if (!payloadData) throw new Error('Invalid token: missing payload')
+    const decodedPayload = JSON.parse(Buffer.from(payloadData, 'base64').toString())
     const userId = decodedPayload.id
 
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID not found in token' }, { status: 401 })
-    }
-
-    // Get the current user from the database
+    // Get user from database
     const user = await payload.findByID({
       collection: 'users',
       id: userId,
@@ -36,19 +28,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Get the requested role from the request body
-    const { targetRole } = await request.json()
-    
-    if (!targetRole || targetRole !== 'host') {
+    // Validate target role
+    const validRoles = ['host', 'admin']
+    if (!validRoles.includes(targetRole)) {
       return NextResponse.json({ 
-        error: 'Invalid target role. Must be "host"' 
-      }, { status: 400 })
-    }
-
-    // Check if user already has the target role
-    if (user.role?.includes(targetRole)) {
-      return NextResponse.json({ 
-        message: `User already has ${targetRole} role`,
+        error: 'Invalid target role. Must be one of: ' + validRoles.join(', '),
         currentRoles: user.role 
       })
     }
@@ -62,7 +46,10 @@ export async function POST(request: NextRequest) {
         }, { status: 500 })
       }
 
-      const purchases = Purchases.configure(apiKey, userId)
+      const purchases = await Purchases.configure({
+        apiKey: apiKey,
+        appUserId: userId,
+      })
       const customerInfo = await purchases.getCustomerInfo()
       
       // Check for active entitlements
@@ -117,9 +104,9 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Role upgrade error:', error)
+    console.error('Error upgrading role:', error)
     return NextResponse.json({ 
-      error: 'Internal server error',
+      error: 'Failed to upgrade role',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }

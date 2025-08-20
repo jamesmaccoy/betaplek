@@ -353,7 +353,8 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
 
   const loadOfferings = async () => {
     try {
-      const fetchedOfferings = await Purchases.getSharedInstance().getOfferings()
+      const purchases = await Purchases.getSharedInstance()
+      const fetchedOfferings = await purchases.getOfferings()
       
       // Collect all packages from all offerings
       const allPackages: RevenueCatPackage[] = []
@@ -422,7 +423,8 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       if (revenueCatPackage) {
         
         try {
-          const purchaseResult = await Purchases.getSharedInstance().purchase({
+          const purchases = await Purchases.getSharedInstance()
+          const purchaseResult = await purchases.purchase({
             rcPackage: revenueCatPackage,
           })
           

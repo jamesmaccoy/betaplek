@@ -35,7 +35,8 @@ export default function SubscribePage() {
     try {
       console.log('RevenueCat API Key:', process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_SDK_KEY)
       console.log('Current User:', currentUser)
-      const fetchedOfferings = await Purchases.getSharedInstance().getOfferings()
+      const purchases = await Purchases.getSharedInstance()
+      const fetchedOfferings = await purchases.getOfferings()
       console.log("Fetched Offerings Object:", fetchedOfferings)
       if (fetchedOfferings.all) {
         setOfferings(Object.values(fetchedOfferings.all))
@@ -58,7 +59,8 @@ export default function SubscribePage() {
     }
     try {
       setError(null)
-      await Purchases.getSharedInstance().purchase({
+      const purchases = await Purchases.getSharedInstance()
+      await purchases.purchase({
         rcPackage: pkg
       })
       router.push('/admin')
