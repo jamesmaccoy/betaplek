@@ -69,9 +69,9 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
       maxNights: 1,
       multiplier: 1.0,
       features: [
-        "Standard accommodation",
-        "Basic amenities",
-        "Self-service"
+        "Wifi",
+        "Cleaning",
+        "Security"
       ]
     },
     {
@@ -82,9 +82,9 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
       maxNights: 3,
       multiplier: 0.9,
       features: [
-        "Standard accommodation",
-        "Basic amenities",
-        "Self-service",
+        "Wifi",
+        "Cleaning",
+        "Security",
         "10% discount on total"
       ]
     },
@@ -96,9 +96,9 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
       maxNights: 7,
       multiplier: 0.8,
       features: [
-        "Standard accommodation",
-        "Basic amenities",
-        "Self-service",
+        "Wifi",
+        "Cleaning",
+        "Security",
         "20% discount on total"
       ]
     },
@@ -110,9 +110,9 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
       maxNights: 13,
       multiplier: 0.7,
       features: [
-        "Standard accommodation",
-        "Basic amenities",
-        "Self-service",
+        "Wifi",
+        "Cleaning",
+        "Security",
         "30% discount on total",
         "Extended stay benefits"
       ]
@@ -125,9 +125,9 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
       maxNights: 28,
       multiplier: 0.5,
       features: [
-        "Standard accommodation",
-        "Basic amenities",
-        "Self-service",
+        "Wifi",
+        "Cleaning",
+        "Security",
         "50% discount on total",
         "Extended stay benefits",
         "Priority booking for future stays"
@@ -141,9 +141,9 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
       maxNights: 365,
       multiplier: 0.7,
       features: [
-        "Standard accommodation",
-        "Basic amenities",
-        "Self-service",
+        "wifi",
+        "cleaning",
+        "Security",
         "30% discount on total"
       ]
     }
@@ -161,9 +161,10 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
       description: "Premium nightly rate",
       multiplier: 1.5,
       features: [
-        "Premium accommodation",
-        "Enhanced amenities",
-        "Priority service"
+        "all inclusive",
+        "Daily hike",
+        "Day lunch",
+        "Wine sommelier"
       ],
       revenueCatId: "per_night_luxury"
     },
@@ -177,10 +178,10 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
       description: "Premium 3-night experience",
       multiplier: 1.4,
       features: [
-        "Premium accommodation",
-        "Dedicated host",
-        "Enhanced amenities",
-        "Priority service"
+        "all inclusive",
+        "Daily hike",
+        "Day lunch",
+        "Wine sommelier"
       ],
       revenueCatId: "hosted3nights"
     },
@@ -194,10 +195,10 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
       description: "Premium week-long experience",
       multiplier: 1.3,
       features: [
-        "Premium accommodation",
-        "Dedicated host",
-        "Enhanced amenities",
-        "Priority service",
+        "all inclusive",
+        "Daily hike",
+        "Day lunch",
+        "Wine sommelier",
         "15% discount on total"
       ],
       revenueCatId: "hosted7nights"
