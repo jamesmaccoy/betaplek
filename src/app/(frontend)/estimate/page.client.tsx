@@ -22,12 +22,7 @@ interface RevenueCatError extends Error {
   code?: ErrorCode;
 }
 
-// Add type for RevenueCat product with additional properties
-interface RevenueCatProduct extends Product {
-  price?: number;
-  priceString?: string;
-  currencyCode?: string;
-}
+// Remove the problematic interface and use proper type casting
 
 export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration = 'N/A' }) {
   const router = useRouter()
@@ -297,8 +292,8 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
         console.log("Per Night packages:", perNightOffering.availablePackages.map(pkg => ({
           identifier: pkg.webBillingProduct?.identifier,
           product: pkg.webBillingProduct,
-          priceString: (pkg.webBillingProduct as RevenueCatProduct)?.priceString,
-          price: (pkg.webBillingProduct as RevenueCatProduct)?.price
+          priceString: (pkg.webBillingProduct as any)?.priceString,
+          price: (pkg.webBillingProduct as any)?.price
         })))
         setOfferings(perNightOffering.availablePackages)
       } else {
@@ -387,8 +382,8 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
       // Add detailed logging
       console.log("RevenueCat Debug - Available Offerings:", offerings.map(pkg => ({
         identifier: pkg.webBillingProduct?.identifier,
-        price: (pkg.webBillingProduct as RevenueCatProduct)?.price,
-        priceString: (pkg.webBillingProduct as RevenueCatProduct)?.priceString,
+        price: (pkg.webBillingProduct as any)?.price,
+        priceString: (pkg.webBillingProduct as any)?.priceString,
         title: pkg.webBillingProduct?.title,
         description: pkg.webBillingProduct?.description
       })));
