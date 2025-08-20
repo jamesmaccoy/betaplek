@@ -23,7 +23,7 @@ import {
   Star,
   Loader2
 } from 'lucide-react'
-import { Mic, MicOff, Wand2, RotateCcw } from 'lucide-react'
+import { Mic, MicOff, Wand2, RotateCcw, Bot } from 'lucide-react'
 import { 
   Dialog,
   DialogContent,
@@ -48,7 +48,7 @@ import {
   type BasePackageConfig,
   type PackageCategory
 } from "@/lib/package-types"
-import { useSpeechToText } from "@/hooks/useSpeechToText"
+import { AIAssistant } from "@/components/AIAssistant/AIAssistant"
 
 interface Props {
   user: User
@@ -79,17 +79,9 @@ interface EnhancedSuggestion {
 export default function ManagePackagesPage({ postId }: { postId: string }) {
   const { packages, loading, error, setPackages, reload } = useHostPackages(postId);
 
-  // Voice-driven suggestions state
-  const [suggestText, setSuggestText] = useState('')
+  // AI Assistant suggestions state
   const [suggestions, setSuggestions] = useState<EnhancedSuggestion[]>([])
   const [suggesting, setSuggesting] = useState(false)
-  const { startListening, stopListening, isListening, micError } = useSpeechToText({
-    onInterim: (text) => setSuggestText(text),
-    onFinal: (text) => {
-      setSuggestText(text)
-      handleSuggest(text)
-    },
-  })
 
   // Self destruct state
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -184,8 +176,6 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
   }
 
   const handleStartOver = async () => {
-    if (isListening) stopListening()
-    setSuggestText('')
     setSuggestions([])
     await reload()
   }
@@ -235,33 +225,36 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
     <div className="container py-10">
       <h1 className="text-3xl font-bold mb-6">Manage Packages</h1>
 
-      {/* Voice-assisted suggestions */}
+      {/* AI Assistant Package Suggestions */}
       <div className="mb-6">
-        <div className="flex gap-2">
-          <Input
-            placeholder="Describe the package(s) you want (e.g. 'Game Safari Lodge 3 night special with luxury')"
-            value={suggestText}
-            onChange={(e) => setSuggestText(e.target.value)}
-            className="flex-1"
-          />
-          <Button
-            type="button"
-            size="icon"
-            variant={isListening ? 'destructive' : 'outline'}
-            onClick={isListening ? stopListening : startListening}
-            title={micError || (isListening ? 'Stop listening' : 'Speak your needs')}
-            disabled={!!micError}
+        <div className="flex items-center gap-3 mb-4">
+          <Button 
+            onClick={() => {
+              // This will trigger the AI Assistant to open with package context
+              const event = new CustomEvent('openAIAssistant', { 
+                detail: { 
+                  context: 'package-suggestions',
+                  postId,
+                  message: "I need help creating packages for my property. Can you suggest some packages based on my needs?"
+                }
+              })
+              window.dispatchEvent(event)
+            }}
+            className="flex items-center gap-2"
           >
-            {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            <Bot className="h-4 w-4" />
+            Ask AI for Package Suggestions
           </Button>
-          <Button type="button" onClick={() => handleSuggest(suggestText)} disabled={suggesting}>
-            {suggesting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
-            Suggest
-          </Button>
+          {suggesting && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Getting suggestions...
+            </div>
+          )}
         </div>
-        {micError && <p className="text-sm text-destructive mt-2">{micError}</p>}
+        
         {suggestions.length > 0 && (
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {suggestions.map((suggestion) => {
               const existing = packages.find(p => p.revenueCatId === suggestion.revenueCatId)
               return (
@@ -322,13 +315,23 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
                       onChange={e => upsertPackage(template, { name: e.target.value })}
                       disabled={!pkg}
                     />
-                    {/* Optional quick mic to rename via voice */}
+                    {/* Quick AI suggestion button */}
                     <Button
                       type="button"
                       size="icon"
                       variant="outline"
-                      onClick={() => handleSuggest((pkg?.name || template.defaultName))}
-                      title="Suggest related packages from this name"
+                      onClick={() => {
+                        const event = new CustomEvent('openAIAssistant', { 
+                          detail: { 
+                            context: 'package-rename',
+                            postId,
+                            currentName: pkg?.name || template.defaultName,
+                            message: `I want to rename my "${pkg?.name || template.defaultName}" package. Can you suggest a better name?`
+                          }
+                        })
+                        window.dispatchEvent(event)
+                      }}
+                      title="Get AI suggestions for this package name"
                     >
                       <Wand2 className="h-4 w-4" />
                     </Button>
@@ -392,6 +395,9 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* AI Assistant - docked bottom right */}
+      <AIAssistant />
     </div>
   );
 }

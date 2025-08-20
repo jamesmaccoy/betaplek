@@ -52,6 +52,20 @@ interface Message {
   content: string
 }
 
+interface PackageSuggestion {
+  revenueCatId: string
+  suggestedName: string
+  description: string
+  details: {
+    minNights?: number
+    maxNights?: number
+    multiplier?: number
+    category?: string
+    customerTierRequired?: string
+    features?: string
+  }
+}
+
 const LoadingDots = () => {
   return (
     <div className="flex space-x-1 items-center">
@@ -70,11 +84,36 @@ export const AIAssistant = () => {
   const [isListening, setIsListening] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [micError, setMicError] = useState<string | null>(null)
+  const [packageSuggestions, setPackageSuggestions] = useState<PackageSuggestion[]>([])
+  const [currentContext, setCurrentContext] = useState<any>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const recognitionRef = useRef<SpeechRecognition | null>(null)
   const synthRef = useRef<SpeechSynthesis | null>(null)
   const isProcessingRef = useRef(false)
   const finalTranscriptRef = useRef('')
+
+  useEffect(() => {
+    // Listen for custom events to open AI Assistant with context
+    const handleOpenAIAssistant = (event: CustomEvent) => {
+      setIsOpen(true)
+      setCurrentContext(event.detail)
+      
+      // If there's a predefined message, send it automatically
+      if (event.detail?.message) {
+        setInput(event.detail.message)
+        // Auto-send after a brief delay
+        setTimeout(() => {
+          handleSubmit(new Event('submit') as any)
+        }, 100)
+      }
+    }
+
+    window.addEventListener('openAIAssistant', handleOpenAIAssistant as EventListener)
+    
+    return () => {
+      window.removeEventListener('openAIAssistant', handleOpenAIAssistant as EventListener)
+    }
+  }, [])
 
   useEffect(() => {
     // Initialize speech recognition
@@ -218,16 +257,70 @@ export const AIAssistant = () => {
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: messageToSend }),
-      })
+      // Check if this is a package suggestion request
+      if (currentContext?.context === 'package-suggestions' || 
+          messageToSend.toLowerCase().includes('package') || 
+          messageToSend.toLowerCase().includes('suggest')) {
+        
+        // Call package suggestions API
+        const res = await fetch('/api/packages/suggest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            description: messageToSend, 
+            postId: currentContext?.postId,
+            hostContext: true 
+          }),
+        })
+        
+        if (res.ok) {
+          const data = await res.json()
+          const suggestions: PackageSuggestion[] = Array.isArray(data.recommendations) ? data.recommendations : []
+          
+          if (suggestions.length > 0) {
+            setPackageSuggestions(suggestions)
+            
+            // Create a formatted response
+            const suggestionText = suggestions.map(s => 
+              `**${s.suggestedName}**\n` +
+              `${s.description}\n` +
+              `- Duration: ${s.details.minNights}-${s.details.maxNights} nights\n` +
+              `- Category: ${s.details.category}\n` +
+              `- Multiplier: ${s.details.multiplier}x\n` +
+              `- Entitlement: ${s.details.customerTierRequired}\n` +
+              `- Features: ${s.details.features || 'Standard features'}`
+            ).join('\n\n')
+            
+            const assistantMessage: Message = { 
+              role: 'assistant', 
+              content: `Here are some package suggestions based on your needs:\n\n${suggestionText}\n\nYou can click "Add Package" on any of these suggestions to create them.` 
+            }
+            setMessages((prev) => [...prev, assistantMessage])
+            speak('I found some package suggestions for you. Check the cards below.')
+          } else {
+            const assistantMessage: Message = { 
+              role: 'assistant', 
+              content: "I couldn't find specific package suggestions for your request. Try describing what type of packages you need, such as 'weekly stays', 'luxury options', or 'gathering packages'." 
+            }
+            setMessages((prev) => [...prev, assistantMessage])
+            speak("I couldn't find specific package suggestions. Try being more specific about what you need.")
+          }
+        } else {
+          throw new Error('Failed to get package suggestions')
+        }
+      } else {
+        // Regular chat API call
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: messageToSend }),
+        })
 
-      const data = await response.json()
-      const assistantMessage: Message = { role: 'assistant', content: data.message }
-      setMessages((prev) => [...prev, assistantMessage])
-      speak(data.message)
+        const data = await response.json()
+        const assistantMessage: Message = { role: 'assistant', content: data.message }
+        setMessages((prev) => [...prev, assistantMessage])
+        speak(data.message)
+      }
     } catch (error) {
       console.error('Error:', error)
       const errorMessage = 'Sorry, I encountered an error. Please try again.'
@@ -257,11 +350,15 @@ export const AIAssistant = () => {
       </Button>
 
       {isOpen && (
-        <Card className="absolute bottom-16 right-0 w-[350px] shadow-lg">
+        <Card className="absolute bottom-16 right-0 w-[400px] shadow-lg">
           <div className="p-4 border-b">
             <h3 className="font-semibold">AI Assistant</h3>
+            {currentContext?.context === 'package-suggestions' && (
+              <p className="text-xs text-muted-foreground">Package suggestions mode</p>
+            )}
           </div>
-          <ScrollArea ref={scrollRef} className="h-[340px] p-4">
+          
+          <ScrollArea ref={scrollRef} className="h-[300px] p-4">
             {messages.map((message, index) => (
               <div
                 key={index}
@@ -284,6 +381,25 @@ export const AIAssistant = () => {
               </div>
             )}
           </ScrollArea>
+          
+          {/* Package Suggestions Display */}
+          {packageSuggestions.length > 0 && (
+            <div className="border-t p-4 max-h-[200px] overflow-y-auto">
+              <h4 className="font-medium text-sm mb-2">Suggested Packages:</h4>
+              <div className="space-y-2">
+                {packageSuggestions.map((suggestion, index) => (
+                  <div key={index} className="text-xs bg-muted p-2 rounded">
+                    <div className="font-medium">{suggestion.suggestedName}</div>
+                    <div className="text-muted-foreground">{suggestion.description}</div>
+                    <div className="mt-1 text-xs">
+                      {suggestion.details.minNights}-{suggestion.details.maxNights} nights • {suggestion.details.category} • {suggestion.details.multiplier}x
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit} className="border-t p-4">
             <div className="flex gap-2">
               <Input
