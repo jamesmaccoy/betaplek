@@ -121,13 +121,17 @@ export default function SubscribePage() {
       <div className="mx-auto max-w-4xl grid grid-cols-1 gap-8 md:grid-cols-2 items-start">
         {monthly_subscription_plan && (() => {
           const product = monthly_subscription_plan.webBillingProduct
+          const dualPrice = getDualCurrencyPrice(product)
           return (
             <div key={monthly_subscription_plan.identifier} className="rounded-2xl border border-border p-8 shadow-sm">
               <h2 className="text-lg font-semibold leading-8 text-foreground">{product.displayName}</h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">{product.description || 'Access all standard features.'}</p>
               <p className="mt-6 flex items-baseline gap-x-1">
-                <span className="text-4xl font-bold tracking-tight text-foreground">{getZARPriceFromRevenueCatProduct(product)}</span>
+                <span className="text-4xl font-bold tracking-tight text-foreground">{dualPrice.zar}</span>
                 <span className="text-sm font-semibold leading-6 text-muted-foreground">/month</span>
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {dualPrice.usd} USD
               </p>
               <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-muted-foreground xl:mt-10">
                 <li className="flex gap-x-3">Calendar booking request</li>
@@ -146,6 +150,7 @@ export default function SubscribePage() {
 
         {annual_subscription_plan && (() => {
           const product = annual_subscription_plan.webBillingProduct
+          const dualPrice = getDualCurrencyPrice(product)
           return (
             <div key={annual_subscription_plan.identifier} className="relative rounded-2xl border border-primary p-8 shadow-lg">
               <div className="absolute top-0 -translate-y-1/2 transform rounded-full bg-primary px-3 py-1 text-xs font-semibold tracking-wide text-primary-foreground">
@@ -154,8 +159,11 @@ export default function SubscribePage() {
               <h2 className="text-lg font-semibold leading-8 text-foreground">{product.displayName}</h2>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">{product.description || 'Get the best value with annual billing.'}</p>
               <p className="mt-6 flex items-baseline gap-x-1">
-                <span className="text-4xl font-bold tracking-tight text-foreground">{getDualCurrencyPrice(product)}</span>
+                <span className="text-4xl font-bold tracking-tight text-foreground">{dualPrice.zar}</span>
                 <span className="text-sm font-semibold leading-6 text-muted-foreground">/year</span>
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {dualPrice.usd} USD
               </p>
               <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-muted-foreground xl:mt-10">
                 <li className="flex gap-x-3">Calendar booking request</li>
@@ -176,6 +184,7 @@ export default function SubscribePage() {
 
       {professional_plan && (() => {
         const product = professional_plan.webBillingProduct;
+        const dualPrice = getDualCurrencyPrice(product);
         return (
           <div 
             className="mt-16 pt-16 pb-16 md:border-t border-border bg-cover bg-center relative rounded-lg shadow-md"
@@ -194,8 +203,11 @@ export default function SubscribePage() {
                   <h3 className="text-lg font-semibold leading-8 text-foreground">{product.displayName}</h3>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">{product.description || 'Advanced features for professionals.'}</p>
                   <p className="mt-6 flex items-baseline gap-x-1">
-                    <span className="text-4xl font-bold tracking-tight text-foreground">{getDualCurrencyPrice(product)}</span>
+                    <span className="text-4xl font-bold tracking-tight text-foreground">{dualPrice.zar}</span>
                     <span className="text-sm font-semibold leading-6 text-muted-foreground">/term</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {dualPrice.usd} USD
                   </p>
                   <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-muted-foreground xl:mt-10">
                     <li className="flex gap-x-3">Insight report</li>

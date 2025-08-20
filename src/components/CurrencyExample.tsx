@@ -4,8 +4,7 @@ import React from 'react'
 import { Package } from '@revenuecat/purchases-js'
 import { 
   getZARPriceFromRevenueCatProduct, 
-  getDualCurrencyPrice, 
-  formatAmountToZAR 
+  getDualCurrencyPrice 
 } from '@/lib/currency'
 
 interface CurrencyExampleProps {
