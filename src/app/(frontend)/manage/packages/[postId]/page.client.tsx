@@ -89,10 +89,9 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
   const [destroying, setDestroying] = useState(false)
   const [destroyError, setDestroyError] = useState<string | null>(null)
 
-  // Add or update a package
+  // Add or update a package from suggestion
   const upsertPackage = async (suggestion: EnhancedSuggestion, updates: any = {}) => {
     const existing = packages.find(p => p.revenueCatId === suggestion.revenueCatId);
-    const template = PACKAGE_TEMPLATES.find(t => t.revenueCatId === suggestion.revenueCatId);
     
     if (existing) {
       // Update
@@ -115,6 +114,37 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
           post: postId,
           name: suggestion.suggestedName,
           revenueCatId: suggestion.revenueCatId,
+          isEnabled: true,
+          ...updates,
+        }),
+      });
+      const created = await res.json();
+      setPackages(pkgs => [...pkgs, created]);
+    }
+  };
+
+  // Add or update a package from template
+  const upsertPackageFromTemplate = async (template: any, updates: any = {}) => {
+    const existing = packages.find(p => p.revenueCatId === template.revenueCatId);
+    
+    if (existing) {
+      // Update
+      const res = await fetch(`/api/packages/${existing.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      const updated = await res.json();
+      setPackages(pkgs => pkgs.map(p => p.id === updated.id ? updated : p));
+    } else {
+      // Create
+      const res = await fetch(`/api/packages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          post: postId,
+          name: template.defaultName,
+          revenueCatId: template.revenueCatId,
           isEnabled: true,
           ...updates,
         }),
@@ -312,7 +342,7 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
                   <div className="flex gap-2">
                     <Input
                       value={pkg?.name || template.defaultName}
-                      onChange={e => upsertPackage(template, { name: e.target.value })}
+                      onChange={e => upsertPackageFromTemplate(template, { name: e.target.value })}
                       disabled={!pkg}
                     />
                     {/* Quick AI suggestion button */}
@@ -341,7 +371,7 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
                   <Switch
                     id={`enabled-${template.revenueCatId}`}
                     checked={!!pkg?.isEnabled}
-                    onCheckedChange={checked => upsertPackage(template, { isEnabled: checked })}
+                    onCheckedChange={checked => upsertPackageFromTemplate(template, { isEnabled: checked })}
                     disabled={!pkg}
                   />
                   <label htmlFor={`enabled-${template.revenueCatId}`}>Enabled</label>
@@ -349,7 +379,7 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
               </CardContent>
               <CardFooter>
                 {!pkg && (
-                  <Button onClick={() => upsertPackage(template)}>
+                  <Button onClick={() => upsertPackageFromTemplate(template)}>
                     Add Package
                   </Button>
                 )}

@@ -541,6 +541,26 @@ export const BASE_PACKAGE_TEMPLATES: BasePackageConfig[] = [
     canBeRenamed: true,
     canBeDisabled: true
   },
+  {
+    id: 'bathbomb_addon',
+    category: 'addon',
+    durationTier: 'single',
+    minNights: 1,
+    maxNights: 365,
+    baseMultiplier: 1.0,
+    features: [
+      {
+        id: 'luxury_bath',
+        label: 'Luxury Bath Experience',
+        description: 'Premium bath bomb for relaxing soak',
+        category: 'amenity'
+      }
+    ],
+    revenueCatId: 'bathBomb',
+    customerTierRequired: 'none',
+    canBeRenamed: true,
+    canBeDisabled: true
+  },
 
   // Hourly packages
   {

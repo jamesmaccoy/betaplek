@@ -7,7 +7,6 @@ import { PlusCircleIcon, TrashIcon, UserIcon, FileText } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import InviteUrlDialog from './_components/invite-url-dialog'
 import { Button } from '@/components/ui/button'
-import { Purchases, type Package, type Product } from '@revenuecat/purchases-js'
 import { useRevenueCat } from '@/providers/RevenueCat'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Calendar } from '@/components/ui/calendar'
@@ -18,14 +17,27 @@ type Props = {
   user: User
 }
 
-interface RevenueCatProduct extends Product {
-  price?: number;
-  priceString?: string;
-  currencyCode?: string;
+
+
+interface AddonPackage {
+  id: string;
+  name: string;
+  originalName: string;
+  description?: string;
+  multiplier: number;
+  category: string;
+  minNights: number;
+  maxNights: number;
+  revenueCatId: string;
+  baseRate?: number;
+  isEnabled: boolean;
+  features: any[];
+  source: string;
+  hasCustomName: boolean;
 }
 
-// Helper to format and convert price
-function formatPriceWithUSD(product) {
+// Helper to format and convert price (kept for potential future use)
+function formatPriceWithUSD(product: any) {
   const price = product.price;
   const priceString = product.priceString;
   const currency = product.currencyCode || 'ZAR';
@@ -41,45 +53,41 @@ function formatPriceWithUSD(product) {
 export default function BookingDetailsClientPage({ data, user }: Props) {
   const [removedGuests, setRemovedGuests] = React.useState<string[]>([])
 
-  // RevenueCat product state
-  const [offerings, setOfferings] = useState<Package[]>([])
-  const [loadingOfferings, setLoadingOfferings] = useState(true)
+  // Addon packages state
+  const [addonPackages, setAddonPackages] = useState<AddonPackage[]>([])
+  const [loadingAddons, setLoadingAddons] = useState(true)
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [paymentError, setPaymentError] = useState<string | null>(null)
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const { isInitialized } = useRevenueCat();
 
   useEffect(() => {
-    if (!isInitialized) return;
-    const loadOfferings = async () => {
-      setLoadingOfferings(true)
+    const loadAddonPackages = async () => {
+      setLoadingAddons(true)
       try {
-        const fetchedOfferings = await Purchases.getSharedInstance().getOfferings()
-        console.log('Offerings:', fetchedOfferings)
-        // Only show bathBomb, cleaning, bottle of wine, and guided hike
-        const allowed = [ 'bathBomb', 'cleaning', 'Bottle_wine', 'Hike']
-        let allPackages: Package[] = []
-        // Prefer the 'add_ons' offering if it exists
-        const addOnsOffering = fetchedOfferings.all["add_ons"];
-        if (addOnsOffering && addOnsOffering.availablePackages.length > 0) {
-          setOfferings(addOnsOffering.availablePackages.filter(pkg => allowed.includes(pkg.webBillingProduct?.identifier)));
-        } else {
-          // Fallback: search all offerings for allowed add-ons
-          Object.values(fetchedOfferings.all).forEach(offering => {
-            if (offering && offering.availablePackages) {
-              allPackages = allPackages.concat(offering.availablePackages)
-            }
-          })
-          setOfferings(allPackages.filter(pkg => allowed.includes(pkg.webBillingProduct?.identifier)));
+        // Get the post ID from the booking data
+        const postId = typeof data?.post === 'string' ? data.post : data?.post?.id
+        if (!postId) {
+          throw new Error('No post ID found')
         }
+        
+        const response = await fetch(`/api/packages/addons/${postId}`)
+        if (!response.ok) {
+          throw new Error('Failed to fetch addon packages')
+        }
+        
+        const responseData = await response.json()
+        setAddonPackages(responseData.addons || [])
       } catch (err) {
+        console.error('Error loading addon packages:', err)
         setPaymentError('Failed to load add-ons')
       } finally {
-        setLoadingOfferings(false)
+        setLoadingAddons(false)
       }
     }
-    loadOfferings()
-  }, [isInitialized])
+    
+    loadAddonPackages()
+  }, [data?.post])
 
   const removeGuestHandler = async (guestId: string) => {
     const res = await fetch(`/api/bookings/${data.id}/guests/${guestId}`, {
@@ -225,30 +233,54 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
           </div>
         </TabsContent>
       </Tabs>
-      {/* Revenuecat cleaning fee, bottle of wine, guided hike */}
+      {/* Addon packages from database */}
       <div className="mt-10 max-w-screen-md mx-auto">
         <h2 className="text-2xl font-bold mb-4">Add-ons</h2>
-        {loadingOfferings ? (
+        {loadingAddons ? (
           <p>Loading add-ons...</p>
+        ) : addonPackages.length === 0 ? (
+          <p className="text-muted-foreground">No add-ons available for this property.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[...new Map(offerings.map(pkg => [pkg.webBillingProduct?.identifier, pkg])).values()].map((pkg) => {
-              const product = pkg.webBillingProduct as RevenueCatProduct;
-              const isWine = product.identifier === 'Bottle_wine';
-              const isCleaning = product.identifier === 'cleaning';
-              const isHike = product.identifier === 'Hike';
+            {addonPackages.map((addon) => {
+              const isWine = addon.revenueCatId === 'Bottle_wine';
+              const isCleaning = addon.revenueCatId === 'cleaning';
+              const isHike = addon.revenueCatId === 'Hike';
+              const isBathBomb = addon.revenueCatId === 'bathBomb';
+              
+              // Calculate price based on base rate and multiplier
+              const baseRate = addon.baseRate || 0;
+              const price = baseRate * addon.multiplier;
+              const priceString = `R${price.toFixed(2)}`;
+              
               return (
-                <div key={product.identifier + '-' + pkg.identifier} className="border rounded-lg p-4 flex flex-col items-center">
-                  <div className="font-bold text-lg mb-2">{product.title || product.identifier}</div>
-                  <div className="mb-2 text-muted-foreground text-sm">{product.description}</div>
-                  <div className="mb-4 text-xl font-bold">{formatPriceWithUSD(product)}</div>
+                <div key={addon.id} className="border rounded-lg p-4 flex flex-col items-center">
+                  <div className="font-bold text-lg mb-2">{addon.name}</div>
+                  <div className="mb-2 text-muted-foreground text-sm">{addon.description || addon.originalName}</div>
+                  <div className="mb-4 text-xl font-bold">{priceString}</div>
+                  {addon.features && addon.features.length > 0 && (
+                    <div className="mb-3 text-xs text-muted-foreground text-center">
+                      {addon.features.map((feature: any, index: number) => (
+                        <div key={index}>{feature.label || feature}</div>
+                      ))}
+                    </div>
+                  )}
                   <Button
-                    className={isWine ? "bg-primary text-primary-foreground hover:bg-primary/90" : isCleaning ? "bg-yellow-200 text-yellow-900" : isHike ? "bg-green-200 text-green-900" : ""}
+                    className={
+                      isWine ? "bg-primary text-primary-foreground hover:bg-primary/90" : 
+                      isCleaning ? "bg-yellow-200 text-yellow-900" : 
+                      isHike ? "bg-green-200 text-green-900" : 
+                      isBathBomb ? "bg-pink-200 text-pink-900" : ""
+                    }
                     onClick={async () => {
                       setPaymentLoading(true)
                       setPaymentError(null)
                       try {
-                        await Purchases.getSharedInstance().purchase({ rcPackage: pkg })
+                        // For now, we'll use a placeholder purchase flow
+                        // In the future, this could integrate with RevenueCat or a custom payment system
+                        console.log('Purchasing addon:', addon)
+                        // Simulate purchase delay
+                        await new Promise(resolve => setTimeout(resolve, 1000))
                         setPaymentSuccess(true)
                       } catch (err) {
                         setPaymentError('Failed to purchase add-on')
@@ -258,7 +290,11 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
                     }}
                     disabled={paymentLoading}
                   >
-                    {isWine ? 'Buy Bottle of Wine' : isCleaning ? 'Add Cleaning' : isHike ? 'Book Guided Hike' : 'Purchase'}
+                    {isWine ? 'Buy Bottle of Wine' : 
+                     isCleaning ? 'Add Cleaning' : 
+                     isHike ? 'Book Guided Hike' : 
+                     isBathBomb ? 'Add Bath Bomb' : 
+                     `Purchase ${addon.name}`}
                   </Button>
                 </div>
               )
