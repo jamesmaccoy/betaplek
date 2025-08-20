@@ -379,7 +379,8 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
               </CardContent>
               <CardFooter>
                 {!pkg && (
-                  <Button onClick={() => upsertPackageFromTemplate(template)}>
+
+<Button onClick={() => upsertPackageFromTemplate(template)}>
                     Add Package
                   </Button>
                 )}

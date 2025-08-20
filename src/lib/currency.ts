@@ -25,7 +25,11 @@ export function getZARPriceFromProduct(product: any): string {
     
     // Try to get the amount first
     if (typeof currentPrice.amount === 'number') {
-      return formatAmountToZAR(currentPrice.amount)
+      // Convert USD to ZAR if currency is USD
+      const amount = currentPrice.currencyCode === 'usd' 
+        ? convertUSDToZAR(currentPrice.amount) 
+        : currentPrice.amount
+      return formatAmountToZAR(amount)
     }
     
     // Try formatted price
@@ -37,7 +41,9 @@ export function getZARPriceFromProduct(product: any): string {
   // Fallback to legacy price structure
   const amount = product?.price
   if (typeof amount === 'number') {
-    return formatAmountToZAR(amount)
+    // Assume USD if no currency specified
+    const zarAmount = convertUSDToZAR(amount)
+    return formatAmountToZAR(zarAmount)
   }
   
   // Try priceString as last resort
@@ -57,9 +63,10 @@ export function getZARPriceFromRevenueCatProduct(product: any): string {
   if (product.currentPrice) {
     const { amount, currencyCode, formattedPrice } = product.currentPrice
     
-    // If we have a numeric amount, format it as ZAR
+    // If we have a numeric amount, convert to ZAR if needed
     if (typeof amount === 'number') {
-      return formatAmountToZAR(amount)
+      const zarAmount = currencyCode === 'usd' ? convertUSDToZAR(amount) : amount
+      return formatAmountToZAR(zarAmount)
     }
     
     // If we have a formatted price, convert the currency symbol
@@ -105,5 +112,23 @@ export function getDualCurrencyPrice(product: any): { usd: string; zar: string }
   return {
     usd: product.currentPrice?.formattedPrice || product.priceString || 'N/A',
     zar: zarPrice
+  }
+}
+
+// Helper function to check if RevenueCat is configured for ZAR
+export function checkRevenueCatCurrency(product: any): { isZAR: boolean; currency: string; message: string } {
+  if (!product) {
+    return { isZAR: false, currency: 'unknown', message: 'No product data' }
+  }
+  
+  const currency = product.currentPrice?.currencyCode || 'unknown'
+  const isZAR = currency === 'zar' || currency === 'ZAR'
+  
+  return {
+    isZAR,
+    currency,
+    message: isZAR 
+      ? 'RevenueCat is properly configured for ZAR' 
+      : `RevenueCat is using ${currency.toUpperCase()}. Configure RevenueCat dashboard to use ZAR currency.`
   }
 } 
