@@ -541,6 +541,146 @@ export const BASE_PACKAGE_TEMPLATES: BasePackageConfig[] = [
     canBeRenamed: true,
     canBeDisabled: true
   },
+
+  // Hourly packages
+  {
+    id: 'per_hour_standard',
+    category: 'standard',
+    durationTier: 'single',
+    minNights: 1,
+    maxNights: 1,
+    baseMultiplier: 0.1,
+    features: [
+      {
+        id: 'standard_accommodation',
+        label: 'Standard Accommodation',
+        description: 'Comfortable lodging with basic amenities',
+        category: 'accommodation'
+      },
+      {
+        id: 'basic_amenities',
+        label: 'Basic Amenities',
+        description: 'Essential facilities and services',
+        category: 'amenity'
+      },
+      {
+        id: 'self_service',
+        label: 'Self-Service',
+        description: 'Independent stay with minimal host interaction',
+        category: 'service'
+      }
+    ],
+    revenueCatId: 'per_hour',
+    customerTierRequired: 'standard',
+    canBeRenamed: true,
+    canBeDisabled: true
+  },
+  {
+    id: 'per_hour_luxury',
+    category: 'hosted',
+    durationTier: 'single',
+    minNights: 1,
+    maxNights: 1,
+    baseMultiplier: 0.15,
+    features: [
+      {
+        id: 'premium_accommodation',
+        label: 'Premium Accommodation',
+        description: 'Enhanced lodging with upgraded amenities',
+        category: 'accommodation'
+      },
+      {
+        id: 'enhanced_amenities',
+        label: 'Enhanced Amenities',
+        description: 'Additional comfort features and services',
+        category: 'amenity'
+      },
+      {
+        id: 'hosted_experience',
+        label: 'Hosted Experience',
+        description: 'Dedicated host support throughout stay',
+        category: 'service'
+      }
+    ],
+    revenueCatId: 'per_hour_luxury',
+    customerTierRequired: 'pro',
+    canBeRenamed: true,
+    canBeDisabled: true
+  },
+
+  // Extended weekly package
+  {
+    id: 'week_x3_standard',
+    category: 'standard',
+    durationTier: 'extended',
+    minNights: 21,
+    maxNights: 21,
+    baseMultiplier: 0.6,
+    features: [
+      {
+        id: 'standard_accommodation',
+        label: 'Standard Accommodation',
+        description: 'Comfortable lodging with basic amenities',
+        category: 'accommodation'
+      },
+      {
+        id: 'basic_amenities',
+        label: 'Basic Amenities',
+        description: 'Essential facilities and services',
+        category: 'amenity'
+      },
+      {
+        id: 'self_service',
+        label: 'Self-Service',
+        description: 'Independent stay with minimal host interaction',
+        category: 'service'
+      },
+      {
+        id: 'member_discount_30',
+        label: '30% Member Discount',
+        description: 'Maximum savings for extended stays',
+        category: 'discount'
+      }
+    ],
+    revenueCatId: 'week_x3_customer',
+    customerTierRequired: 'standard',
+    canBeRenamed: true,
+    canBeDisabled: true
+  },
+
+  // Gathering packages
+  {
+    id: 'gathering_special',
+    category: 'special',
+    durationTier: 'single',
+    minNights: 1,
+    maxNights: 7,
+    baseMultiplier: 1.2,
+    features: [
+      {
+        id: 'team_building',
+        label: 'Team Building',
+        description: 'Organized team building activities',
+        category: 'special'
+      },
+      {
+        id: 'catering_support',
+        label: 'Catering Support',
+        description: 'Professional catering services',
+        category: 'service'
+      },
+      {
+        id: 'entertainment_setup',
+        label: 'Entertainment Setup',
+        description: 'Complete entertainment and event setup',
+        category: 'service'
+      }
+    ],
+    revenueCatId: 'gathering',
+    customerTierRequired: 'pro',
+    canBeRenamed: true,
+    canBeDisabled: true
+  },
   {
     id: 'gathering_monthly_special',
     category: 'special',

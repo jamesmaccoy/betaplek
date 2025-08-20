@@ -62,12 +62,26 @@ interface PackagePreview {
   total: number
 }
 
+interface EnhancedSuggestion {
+  revenueCatId: string
+  suggestedName: string
+  description: string
+  details: {
+    minNights?: number
+    maxNights?: number
+    multiplier?: number
+    category?: string
+    customerTierRequired?: string
+    features?: string
+  }
+}
+
 export default function ManagePackagesPage({ postId }: { postId: string }) {
   const { packages, loading, error, setPackages, reload } = useHostPackages(postId);
 
   // Voice-driven suggestions state
   const [suggestText, setSuggestText] = useState('')
-  const [suggestions, setSuggestions] = useState<typeof PACKAGE_TEMPLATES>([])
+  const [suggestions, setSuggestions] = useState<EnhancedSuggestion[]>([])
   const [suggesting, setSuggesting] = useState(false)
   const { startListening, stopListening, isListening, micError } = useSpeechToText({
     onInterim: (text) => setSuggestText(text),
@@ -84,14 +98,19 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
   const [destroyError, setDestroyError] = useState<string | null>(null)
 
   // Add or update a package
-  const upsertPackage = async (template: any, updates: any = {}) => {
-    const existing = packages.find(p => p.revenueCatId === template.revenueCatId);
+  const upsertPackage = async (suggestion: EnhancedSuggestion, updates: any = {}) => {
+    const existing = packages.find(p => p.revenueCatId === suggestion.revenueCatId);
+    const template = PACKAGE_TEMPLATES.find(t => t.revenueCatId === suggestion.revenueCatId);
+    
     if (existing) {
       // Update
       const res = await fetch(`/api/packages/${existing.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
+        body: JSON.stringify({
+          name: suggestion.suggestedName,
+          ...updates,
+        }),
       });
       const updated = await res.json();
       setPackages(pkgs => pkgs.map(p => p.id === updated.id ? updated : p));
@@ -102,8 +121,8 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           post: postId,
-          name: template.defaultName,
-          revenueCatId: template.revenueCatId,
+          name: suggestion.suggestedName,
+          revenueCatId: suggestion.revenueCatId,
           isEnabled: true,
           ...updates,
         }),
@@ -112,11 +131,6 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
       setPackages(pkgs => [...pkgs, created]);
     }
   };
-
-  const mapIdsToTemplates = (ids: string[]) => {
-    const idSet = new Set(ids)
-    return PACKAGE_TEMPLATES.filter(t => idSet.has(t.revenueCatId))
-  }
 
   const handleSuggest = async (text: string) => {
     const trimmed = text.trim()
@@ -132,9 +146,8 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
         body: JSON.stringify({ description: trimmed, postId, hostContext: true })
       })
       const data = await res.json()
-      const ids: string[] = Array.isArray(data.recommendations) ? data.recommendations : []
-      const mapped = mapIdsToTemplates(ids)
-      setSuggestions(mapped.length ? mapped : getSuggestionsFromText(trimmed))
+      const recommendations: EnhancedSuggestion[] = Array.isArray(data.recommendations) ? data.recommendations : []
+      setSuggestions(recommendations.length ? recommendations : getSuggestionsFromText(trimmed))
     } catch (e) {
       setSuggestions(getSuggestionsFromText(trimmed))
     } finally {
@@ -142,7 +155,7 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
     }
   }
 
-  const getSuggestionsFromText = (text: string) => {
+  const getSuggestionsFromText = (text: string): EnhancedSuggestion[] => {
     const t = text.toLowerCase()
     const picks = new Set<string>()
     if (/\bweek(ly)?\b/.test(t)) picks.add('Weekly')
@@ -150,7 +163,24 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
     if (/\bluxury\b|hosted|concierge/.test(t)) picks.add('per_night_luxury')
     if (/gathering|offsite|event|team|monthly workspace/.test(t)) picks.add('gathering_monthly')
     if (/per night|nightly|\bnight(s)?\b/.test(t)) picks.add('per_night')
-    return PACKAGE_TEMPLATES.filter(tpl => picks.has(tpl.revenueCatId))
+    if (/hour(ly)?/.test(t)) picks.add('per_hour')
+    if (/hour(ly)?.*luxury/.test(t)) picks.add('per_hour_luxury')
+    if (/week.*3|3.*week/.test(t)) picks.add('week_x3_customer')
+    if (/gathering|event/.test(t)) picks.add('gathering')
+    
+    return PACKAGE_TEMPLATES.filter(tpl => picks.has(tpl.revenueCatId)).map(tpl => ({
+      revenueCatId: tpl.revenueCatId,
+      suggestedName: tpl.defaultName,
+      description: `Standard ${tpl.defaultName} package`,
+      details: {
+        minNights: tpl.minNights,
+        maxNights: tpl.maxNights,
+        multiplier: tpl.baseMultiplier,
+        category: tpl.category,
+        customerTierRequired: tpl.customerTierRequired,
+        features: tpl.features.map(f => f.label).join(', ')
+      }
+    }))
   }
 
   const handleStartOver = async () => {
@@ -209,7 +239,7 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
       <div className="mb-6">
         <div className="flex gap-2">
           <Input
-            placeholder="Describe the package(s) you want (e.g. 'weekly, hosted luxury with concierge')"
+            placeholder="Describe the package(s) you want (e.g. 'Game Safari Lodge 3 night special with luxury')"
             value={suggestText}
             onChange={(e) => setSuggestText(e.target.value)}
             className="flex-1"
@@ -232,28 +262,41 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
         {micError && <p className="text-sm text-destructive mt-2">{micError}</p>}
         {suggestions.length > 0 && (
           <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {suggestions.map((t) => {
-              const existing = packages.find(p => p.revenueCatId === t.revenueCatId)
+            {suggestions.map((suggestion) => {
+              const existing = packages.find(p => p.revenueCatId === suggestion.revenueCatId)
               return (
-                <Card key={`suggest-${t.revenueCatId}`} className="p-4">
-                  <div className="flex items-center gap-3">
+                <Card key={`suggest-${suggestion.revenueCatId}`} className="p-4">
+                  <div className="space-y-3">
                     <div>
-                      <div className="font-medium">{t.defaultName}</div>
-                      <div className="text-xs text-muted-foreground">{t.revenueCatId}</div>
+                      <div className="font-medium text-lg">{suggestion.suggestedName}</div>
+                      <div className="text-sm text-muted-foreground">{suggestion.description}</div>
+                      <div className="text-xs font-mono text-muted-foreground mt-1">{suggestion.revenueCatId}</div>
                     </div>
-                    <div className="ml-auto">
+                    
+                    {/* Package Details */}
+                    <div className="text-xs space-y-1 bg-muted p-2 rounded">
+                      <div><strong>Duration:</strong> {suggestion.details.minNights}-{suggestion.details.maxNights} nights</div>
+                      <div><strong>Category:</strong> {suggestion.details.category}</div>
+                      <div><strong>Multiplier:</strong> {suggestion.details.multiplier}x</div>
+                      <div><strong>Entitlement:</strong> {suggestion.details.customerTierRequired}</div>
+                      {suggestion.details.features && (
+                        <div><strong>Features:</strong> {suggestion.details.features}</div>
+                      )}
+                    </div>
+                    
+                    <div className="flex justify-end">
                       {existing ? (
                         <Badge>Already added</Badge>
                       ) : (
-                        <Button size="sm" onClick={() => upsertPackage(t)}>
-                          Add
+                        <Button size="sm" onClick={() => upsertPackage(suggestion)}>
+                          Add Package
                         </Button>
                       )}
                     </div>
                   </div>
                 </Card>
-              )}
-            )}
+              )
+            })}
           </div>
         )}
       </div>
@@ -387,4 +430,10 @@ function useHostPackages(postId: string) {
 const PACKAGE_TEMPLATES = BASE_PACKAGE_TEMPLATES.map(t => ({
   revenueCatId: t.revenueCatId,
   defaultName: getDefaultPackageTitle(t),
+  minNights: t.minNights,
+  maxNights: t.maxNights,
+  baseMultiplier: t.baseMultiplier,
+  category: t.category,
+  customerTierRequired: t.customerTierRequired,
+  features: t.features
 })) 
