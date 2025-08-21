@@ -73,6 +73,7 @@ Return ONLY a compact JSON object with the shape:
       "revenueCatId": "string",
       "suggestedName": "string", 
       "description": "string",
+      "features": ["string"],
       "details": {
         "minNights": number,
         "maxNights": number,
@@ -88,7 +89,8 @@ Return ONLY a compact JSON object with the shape:
 Rules:
 - Choose 1-4 packages that best match the description and duration hints (e.g. hourly,daily, weekly, monthly, annual, 3 nights, 7 nights, 14 nights, 30 nights, Allunslusive, Studio hire,  hosted, luxury, add-on).
 - For suggestedName, create a contextual name based on the property and description (e.g. "Game Safari Lodge 3-Night Special", "Luxury Hourly Retreat", "Team Building Gathering").
-- For description, provide a brief explanation of what this package offers.
+- For description, provide a detailed explanation of what this package offers, including amenities, services, and unique selling points.
+- For features, provide an array of 3-5 key features that highlight the package's benefits (e.g. ["Luxury accommodation", "Concierge service", "Premium amenities", "Flexible check-in", "Local experience"]).
 - Prefer 'pro' tier items only if the description implies hosted/concierge/luxury/experiences.
 - If unclear, include a safe default like per-night standard and weekly standard.
 - If description implies gatherings, events, team offsites, or monthly workspace use, consider 'gathering_monthly' where appropriate.
@@ -108,6 +110,7 @@ Rules:
 					revenueCatId: String(r.revenueCatId || ''),
 					suggestedName: String(r.suggestedName || ''),
 					description: String(r.description || ''),
+					features: Array.isArray(r.features) ? r.features : [],
 					details: r.details || {}
 				}))
 			}
@@ -124,13 +127,15 @@ Rules:
 				{
 					revenueCatId: 'per_night',
 					suggestedName: 'Standard Per Night',
-					description: 'Basic overnight accommodation',
+					description: 'Basic overnight accommodation with essential amenities',
+					features: ['Standard accommodation', 'Basic amenities', 'Self-service'],
 					details: BASE_PACKAGE_TEMPLATES.find(t => t.revenueCatId === 'per_night') || {}
 				},
 				{
 					revenueCatId: 'Weekly',
 					suggestedName: 'Weekly Stay',
-					description: 'Extended weekly accommodation',
+					description: 'Extended weekly accommodation with enhanced comfort',
+					features: ['Weekly accommodation', 'Enhanced amenities', 'Flexible check-in'],
 					details: BASE_PACKAGE_TEMPLATES.find(t => t.revenueCatId === 'Weekly') || {}
 				}
 			].filter(r => knownIds.has(r.revenueCatId))

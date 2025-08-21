@@ -56,6 +56,7 @@ interface PackageSuggestion {
   revenueCatId: string
   suggestedName: string
   description: string
+  features: string[]
   details: {
     minNights?: number
     maxNights?: number
@@ -288,7 +289,7 @@ export const AIAssistant = () => {
               `- Category: ${s.details.category}\n` +
               `- Multiplier: ${s.details.multiplier}x\n` +
               `- Entitlement: ${s.details.customerTierRequired}\n` +
-              `- Features: ${s.details.features || 'Standard features'}`
+              `- Features: ${s.features && s.features.length > 0 ? s.features.join(', ') : (s.details.features || 'Standard features')}`
             ).join('\n\n')
             
             const assistantMessage: Message = { 
@@ -300,13 +301,49 @@ export const AIAssistant = () => {
           } else {
             const assistantMessage: Message = { 
               role: 'assistant', 
-              content: "I couldn't find specific package suggestions for your request. Try describing what type of packages you need, such as 'weekly stays', 'luxury options', or 'gathering packages'." 
+              content: `I couldn't find specific package suggestions for "${messageToSend}". Try describing your needs more specifically, such as "I need a luxury weekend package" or "I want to offer hourly rentals for events".` 
             }
             setMessages((prev) => [...prev, assistantMessage])
-            speak("I couldn't find specific package suggestions. Try being more specific about what you need.")
+            speak('I couldn\'t find specific package suggestions. Please try describing your needs more specifically.')
           }
         } else {
-          throw new Error('Failed to get package suggestions')
+          const assistantMessage: Message = { 
+            role: 'assistant', 
+            content: 'Sorry, I encountered an error while generating package suggestions. Please try again.' 
+          }
+          setMessages((prev) => [...prev, assistantMessage])
+          speak('Sorry, I encountered an error while generating package suggestions.')
+        }
+      } else if (currentContext?.context === 'package-rename') {
+        // Handle package renaming with enhanced suggestions
+        const currentName = currentContext?.currentName || 'this package'
+        const postId = currentContext?.postId
+        
+        // Call the general chat API with package renaming context
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            message: `I want to rename my "${currentName}" package. ${messageToSend}. Please suggest a better name, description, and key features that would appeal to guests. Make it specific to this property and the package type.`,
+            context: 'package-rename'
+          }),
+        })
+        
+        if (res.ok) {
+          const data = await res.json()
+          const assistantMessage: Message = { 
+            role: 'assistant', 
+            content: data.response || 'I\'ve provided some suggestions for renaming your package. You can review and apply them as needed.' 
+          }
+          setMessages((prev) => [...prev, assistantMessage])
+          speak('I\'ve provided suggestions for renaming your package.')
+        } else {
+          const assistantMessage: Message = { 
+            role: 'assistant', 
+            content: 'Sorry, I encountered an error while generating renaming suggestions. Please try again.' 
+          }
+          setMessages((prev) => [...prev, assistantMessage])
+          speak('Sorry, I encountered an error while generating renaming suggestions.')
         }
       } else {
         // Regular chat API call
@@ -391,6 +428,11 @@ export const AIAssistant = () => {
                   <div key={index} className="text-xs bg-muted p-2 rounded">
                     <div className="font-medium">{suggestion.suggestedName}</div>
                     <div className="text-muted-foreground">{suggestion.description}</div>
+                    {suggestion.features && suggestion.features.length > 0 && (
+                      <div className="mt-1 text-xs text-blue-600">
+                        Features: {suggestion.features.join(', ')}
+                      </div>
+                    )}
                     <div className="mt-1 text-xs">
                       {suggestion.details.minNights}-{suggestion.details.maxNights} nights • {suggestion.details.category} • {suggestion.details.multiplier}x
                     </div>

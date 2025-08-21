@@ -66,6 +66,7 @@ interface EnhancedSuggestion {
   revenueCatId: string
   suggestedName: string
   description: string
+  features: string[]
   details: {
     minNights?: number
     maxNights?: number
@@ -100,6 +101,8 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: suggestion.suggestedName,
+          description: suggestion.description,
+          features: suggestion.features.map(feature => ({ feature })),
           ...updates,
         }),
       });
@@ -113,6 +116,8 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
         body: JSON.stringify({
           post: postId,
           name: suggestion.suggestedName,
+          description: suggestion.description,
+          features: suggestion.features.map(feature => ({ feature })),
           revenueCatId: suggestion.revenueCatId,
           isEnabled: true,
           ...updates,
@@ -193,7 +198,8 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
     return PACKAGE_TEMPLATES.filter(tpl => picks.has(tpl.revenueCatId)).map(tpl => ({
       revenueCatId: tpl.revenueCatId,
       suggestedName: tpl.defaultName,
-      description: `Standard ${tpl.defaultName} package`,
+      description: `Standard ${tpl.defaultName} package with ${tpl.features.map(f => f.label).join(', ')}`,
+      features: tpl.features.map(f => f.label),
       details: {
         minNights: tpl.minNights,
         maxNights: tpl.maxNights,
@@ -293,6 +299,11 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
                     <div>
                       <div className="font-medium text-lg">{suggestion.suggestedName}</div>
                       <div className="text-sm text-muted-foreground">{suggestion.description}</div>
+                      {suggestion.features && suggestion.features.length > 0 && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          <strong>Features:</strong> {suggestion.features.join(', ')}
+                        </div>
+                      )}
                       <div className="text-xs font-mono text-muted-foreground mt-1">{suggestion.revenueCatId}</div>
                     </div>
                     
