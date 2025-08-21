@@ -67,6 +67,7 @@ interface EnhancedSuggestion {
   suggestedName: string
   description: string
   features: string[]
+  baseRate?: number
   details: {
     minNights?: number
     maxNights?: number
@@ -103,6 +104,7 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
           name: suggestion.suggestedName,
           description: suggestion.description,
           features: suggestion.features.map(feature => ({ feature })),
+          baseRate: suggestion.baseRate,
           ...updates,
         }),
       });
@@ -118,6 +120,7 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
           name: suggestion.suggestedName,
           description: suggestion.description,
           features: suggestion.features.map(feature => ({ feature })),
+          baseRate: suggestion.baseRate,
           revenueCatId: suggestion.revenueCatId,
           isEnabled: true,
           ...updates,
@@ -213,6 +216,12 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
       suggestedName: tpl.defaultName,
       description: `Standard ${tpl.defaultName} package with ${tpl.features.map(f => f.label).join(', ')}`,
       features: tpl.features.map(f => f.label),
+      baseRate: tpl.category === 'addon' ? 
+        (tpl.revenueCatId === 'cleaning' ? 300 : 
+         tpl.revenueCatId === 'Bottle_wine' ? 200 : 
+         tpl.revenueCatId === 'Hike' ? 500 : 
+         tpl.revenueCatId === 'bathBomb' ? 100 : 150) : 
+        undefined,
       details: {
         minNights: tpl.minNights,
         maxNights: tpl.maxNights,
@@ -326,6 +335,9 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
                       <div><strong>Category:</strong> {suggestion.details.category}</div>
                       <div><strong>Multiplier:</strong> {suggestion.details.multiplier}x</div>
                       <div><strong>Entitlement:</strong> {suggestion.details.customerTierRequired}</div>
+                      {suggestion.baseRate && (
+                        <div><strong>Base Rate:</strong> R{suggestion.baseRate}</div>
+                      )}
                       {suggestion.details.features && (
                         <div><strong>Features:</strong> {suggestion.details.features}</div>
                       )}

@@ -68,22 +68,23 @@ User description: "${text}"
 
 Return ONLY a compact JSON object with the shape:
 {
-  "recommendations": [
-    {
-      "revenueCatId": "string",
-      "suggestedName": "string", 
-      "description": "string",
-      "features": ["string"],
-      "details": {
-        "minNights": number,
-        "maxNights": number,
-        "multiplier": number,
-        "category": "string",
-        "customerTierRequired": "string",
-        "features": "string"
-      }
-    }
-  ]
+             "recommendations": [
+             {
+               "revenueCatId": "string",
+               "suggestedName": "string", 
+               "description": "string",
+               "features": ["string"],
+               "baseRate": number,
+               "details": {
+                 "minNights": number,
+                 "maxNights": number,
+                 "multiplier": number,
+                 "category": "string",
+                 "customerTierRequired": "string",
+                 "features": "string"
+               }
+             }
+           ]
 }
 
 Rules:
@@ -91,6 +92,7 @@ Rules:
 - For suggestedName, create a contextual name based on the property and description (e.g. "Game Safari Lodge 3-Night Special", "Luxury Hourly Retreat", "Team Building Gathering").
 - For description, provide a detailed explanation of what this package offers, including amenities, services, and unique selling points.
 - For features, provide an array of 3-5 key features that highlight the package's benefits (e.g. ["Luxury accommodation", "Concierge service", "Premium amenities", "Flexible check-in", "Local experience"]).
+- For baseRate, suggest appropriate pricing based on the package type and property context. For addon packages, suggest reasonable one-time fees (e.g., cleaning: 200-500, wine: 150-300, guided hike: 300-800, bath bomb: 50-150). For accommodation packages, use the property's base rate as a starting point.
 - If the description mentions add-ons, extras, services, or one-time purchases (like cleaning, wine, guided tours, bath bombs, etc.), prioritize addon category packages.
 - For addon packages, focus on service-based features like "Professional cleaning service", "Premium wine selection", "Guided hiking experience", "Luxury bath amenities".
 - Prefer 'pro' tier items only if the description implies hosted/concierge/luxury/experiences.
@@ -113,6 +115,7 @@ Rules:
 					suggestedName: String(r.suggestedName || ''),
 					description: String(r.description || ''),
 					features: Array.isArray(r.features) ? r.features : [],
+					baseRate: typeof r.baseRate === 'number' ? r.baseRate : undefined,
 					details: r.details || {}
 				}))
 			}
@@ -131,6 +134,7 @@ Rules:
 					suggestedName: 'Standard Per Night',
 					description: 'Basic overnight accommodation with essential amenities',
 					features: ['Standard accommodation', 'Basic amenities', 'Self-service'],
+					baseRate: baseRate || 150,
 					details: BASE_PACKAGE_TEMPLATES.find(t => t.revenueCatId === 'per_night') || {}
 				},
 				{
@@ -138,6 +142,7 @@ Rules:
 					suggestedName: 'Weekly Stay',
 					description: 'Extended weekly accommodation with enhanced comfort',
 					features: ['Weekly accommodation', 'Enhanced amenities', 'Flexible check-in'],
+					baseRate: (baseRate || 150) * 7,
 					details: BASE_PACKAGE_TEMPLATES.find(t => t.revenueCatId === 'Weekly') || {}
 				}
 			].filter(r => knownIds.has(r.revenueCatId))

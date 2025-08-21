@@ -57,6 +57,7 @@ interface PackageSuggestion {
   suggestedName: string
   description: string
   features: string[]
+  baseRate?: number
   details: {
     minNights?: number
     maxNights?: number
@@ -289,6 +290,7 @@ export const AIAssistant = () => {
               `- Category: ${s.details.category}\n` +
               `- Multiplier: ${s.details.multiplier}x\n` +
               `- Entitlement: ${s.details.customerTierRequired}\n` +
+              `- Base Rate: ${s.baseRate ? `R${s.baseRate}` : 'Not set'}\n` +
               `- Features: ${s.features && s.features.length > 0 ? s.features.join(', ') : (s.details.features || 'Standard features')}`
             ).join('\n\n')
             
@@ -435,6 +437,7 @@ export const AIAssistant = () => {
                     )}
                     <div className="mt-1 text-xs">
                       {suggestion.details.minNights}-{suggestion.details.maxNights} nights • {suggestion.details.category} • {suggestion.details.multiplier}x
+                      {suggestion.baseRate && ` • R${suggestion.baseRate}`}
                     </div>
                     <div className="mt-2">
                       <Button 
