@@ -91,6 +91,8 @@ Rules:
 - For suggestedName, create a contextual name based on the property and description (e.g. "Game Safari Lodge 3-Night Special", "Luxury Hourly Retreat", "Team Building Gathering").
 - For description, provide a detailed explanation of what this package offers, including amenities, services, and unique selling points.
 - For features, provide an array of 3-5 key features that highlight the package's benefits (e.g. ["Luxury accommodation", "Concierge service", "Premium amenities", "Flexible check-in", "Local experience"]).
+- If the description mentions add-ons, extras, services, or one-time purchases (like cleaning, wine, guided tours, bath bombs, etc.), prioritize addon category packages.
+- For addon packages, focus on service-based features like "Professional cleaning service", "Premium wine selection", "Guided hiking experience", "Luxury bath amenities".
 - Prefer 'pro' tier items only if the description implies hosted/concierge/luxury/experiences.
 - If unclear, include a safe default like per-night standard and weekly standard.
 - If description implies gatherings, events, team offsites, or monthly workspace use, consider 'gathering_monthly' where appropriate.

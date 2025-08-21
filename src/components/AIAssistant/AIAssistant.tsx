@@ -436,6 +436,26 @@ export const AIAssistant = () => {
                     <div className="mt-1 text-xs">
                       {suggestion.details.minNights}-{suggestion.details.maxNights} nights • {suggestion.details.category} • {suggestion.details.multiplier}x
                     </div>
+                    <div className="mt-2">
+                      <Button 
+                        size="sm" 
+                        className="text-xs h-6 px-2"
+                        onClick={() => {
+                          // Dispatch event to apply this suggestion
+                          const event = new CustomEvent('applyPackageSuggestion', { 
+                            detail: { 
+                              suggestion,
+                              postId: currentContext?.postId
+                            }
+                          })
+                          window.dispatchEvent(event)
+                          // Close AI Assistant after applying
+                          setIsOpen(false)
+                        }}
+                      >
+                        Apply Suggestion
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>

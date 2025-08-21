@@ -195,6 +195,19 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
     if (/week.*3|3.*week/.test(t)) picks.add('week_x3_customer')
     if (/gathering|event/.test(t)) picks.add('gathering')
     
+    // Addon package detection
+    if (/cleaning|clean/.test(t)) picks.add('cleaning')
+    if (/wine|bottle/.test(t)) picks.add('Bottle_wine')
+    if (/hike|guided|tour/.test(t)) picks.add('Hike')
+    if (/bath|bomb|soak/.test(t)) picks.add('bathBomb')
+    if (/add.?on|extra|service|amenity/.test(t)) {
+      // Add common addon packages when addon is mentioned
+      picks.add('cleaning')
+      picks.add('Bottle_wine')
+      picks.add('Hike')
+      picks.add('bathBomb')
+    }
+    
     return PACKAGE_TEMPLATES.filter(tpl => picks.has(tpl.revenueCatId)).map(tpl => ({
       revenueCatId: tpl.revenueCatId,
       suggestedName: tpl.defaultName,
@@ -467,6 +480,22 @@ function useHostPackages(postId: string) {
     fetchPackages()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId]);
+
+  // Listen for apply package suggestion events from AI Assistant
+  useEffect(() => {
+    const handleApplySuggestion = (event: CustomEvent) => {
+      const { suggestion, postId: suggestionPostId } = event.detail
+      if (suggestionPostId === postId) {
+        upsertPackage(suggestion)
+      }
+    }
+
+    window.addEventListener('applyPackageSuggestion', handleApplySuggestion as EventListener)
+    
+    return () => {
+      window.removeEventListener('applyPackageSuggestion', handleApplySuggestion as EventListener)
+    }
+  }, [postId])
 
   const reload = async () => {
     await fetchPackages()
