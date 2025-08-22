@@ -50,19 +50,60 @@ export async function PATCH(
     const { id } = await params
     let body: any = {}
     const contentType = request.headers.get('content-type') || ''
+    console.log('Content-Type:', contentType)
+    
     if (contentType.includes('application/json')) {
       try {
         body = await request.json()
+        console.log('Successfully parsed JSON body')
       } catch (err) {
         console.warn('Could not parse JSON body:', err)
         body = {}
       }
+    } else if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
+      // Handle form data requests
+      try {
+        const formData = await request.formData()
+        body = {} as any
+        
+        // Convert FormData to regular object
+        for (const [key, value] of formData.entries()) {
+          if (key.includes('[') && key.includes(']')) {
+            // Handle nested form fields like "meta[title]"
+            const match = key.match(/^(\w+)\[(\w+)\]$/)
+            if (match && match.length >= 3) {
+              const parentKey = match[1]
+              const childKey = match[2]
+              if (parentKey && childKey) {
+                if (!body[parentKey]) body[parentKey] = {}
+                body[parentKey][childKey] = value
+              }
+            } else {
+              body[key] = value
+            }
+          } else {
+            body[key] = value
+          }
+        }
+        console.log('Successfully parsed form data body')
+      } catch (err) {
+        console.warn('Could not parse form data body:', err)
+        body = {}
+      }
     } else {
-      // Not JSON, ignore or handle as empty
-      body = {}
+      // Try to parse as JSON as fallback
+      try {
+        body = await request.json()
+        console.log('Successfully parsed body as JSON fallback')
+      } catch (err) {
+        console.warn('Could not parse body as JSON fallback:', err)
+        body = {}
+      }
     }
     
     console.log('PATCH request for package:', { id, body, user: user?.id || 'admin' })
+    console.log('Request body keys:', Object.keys(body))
+    console.log('Request body values:', Object.entries(body).map(([key, value]) => `${key}: ${typeof value} = ${JSON.stringify(value)}`))
     
     // Validate the package exists first
     let existingPackage
@@ -87,6 +128,8 @@ export async function PATCH(
     
     // Validate the request body
     const cleanData: any = {}
+    
+    try {
     
     // Handle isEnabled field
     if (body.isEnabled !== undefined) {
@@ -126,6 +169,11 @@ export async function PATCH(
     }
     
     // Handle other fields
+    if (body.post !== undefined) {
+      cleanData.post = body.post
+      console.log('Setting post to:', cleanData.post)
+    }
+    
     if (body.category !== undefined) {
       cleanData.category = body.category
       console.log('Setting category to:', cleanData.category)
@@ -181,12 +229,41 @@ export async function PATCH(
       console.log('Setting baseRate to:', cleanData.baseRate)
     }
     
+    // Handle features field
+    if (body.features !== undefined) {
+      if (Array.isArray(body.features)) {
+        cleanData.features = body.features
+          .filter((feature: any) => feature && (typeof feature === 'string' || (typeof feature === 'object' && feature.feature)))
+          .map((feature: any) => {
+            if (typeof feature === 'string') {
+              return { feature: feature.trim() }
+            } else if (typeof feature === 'object' && feature.feature) {
+              return { feature: String(feature.feature).trim() }
+            }
+            return null
+          })
+          .filter(Boolean)
+      } else {
+        cleanData.features = []
+      }
+      console.log('Setting features to:', cleanData.features)
+    }
+    
     console.log('Clean data for update:', cleanData)
     console.log('Number of fields to update:', Object.keys(cleanData).length)
+    console.log('Fields that were processed:', Object.keys(cleanData))
     
     if (Object.keys(cleanData).length === 0) {
       console.warn('No valid fields to update')
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+    }
+    
+    } catch (validationError) {
+      console.error('Error during validation:', validationError)
+      return NextResponse.json(
+        { error: 'Validation error', details: validationError instanceof Error ? validationError.message : 'Unknown validation error' },
+        { status: 400 }
+      )
     }
     
     // For admin requests, we might not have a user object
