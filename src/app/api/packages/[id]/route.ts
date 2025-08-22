@@ -51,9 +51,16 @@ export async function PATCH(
     let body: any = {}
     const contentType = request.headers.get('content-type') || ''
     console.log('Content-Type:', contentType)
+    console.log('Request URL:', request.url)
+    console.log('Request method:', request.method)
     
     if (contentType.includes('application/json')) {
       try {
+        // Clone the request to read the body
+        const clonedRequest = request.clone()
+        const rawBody = await clonedRequest.text()
+        console.log('Raw request body:', rawBody)
+        
         body = await request.json()
         console.log('Successfully parsed JSON body')
       } catch (err) {
@@ -104,6 +111,8 @@ export async function PATCH(
     console.log('PATCH request for package:', { id, body, user: user?.id || 'admin' })
     console.log('Request body keys:', Object.keys(body))
     console.log('Request body values:', Object.entries(body).map(([key, value]) => `${key}: ${typeof value} = ${JSON.stringify(value)}`))
+    console.log('Environment:', process.env.NODE_ENV)
+    console.log('Request headers:', Object.fromEntries(request.headers.entries()))
     
     // Validate the package exists first
     let existingPackage
@@ -252,9 +261,13 @@ export async function PATCH(
     console.log('Clean data for update:', cleanData)
     console.log('Number of fields to update:', Object.keys(cleanData).length)
     console.log('Fields that were processed:', Object.keys(cleanData))
+    console.log('Expected fields:', ['post', 'name', 'description', 'multiplier', 'features', 'category', 'entitlement', 'minNights', 'maxNights', 'revenueCatId', 'isEnabled', 'baseRate'])
+    console.log('Received fields:', Object.keys(body))
+    console.log('Missing field validation for:', Object.keys(body).filter(key => !['post', 'name', 'description', 'multiplier', 'features', 'category', 'entitlement', 'minNights', 'maxNights', 'revenueCatId', 'isEnabled', 'baseRate'].includes(key)))
     
     if (Object.keys(cleanData).length === 0) {
       console.warn('No valid fields to update')
+      console.warn('Request body was:', JSON.stringify(body))
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
     }
     
