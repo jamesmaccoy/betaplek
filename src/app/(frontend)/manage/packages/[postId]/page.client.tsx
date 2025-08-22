@@ -85,6 +85,22 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
   const [suggestions, setSuggestions] = useState<EnhancedSuggestion[]>([])
   const [suggesting, setSuggesting] = useState(false)
 
+  // Listen for apply package suggestion events from AI Assistant
+  useEffect(() => {
+    const handleApplySuggestion = (event: CustomEvent) => {
+      const { suggestion, postId: suggestionPostId } = event.detail
+      if (suggestionPostId === postId) {
+        upsertPackage(suggestion)
+      }
+    }
+
+    window.addEventListener('applyPackageSuggestionFromHook', handleApplySuggestion as EventListener)
+    
+    return () => {
+      window.removeEventListener('applyPackageSuggestionFromHook', handleApplySuggestion as EventListener)
+    }
+  }, [postId])
+
   // Self destruct state
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [confirmText, setConfirmText] = useState('')
@@ -414,10 +430,30 @@ export default function ManagePackagesPage({ postId }: { postId: string }) {
                 </div>
               </CardContent>
               <CardFooter>
-                {!pkg && (
-
-<Button onClick={() => upsertPackageFromTemplate(template)}>
+                {!pkg ? (
+                  <Button onClick={() => upsertPackageFromTemplate(template)}>
                     Add Package
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      const event = new CustomEvent('openAIAssistant', { 
+                        detail: { 
+                          context: 'package-update',
+                          postId,
+                          packageId: pkg.id,
+                          currentName: pkg.name,
+                          currentCategory: pkg.category || template.category,
+                          message: `I want to update my "${pkg.name}" package. Can you help me modify it?`
+                        }
+                      })
+                      window.dispatchEvent(event)
+                    }}
+                  >
+                    <Wand2 className="h-4 w-4 mr-1" />
+                    Update Package
                   </Button>
                 )}
               </CardFooter>
@@ -498,7 +534,10 @@ function useHostPackages(postId: string) {
     const handleApplySuggestion = (event: CustomEvent) => {
       const { suggestion, postId: suggestionPostId } = event.detail
       if (suggestionPostId === postId) {
-        upsertPackage(suggestion)
+        // This will be handled by the main component
+        window.dispatchEvent(new CustomEvent('applyPackageSuggestionFromHook', { 
+          detail: { suggestion, postId: suggestionPostId }
+        }))
       }
     }
 

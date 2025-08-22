@@ -347,6 +347,41 @@ export const AIAssistant = () => {
           setMessages((prev) => [...prev, assistantMessage])
           speak('Sorry, I encountered an error while generating renaming suggestions.')
         }
+      } else if (currentContext?.context === 'package-update') {
+        // Handle package updates including category changes
+        const currentName = currentContext?.currentName || 'this package'
+        const currentCategory = currentContext?.currentCategory || 'unknown'
+        const postId = currentContext?.postId
+        const packageId = currentContext?.packageId
+        
+        // Call the general chat API with package update context
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            message: `I want to update my "${currentName}" package (currently ${currentCategory} category). ${messageToSend}. Please suggest appropriate changes including category, name, description, features, and base rate if needed. Make it specific to this property and the requested changes.`,
+            context: 'package-update',
+            packageId,
+            postId
+          }),
+        })
+        
+        if (res.ok) {
+          const data = await res.json()
+          const assistantMessage: Message = { 
+            role: 'assistant', 
+            content: data.response || 'I\'ve provided some suggestions for updating your package. You can review and apply them as needed.' 
+          }
+          setMessages((prev) => [...prev, assistantMessage])
+          speak('I\'ve provided suggestions for updating your package.')
+        } else {
+          const assistantMessage: Message = { 
+            role: 'assistant', 
+            content: 'Sorry, I encountered an error while generating update suggestions. Please try again.' 
+          }
+          setMessages((prev) => [...prev, assistantMessage])
+          speak('Sorry, I encountered an error while generating update suggestions.')
+        }
       } else {
         // Regular chat API call
         const response = await fetch('/api/chat', {
