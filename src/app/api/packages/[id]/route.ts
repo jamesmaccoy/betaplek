@@ -108,6 +108,20 @@ export async function PATCH(
       }
     }
     
+    // Handle Payload admin interface format - data might be in _payload field
+    if (body._payload && typeof body._payload === 'string') {
+      try {
+        const payloadData = JSON.parse(body._payload)
+        console.log('Successfully parsed _payload field')
+        console.log('Payload data keys:', Object.keys(payloadData))
+        body = { ...body, ...payloadData }
+        delete body._payload // Remove the _payload field since we've extracted the data
+        console.log('Body after _payload processing:', Object.keys(body))
+      } catch (err) {
+        console.warn('Could not parse _payload field:', err)
+      }
+    }
+    
     console.log('PATCH request for package:', { id, body, user: user?.id || 'admin' })
     console.log('Request body keys:', Object.keys(body))
     console.log('Request body values:', Object.entries(body).map(([key, value]) => `${key}: ${typeof value} = ${JSON.stringify(value)}`))
