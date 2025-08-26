@@ -29,13 +29,26 @@ export const checkAvailabilityHook: CollectionBeforeChangeHook = async ({
         { toDate: { greater_than_equal: formattedFromDate } },
       ],
     },
-    limit: 1,
+    limit: 10, // Get more bookings for debugging
     select: {
       slug: true,
+      fromDate: true,
+      toDate: true,
+      title: true,
     },
     depth: 0,
     req,
   })
+
+  console.log('Availability check for post:', data.post)
+  console.log('Requested dates:', { fromDate: formattedFromDate, toDate: formattedToDate })
+  console.log('Conflicting bookings found:', bookings.docs.length)
+  console.log('Conflicting bookings:', bookings.docs.map(b => ({
+    slug: b.slug,
+    fromDate: b.fromDate,
+    toDate: b.toDate,
+    title: b.title
+  })))
 
   const isAvailable = bookings.docs.length === 0
 

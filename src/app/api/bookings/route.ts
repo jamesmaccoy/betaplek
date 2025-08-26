@@ -59,6 +59,14 @@ export async function POST(req: Request) {
 
       // Create booking in Payload CMS with the post relationship
       console.log('Creating booking with post:', { postId: post.id, title: post.title })
+      console.log('Booking data being sent:', {
+        title: post.title,
+        post: post.id,
+        fromDate,
+        toDate,
+        customer: currentUser.user.id,
+        paymentStatus: 'paid'
+      })
       
       const booking = await payload.create({
         collection: "bookings",
