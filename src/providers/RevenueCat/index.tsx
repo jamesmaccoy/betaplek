@@ -40,7 +40,7 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         // Configure RevenueCat with the new API v2 and currency settings
         const purchases = await Purchases.configure({
           apiKey: process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_SDK_KEY,
-          appUserId: currentUser?.id ? String(currentUser.id) : '', // Let RevenueCat generate anonymous ID if no user
+          appUserId: currentUser?.id ? String(currentUser.id) : undefined, // Let RevenueCat generate anonymous ID if no user
           // Optional: Set observer mode if you want to track without making purchases
           // observerMode: false,
         })

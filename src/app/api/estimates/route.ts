@@ -16,6 +16,8 @@ export async function POST(request: NextRequest) {
     const { postId, fromDate, toDate, guests, title, packageType, total } = body
 
     console.log('Looking for package:', { postId, packageType })
+    console.log('Package type (original):', packageType)
+    console.log('Package type (lowercase):', packageType.toLowerCase())
     let pkg: any = null
     let multiplier = 1
     let baseRate = 150
@@ -92,8 +94,14 @@ export async function POST(request: NextRequest) {
         }))
       ].filter(pkg => pkg.isEnabled) // Only include enabled packages
 
+      console.log('Available packages:', allPackages.map(p => ({ id: p.id, name: p.name, source: p.source })))
+
       // Find the package by ID (works for both database and RevenueCat packages)
-      pkg = allPackages.find((p: any) => p.id === packageType)
+      // Use case-insensitive comparison for package lookup
+      pkg = allPackages.find((p: any) => 
+        p.id.toLowerCase() === packageType.toLowerCase() || 
+        p.id === packageType
+      )
       
       if (pkg) {
         console.log('Found package:', {
@@ -200,7 +208,10 @@ export async function POST(request: NextRequest) {
     if (!pkg) {
       try {
         const revenueCatProducts = await revenueCatService.getProducts()
-        const revenueCatProduct = revenueCatProducts.find(product => product.id === packageType)
+        const revenueCatProduct = revenueCatProducts.find(product => 
+          product.id.toLowerCase() === packageType.toLowerCase() || 
+          product.id === packageType
+        )
         
         if (revenueCatProduct) {
           pkg = {
