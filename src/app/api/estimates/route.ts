@@ -97,11 +97,13 @@ export async function POST(request: NextRequest) {
       console.log('Available packages:', allPackages.map(p => ({ id: p.id, name: p.name, source: p.source, revenueCatId: p.revenueCatId })))
       console.log('Looking for packageType:', packageType)
 
-      // Find the package by ID (works for both database and RevenueCat packages)
+      // Find the package by ID or revenueCatId (works for both database and RevenueCat packages)
       // Use case-insensitive comparison for package lookup
       pkg = allPackages.find((p: any) => 
         p.id.toLowerCase() === packageType.toLowerCase() || 
-        p.id === packageType
+        p.id === packageType ||
+        (p.revenueCatId && p.revenueCatId.toLowerCase() === packageType.toLowerCase()) ||
+        (p.revenueCatId && p.revenueCatId === packageType)
       )
       
       if (pkg) {
@@ -109,7 +111,9 @@ export async function POST(request: NextRequest) {
           id: pkg.id,
           name: pkg.name,
           source: pkg.source,
-          packageType
+          revenueCatId: pkg.revenueCatId,
+          packageType,
+          matchedBy: pkg.id === packageType ? 'id' : pkg.revenueCatId === packageType ? 'revenueCatId' : 'case-insensitive'
         })
         multiplier = pkg.multiplier || 1
         baseRate = pkg.baseRate || 150
