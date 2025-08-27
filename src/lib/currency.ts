@@ -90,6 +90,16 @@ export function convertUSDToZAR(usdAmount: number): number {
 export function getDualCurrencyPrice(product: any): { usd: string; zar: string } {
   if (!product) return { usd: 'N/A', zar: 'N/A' }
   
+  // Check if RevenueCat is already providing formatted prices
+  if (product.currentPrice?.formattedPrice) {
+    const usdFormatted = product.currentPrice.formattedPrice
+    const zarFormatted = formatFormattedPriceToZAR(usdFormatted)
+    return {
+      usd: usdFormatted,
+      zar: zarFormatted
+    }
+  }
+  
   let usdAmount: number | null = null
   
   // Try to get USD amount from RevenueCat product
@@ -100,9 +110,11 @@ export function getDualCurrencyPrice(product: any): { usd: string; zar: string }
   }
   
   if (usdAmount !== null) {
-    const zarAmount = convertUSDToZAR(usdAmount)
+    // Check if amount is in cents (RevenueCat sometimes provides cents)
+    const normalizedAmount = usdAmount > 1000 ? usdAmount / 100 : usdAmount
+    const zarAmount = convertUSDToZAR(normalizedAmount)
     return {
-      usd: `$${usdAmount.toFixed(2)}`,
+      usd: `$${normalizedAmount.toFixed(2)}`,
       zar: formatAmountToZAR(zarAmount)
     }
   }
