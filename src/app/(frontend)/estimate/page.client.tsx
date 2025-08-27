@@ -53,7 +53,7 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
       ? Number(bookingTotal) * Number(bookingDuration)
       : null
 
-  const [selectedPackage, setSelectedPackage] = useState<string | null>(null)
+  const [selectedPackage, setSelectedPackage] = useState<keyof typeof packageDetails | null>(null)
   const [selectedDuration, setSelectedDuration] = useState<number>(1)
   const [isWineSelected, setIsWineSelected] = useState(false)
   const [packagePrice, setPackagePrice] = useState<number | null>(null)
@@ -268,7 +268,7 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
     }
 
     console.log("Selected package ID:", packageId)
-    setSelectedPackage(packageId)
+    setSelectedPackage(packageId as keyof typeof packageDetails)
     setSelectedDuration(duration)
   }, [bookingDuration, isWineSelected])
 
@@ -317,7 +317,7 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
     if (!selectedPackageDetails) return
 
     const basePrice = Number(bookingTotal)
-    const multiplier = selectedPackageDetails.multiplier
+    const multiplier = selectedPackageDetails.multiplier || 1
     const discountedPerNight = basePrice * multiplier
     const discountedTotal = discountedPerNight * selectedDuration
     setPackagePrice(discountedPerNight)
@@ -360,7 +360,7 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
         console.log("Guest data:", data);
         setGuests(data);
       } catch (err) {
-        setError(err.message);
+        setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
         setLoading(false);
       }
@@ -370,6 +370,7 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
   }, [])
 
   const handleBooking = async () => {
+    
     setPaymentLoading(true)
     setPaymentError(null)
     
@@ -542,7 +543,7 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
         {isUserLoading || isSubscriptionLoading ? (
           <span>Loading user info...</span>
         ) : currentUser ? (
-          <span className="text-sm text-muted-foreground">Logged in as: <b>{currentUser.name}</b> ({currentUser.role?.join(', ')})</span>
+          <span className="text-sm text-muted-foreground">Logged in as: <b>{currentUser.name}</b> ({currentUser.role})</span>
         ) : (
           <span className="text-sm text-muted-foreground">Not logged in. Showing base rate only.</span>
         )}
@@ -584,7 +585,7 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
             </CardHeader>
             <CardContent>
               <ul className="space-y-2">
-                {selectedPackage && packageDetails[selectedPackage]?.features.map((feature, index) => (
+                {selectedPackage && packageDetails[selectedPackage]?.features?.map((feature, index) => (
                   <li key={index} className="flex items-center text-sm">
                     <Check className="mr-2 h-4 w-4 text-primary" />
                     {feature}
