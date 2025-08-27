@@ -395,6 +395,13 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       const total = calculateTotal(baseRate, duration, selectedPackage.multiplier)
       
       // Create estimate first
+      console.log('Creating estimate with package:', {
+        selectedPackage,
+        packageType: selectedPackage.revenueCatId || selectedPackage.id,
+        postId,
+        total
+      })
+      
       const estimateData = {
         postId,
         fromDate: startDate?.toISOString() || new Date().toISOString(),

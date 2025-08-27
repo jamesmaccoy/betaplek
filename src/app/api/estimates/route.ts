@@ -94,7 +94,8 @@ export async function POST(request: NextRequest) {
         }))
       ].filter(pkg => pkg.isEnabled) // Only include enabled packages
 
-      console.log('Available packages:', allPackages.map(p => ({ id: p.id, name: p.name, source: p.source })))
+      console.log('Available packages:', allPackages.map(p => ({ id: p.id, name: p.name, source: p.source, revenueCatId: p.revenueCatId })))
+      console.log('Looking for packageType:', packageType)
 
       // Find the package by ID (works for both database and RevenueCat packages)
       // Use case-insensitive comparison for package lookup
