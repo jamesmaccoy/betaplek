@@ -82,10 +82,10 @@ export default function AccountClient({ user }: AccountClientProps) {
                   </Button>
                 </EditPostsLink>
                 
-                <Link href="/estimate">
+                <Link href="/posts">
                   <Button variant="outline" className="w-full h-16 flex flex-col gap-2">
                     <Calendar className="h-5 w-5" />
-                    <span>Get Estimate</span>
+                    <span>Browse Properties</span>
                   </Button>
                 </Link>
                 {isSubscribed && (
