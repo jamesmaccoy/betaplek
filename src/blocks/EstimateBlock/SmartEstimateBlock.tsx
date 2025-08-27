@@ -224,10 +224,16 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
 
   // Helper function to filter packages based on customer entitlement
   // This ensures that pro-only packages (like gathering_monthly) are only shown to pro users
+  // Also filters out addon packages which should only appear on the booking page
   const filterPackagesByEntitlement = useCallback((packages: Package[]): Package[] => {
     // Reduce logging to prevent performance issues
     const filtered = packages.filter((pkg: Package) => {
       if (!pkg.isEnabled) {
+        return false
+      }
+      
+      // Filter out addon packages - these should only appear on the booking page
+      if (pkg.category === 'addon') {
         return false
       }
       
@@ -750,6 +756,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         if (!aExactMatch && bExactMatch) return 1
         
         // Then sort by category priority (special > hosted > standard)
+        // Note: addon packages are filtered out earlier and should not appear here
         const categoryPriority: Record<string, number> = { special: 3, hosted: 2, standard: 1 }
         const aPriority = categoryPriority[a.category as string] || 1
         const bPriority = categoryPriority[b.category as string] || 1
@@ -817,6 +824,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
             if (!aExactMatch && bExactMatch) return 1
             
             // Then sort by category priority (special > hosted > standard)
+            // Note: addon packages are filtered out earlier and should not appear here
             const categoryPriority: Record<string, number> = { special: 3, hosted: 2, standard: 1 }
             const aPriority = categoryPriority[a.category as string] || 1
             const bPriority = categoryPriority[b.category as string] || 1
