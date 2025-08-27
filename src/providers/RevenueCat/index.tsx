@@ -33,17 +33,29 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       try {
         setIsLoading(true)
         
+        // Debug user information
+        console.log('RevenueCat Debug - Current user:', {
+          hasUser: !!currentUser,
+          userId: currentUser?.id,
+          userIdType: typeof currentUser?.id,
+          userIdValid: currentUser?.id && currentUser.id !== '[Not provided]'
+        })
+        
         if (!process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_SDK_KEY) {
           throw new Error('RevenueCat public SDK key is not defined')
         }
 
         // Configure RevenueCat with the new API v2 and currency settings
-        const purchases = await Purchases.configure({
+        const configOptions: any = {
           apiKey: process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_SDK_KEY,
-          appUserId: currentUser?.id ? String(currentUser.id) : undefined, // Let RevenueCat generate anonymous ID if no user
-          // Optional: Set observer mode if you want to track without making purchases
-          // observerMode: false,
-        })
+        }
+        
+        // Only add appUserId if we have a valid user ID
+        if (currentUser?.id && currentUser.id !== '[Not provided]') {
+          configOptions.appUserId = String(currentUser.id)
+        }
+        
+        const purchases = await Purchases.configure(configOptions)
         console.log('Purchases instance:', purchases)
         
         setIsInitialized(true)
