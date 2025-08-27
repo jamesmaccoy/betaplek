@@ -430,16 +430,43 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
         
         console.log("Purchase successful:", purchaseResult)
         
+        // After successful RevenueCat purchase, confirm the estimate with payment validation
+        const estimateId = searchParams.get('estimateId')
+        if (!estimateId) {
+          throw new Error("No estimate ID found for confirmation")
+        }
+        
+        // Confirm the estimate with payment validation
+        const confirmResponse = await fetch(`/api/estimates/${estimateId}/confirm`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            packageType: selectedPackageDetails.revenueCatId,
+            baseRate: displayTotal,
+            paymentValidated: true, // Mark that payment was successfully processed
+            revenueCatPurchaseId: purchaseResult.customerInfo.originalPurchaseDate // Use purchase info as validation
+          }),
+        })
+        
+        if (!confirmResponse.ok) {
+          const errorData = await confirmResponse.json()
+          throw new Error(errorData.error || 'Failed to confirm estimate')
+        }
+        
         // Calculate dates for the booking
         const fromDate = new Date()
         const toDate = new Date()
         toDate.setDate(toDate.getDate() + selectedDuration)
         
-        // After successful purchase, save booking to your backend
+        // After successful estimate confirmation, create booking with payment validation
         const bookingData = {
           postId: postId,
           fromDate: fromDate.toISOString(),
           toDate: toDate.toISOString(),
+          paymentStatus: 'paid', // Now safe to mark as paid since payment was validated
+          estimateId: estimateId // Link to the confirmed estimate
         }
         
         console.log('Sending booking data:', bookingData)

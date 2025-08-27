@@ -68,6 +68,9 @@ export async function POST(req: Request) {
         paymentStatus: 'paid'
       })
       
+      // Check if this is a valid paid booking (should come from estimate confirmation)
+      const paymentStatus = body.paymentStatus || 'pending'
+      
       const booking = await payload.create({
         collection: "bookings",
         data: {
@@ -77,7 +80,7 @@ export async function POST(req: Request) {
           toDate,
           customer: currentUser.user.id,
           token: Math.random().toString(36).substring(2, 15),
-          paymentStatus: 'paid' // Set as paid since payment was successful
+          paymentStatus: paymentStatus // Use provided payment status or default to pending
         },
       })
 

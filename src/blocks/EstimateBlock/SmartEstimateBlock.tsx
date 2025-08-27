@@ -544,27 +544,36 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       throw new Error('Start and end dates are required')
     }
 
-    const bookingData = {
-      postId,
-      fromDate: startDate.toISOString(),
-      toDate: endDate.toISOString(),
-    }
+    // Instead of creating booking directly, redirect to estimate page for payment processing
+    // This ensures payment is properly handled before booking creation
+    const multiplier = selectedPackage?.multiplier ?? 1
+    const total = calculateTotal(baseRate, duration || 1, multiplier)
 
-    const bookingResponse = await fetch('/api/bookings', {
+    const resp = await fetch('/api/estimates', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(bookingData),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        postId,
+        fromDate: startDate.toISOString(),
+        toDate: endDate.toISOString(),
+        guests: [],
+        title: `Estimate for ${postId}`,
+        packageType: selectedPackage?.revenueCatId || selectedPackage?.id || 'standard',
+        total
+      })
     })
-
-    if (!bookingResponse.ok) {
-      const errorData = await bookingResponse.json()
-      throw new Error(errorData.error || 'Failed to create booking')
+    
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}))
+      throw new Error(err?.error || 'Failed to create estimate')
     }
-
-    const booking = await bookingResponse.json()
-    return booking
+    
+    const created = await resp.json()
+    
+    // Redirect to estimate page for payment processing
+    router.push(`/estimate?postId=${postId}&total=${total}&duration=${duration}`)
+    
+    return created
   }
 
   // Navigate to estimate details (latest or create then navigate)
