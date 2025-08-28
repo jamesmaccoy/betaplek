@@ -515,10 +515,25 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       
       const estimate = await estimateResponse.json()
       
-      // Find the package in RevenueCat offerings
-      const revenueCatPackage = offerings.find((pkg) => 
-        pkg.webBillingProduct?.identifier === selectedPackage.revenueCatId
-      )
+      console.log('Available RevenueCat offerings:', offerings.map(pkg => ({
+        identifier: pkg.webBillingProduct?.identifier,
+        title: pkg.webBillingProduct?.title
+      })))
+      console.log('Looking for package with revenueCatId:', selectedPackage.revenueCatId)
+      
+      // Find the package in RevenueCat offerings (case-insensitive)
+      const revenueCatPackage = offerings.find((pkg) => {
+        const identifier = pkg.webBillingProduct?.identifier
+        const revenueCatId = selectedPackage.revenueCatId
+        console.log('Checking RevenueCat package:', {
+          identifier,
+          revenueCatId,
+          matches: identifier === revenueCatId || 
+                   (identifier && revenueCatId && identifier.toLowerCase() === revenueCatId.toLowerCase())
+        })
+        return identifier === revenueCatId || 
+               (identifier && revenueCatId && identifier.toLowerCase() === revenueCatId.toLowerCase())
+      })
       
       if (revenueCatPackage) {
         
