@@ -69,7 +69,7 @@ export async function POST(req: Request) {
       })
       
       // Check if this is a valid paid booking (should come from estimate confirmation)
-      const paymentStatus = body.paymentStatus || 'pending'
+      const paymentStatus = data.paymentStatus || 'pending'
       
       const booking = await payload.create({
         collection: "bookings",
