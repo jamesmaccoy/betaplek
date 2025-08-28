@@ -521,18 +521,35 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       })))
       console.log('Looking for package with revenueCatId:', selectedPackage.revenueCatId)
       
-      // Find the package in RevenueCat offerings (case-insensitive)
+      // Handle known package ID mismatches between database and RevenueCat
+      const getRevenueCatPackageId = (revenueCatId: string) => {
+        const mappings: Record<string, string> = {
+          'per_night': 'per_night_customer', // Database has per_night, RevenueCat has per_night_customer
+          'Weekly': 'weekly', // Database has Weekly, RevenueCat has weekly
+        }
+        return mappings[revenueCatId] || revenueCatId
+      }
+      
+      // Find the package in RevenueCat offerings (case-insensitive + mapping)
       const revenueCatPackage = offerings.find((pkg) => {
         const identifier = pkg.webBillingProduct?.identifier
         const revenueCatId = selectedPackage.revenueCatId
+        const mappedRevenueCatId = getRevenueCatPackageId(revenueCatId)
+        
         console.log('Checking RevenueCat package:', {
           identifier,
           revenueCatId,
+          mappedRevenueCatId,
           matches: identifier === revenueCatId || 
-                   (identifier && revenueCatId && identifier.toLowerCase() === revenueCatId.toLowerCase())
+                   identifier === mappedRevenueCatId ||
+                   (identifier && revenueCatId && identifier.toLowerCase() === revenueCatId.toLowerCase()) ||
+                   (identifier && mappedRevenueCatId && identifier.toLowerCase() === mappedRevenueCatId.toLowerCase())
         })
+        
         return identifier === revenueCatId || 
-               (identifier && revenueCatId && identifier.toLowerCase() === revenueCatId.toLowerCase())
+               identifier === mappedRevenueCatId ||
+               (identifier && revenueCatId && identifier.toLowerCase() === revenueCatId.toLowerCase()) ||
+               (identifier && mappedRevenueCatId && identifier.toLowerCase() === mappedRevenueCatId.toLowerCase())
       })
       
       if (revenueCatPackage) {
