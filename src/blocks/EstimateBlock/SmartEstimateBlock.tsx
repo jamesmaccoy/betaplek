@@ -192,6 +192,12 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   const [offerings, setOfferings] = useState<RevenueCatPackage[]>([])
   const [isCreatingEstimate, setIsCreatingEstimate] = useState(false)
   
+  // Availability checking states
+  const [unavailableDates, setUnavailableDates] = useState<string[]>([])
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false)
+  const [areDatesAvailable, setAreDatesAvailable] = useState(true)
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null)
+  
   // Latest estimate state
   const [latestEstimate, setLatestEstimate] = useState<any>(null)
   const [loadingEstimate, setLoadingEstimate] = useState(false)
@@ -254,6 +260,60 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
     return filtered
   }, [customerEntitlement])
 
+  // Load unavailable dates for the post
+  const loadUnavailableDates = async () => {
+    try {
+      const response = await fetch(`/api/bookings/unavailable-dates?postId=${postId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setUnavailableDates(data.unavailableDates || [])
+      }
+    } catch (error) {
+      console.error('Error loading unavailable dates:', error)
+    }
+  }
+
+  // Check if selected dates are available
+  const checkDateAvailability = async (fromDate: Date, toDate: Date) => {
+    if (!fromDate || !toDate) return true
+    
+    setIsCheckingAvailability(true)
+    setAvailabilityError(null)
+    
+    try {
+      const response = await fetch(
+        `/api/bookings/check-availability?postId=${postId}&startDate=${fromDate.toISOString()}&endDate=${toDate.toISOString()}`
+      )
+      
+      if (response.ok) {
+        const data = await response.json()
+        const isAvailable = data.isAvailable
+        setAreDatesAvailable(isAvailable)
+        
+        // Add a message to inform the user about availability
+        if (!isAvailable) {
+          const availabilityMessage: Message = {
+            role: 'assistant',
+            content: `I'm sorry, but the dates you selected (${format(fromDate, 'MMM dd')} to ${format(toDate, 'MMM dd, yyyy')}) are not available. Please select different dates for your stay.`,
+            type: 'text'
+          }
+          setMessages(prev => [...prev, availabilityMessage])
+        }
+        
+        return isAvailable
+      } else {
+        setAvailabilityError('Failed to check availability')
+        return false
+      }
+    } catch (error) {
+      console.error('Error checking availability:', error)
+      setAvailabilityError('Failed to check availability')
+      return false
+    } finally {
+      setIsCheckingAvailability(false)
+    }
+  }
+
   // Load latest estimate for the user
   const loadLatestEstimate = async (force: boolean = false) => {
     if (!isLoggedIn || (estimateLoadedRef.current && !force)) return
@@ -286,6 +346,9 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   // Initialize booking journey on component mount
   useEffect(() => {
     const restored = loadBookingJourney()
+    
+    // Load unavailable dates for the post
+    loadUnavailableDates()
     
     if (!restored) {
       // Load latest estimate first, then set initial message
@@ -387,6 +450,15 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
 
   const handleBooking = async () => {
     if (!selectedPackage || !isLoggedIn) return
+    
+    // Check availability before proceeding with booking
+    if (startDate && endDate) {
+      const isAvailable = await checkDateAvailability(startDate, endDate)
+      if (!isAvailable) {
+        setBookingError('The selected dates are no longer available. Please choose different dates.')
+        return
+      }
+    }
     
     setIsBooking(true)
     setBookingError(null)
@@ -1226,6 +1298,9 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       const newDuration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
       setDuration(newDuration)
       
+      // Check availability for the selected dates
+      checkDateAvailability(startDate, endDate)
+      
       // Check if this is from pre-populated data (latestEstimate) or user selection
       if (latestEstimate && latestEstimate.fromDate && latestEstimate.toDate) {
         const estimateFrom = new Date(latestEstimate.fromDate)
@@ -1341,9 +1416,25 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
                     {duration} {duration === 1 ? 'night' : 'nights'} • {selectedPackage.features.slice(0, 2).join(', ')}
                   </p>
                   {startDate && endDate && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {format(startDate, 'MMM dd')} - {format(endDate, 'MMM dd, yyyy')}
-                    </p>
+                    <div className="mt-1">
+                      <p className="text-xs text-muted-foreground">
+                        {format(startDate, 'MMM dd')} - {format(endDate, 'MMM dd, yyyy')}
+                      </p>
+                      {isCheckingAvailability ? (
+                        <p className="text-xs text-blue-600 flex items-center gap-1">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Checking availability...
+                        </p>
+                      ) : !areDatesAvailable ? (
+                        <p className="text-xs text-red-600 flex items-center gap-1">
+                          ❌ Dates not available
+                        </p>
+                      ) : (
+                        <p className="text-xs text-green-600 flex items-center gap-1">
+                          ✅ Dates available
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
                 <div className="text-right">
@@ -1363,7 +1454,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
                       size="sm" 
                       className="mt-1" 
                       onClick={handleBooking}
-                      disabled={isBooking || !startDate || !endDate}
+                      disabled={isBooking || !startDate || !endDate || !areDatesAvailable || isCheckingAvailability}
                     >
                       {isBooking ? (
                         <>
@@ -1372,6 +1463,10 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
                         </>
                       ) : !startDate || !endDate ? (
                         'Select Dates'
+                      ) : !areDatesAvailable ? (
+                        'Dates Unavailable'
+                      ) : isCheckingAvailability ? (
+                        'Checking...'
                       ) : (
                         'Book Now'
                       )}
