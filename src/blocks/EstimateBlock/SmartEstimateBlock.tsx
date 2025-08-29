@@ -520,6 +520,12 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         title: pkg.webBillingProduct?.title
       })))
       console.log('Looking for package with revenueCatId:', selectedPackage.revenueCatId)
+      console.log('Selected package details:', {
+        id: selectedPackage.id,
+        name: selectedPackage.name,
+        revenueCatId: selectedPackage.revenueCatId,
+        source: selectedPackage.source
+      })
       
       // Handle known package ID mismatches between database and RevenueCat
       const getRevenueCatPackageId = (revenueCatId: string) => {
@@ -637,7 +643,11 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         }
       } else {
         // Fallback: simulate payment success and confirm estimate first
-        console.log('Package not found in RevenueCat offerings, using fallback payment flow')
+        console.log('❌ Package not found in RevenueCat offerings, using fallback payment flow')
+        console.log('❌ This means the payment modal will be bypassed!')
+        console.log('❌ Available offerings:', offerings.map(pkg => pkg.webBillingProduct?.identifier))
+        console.log('❌ Looking for:', selectedPackage.revenueCatId)
+        console.log('❌ Mapped to:', getRevenueCatPackageId(selectedPackage.revenueCatId))
         
         // Confirm the estimate with payment validation (for fallback case)
         const confirmResponse = await fetch(`/api/estimates/${estimate.id}/confirm`, {
