@@ -531,7 +531,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       const getRevenueCatPackageId = (revenueCatId: string) => {
         const mappings: Record<string, string> = {
           'per_night': 'per_night_customer', // Database has per_night, RevenueCat has per_night_customer
-          'Weekly': 'weekly', // Database has Weekly, RevenueCat has weekly
+          'Weekly': 'weekly_customer', // Database has Weekly, RevenueCat has weekly_customer (Standard Weekly)
         }
         return mappings[revenueCatId] || revenueCatId
       }
