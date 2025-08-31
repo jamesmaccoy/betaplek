@@ -142,33 +142,53 @@ export default function SubscribePage() {
 
       {/* Standard Entitlement Products */}
       {!showProEntitlements && (
-        <div className="mx-auto max-w-4xl grid grid-cols-1 gap-8 md:grid-cols-2 items-start">
+        <div className="mx-auto max-w-4xl">
           {virtual_wine_plan && (() => {
             const product = virtual_wine_plan.webBillingProduct
             const dualPrice = getDualCurrencyPrice(product)
             return (
-              <div key={virtual_wine_plan.identifier} className="rounded-2xl border border-border p-8 shadow-sm">
-                <h2 className="text-lg font-semibold leading-8 text-foreground">{product.displayName}</h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{product.description || 'Weekly virtual wine tasting experience.'}</p>
-                <p className="mt-6 flex items-baseline gap-x-1">
-                  <span className="text-4xl font-bold tracking-tight text-foreground">{dualPrice.zar}</span>
-                  <span className="text-sm font-semibold leading-6 text-muted-foreground">/week</span>
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {dualPrice.usd} USD
-                </p>
-                <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-muted-foreground xl:mt-10">
-                  <li className="flex gap-x-3">Virtual wine tasting</li>
-                  <li className="flex gap-x-3">Expert sommelier</li>
-                  <li className="flex gap-x-3">Premium wine selection</li>
-                  <li className="flex gap-x-3">Interactive experience</li>
-                  <li className="flex gap-x-3">Digital tasting notes</li>
+              <div key={virtual_wine_plan.identifier} className="relative rounded-2xl border border-primary p-8 shadow-lg max-w-2xl mx-auto">
+                <div className="absolute top-0 -translate-y-1/2 transform rounded-full bg-primary px-3 py-1 text-xs font-semibold tracking-wide text-primary-foreground">
+                  Featured Experience
+                </div>
+                <h2 className="text-2xl font-semibold leading-8 text-foreground text-center">{product.displayName}</h2>
+                <p className="mt-4 text-lg leading-6 text-muted-foreground text-center">{product.description || 'Weekly virtual wine tasting experience.'}</p>
+                <div className="mt-8 text-center">
+                  <p className="flex items-baseline gap-x-1 justify-center">
+                    <span className="text-5xl font-bold tracking-tight text-foreground">{dualPrice.zar}</span>
+                    <span className="text-lg font-semibold leading-6 text-muted-foreground">/week</span>
+                  </p>
+                  <p className="text-lg text-muted-foreground mt-2">
+                    {dualPrice.usd} USD
+                  </p>
+                </div>
+                <ul role="list" className="mt-10 space-y-4 text-base leading-6 text-muted-foreground">
+                  <li className="flex gap-x-3 items-center">
+                    <span className="text-primary text-xl">🍷</span>
+                    <span>Virtual wine tasting with expert sommelier</span>
+                  </li>
+                  <li className="flex gap-x-3 items-center">
+                    <span className="text-primary text-xl">🥂</span>
+                    <span>Premium wine selection curated for you</span>
+                  </li>
+                  <li className="flex gap-x-3 items-center">
+                    <span className="text-primary text-xl">🎯</span>
+                    <span>Interactive virtual experience</span>
+                  </li>
+                  <li className="flex gap-x-3 items-center">
+                    <span className="text-primary text-xl">📝</span>
+                    <span>Digital tasting notes and recommendations</span>
+                  </li>
+                  <li className="flex gap-x-3 items-center">
+                    <span className="text-primary text-xl">🌟</span>
+                    <span>Weekly sessions with wine education</span>
+                  </li>
                 </ul>
                 <button
                   onClick={() => handlePurchase(virtual_wine_plan)}
-                  className="mt-8 block w-full rounded-md bg-secondary px-3.5 py-2.5 text-center text-sm font-semibold text-secondary-foreground shadow-sm hover:bg-secondary/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                  className="mt-10 block w-full rounded-md bg-primary px-6 py-4 text-center text-lg font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-all duration-200"
                 >
-                  Start Wine Experience
+                  Start Your Wine Journey
                 </button>
               </div>
             )
