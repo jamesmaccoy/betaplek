@@ -147,6 +147,14 @@ export default function SubscribePage() {
         const hasStandardAccess = isSubscribed && !showProEntitlements
         const hasNoAccess = !isSubscribed
         
+        console.log('Virtual Wine Debug:', {
+          isSubscribed,
+          showProEntitlements,
+          hasStandardAccess,
+          hasNoAccess,
+          virtual_wine_plan: !!virtual_wine_plan
+        })
+        
         return (
           <div className="mx-auto max-w-4xl">
             <div className="relative rounded-2xl border border-primary p-8 shadow-lg max-w-2xl mx-auto">
@@ -196,7 +204,7 @@ export default function SubscribePage() {
                 </li>
               </ul>
               
-              {hasNoAccess ? (
+              {!isSubscribed ? (
                 <div className="mt-10 space-y-4">
                   <button
                     onClick={() => setShowProEntitlements(false)}
