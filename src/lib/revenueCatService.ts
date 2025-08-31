@@ -436,8 +436,8 @@ class RevenueCatService {
         entitlement: 'pro',
         icon: '📅',
       },
-      'virtual_wine': {
-        id: 'virtual_wine',
+      'wine': {
+        id: 'wine',
         title: '🍷 Virtual Wine Experience',
         description: 'Weekly virtual wine tasting and experience package',
         price: 299.99,
