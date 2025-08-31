@@ -140,7 +140,7 @@ export default function SubscribePage() {
         </div>
       </div>
 
-      {/* Virtual Wine Package - Always visible but with different messaging */}
+      {/* Virtual Wine Package - Always visible for all users */}
       {virtual_wine_plan && (() => {
         const product = virtual_wine_plan.webBillingProduct
         const dualPrice = getDualCurrencyPrice(product)
