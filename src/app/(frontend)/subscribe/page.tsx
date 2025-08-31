@@ -7,6 +7,8 @@ import { useSubscription } from '@/hooks/useSubscription'
 import { Purchases, Package, PurchasesError, ErrorCode, Offering } from '@revenuecat/purchases-js'
 import { useRouter } from 'next/navigation'
 import { getZARPriceFromRevenueCatProduct, getDualCurrencyPrice } from '@/lib/currency'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 
 export default function SubscribePage() {
   const router = useRouter()
@@ -16,6 +18,7 @@ export default function SubscribePage() {
   const [offerings, setOfferings] = useState<Offering[]>([])
   const [loadingOfferings, setLoadingOfferings] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showProEntitlements, setShowProEntitlements] = useState(false)
 
   useEffect(() => {
     if (isInitialized) {
@@ -92,11 +95,13 @@ export default function SubscribePage() {
   const monthly_subscription_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "$rc_monthly");
   const annual_subscription_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "$rc_annual");
   const professional_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "$rc_six_month");
+  const virtual_wine_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "virtual_wine");
   
   console.log("Monthly Plan Found:", monthly_subscription_plan)
   console.log("Annual Plan Found:", annual_subscription_plan)
   console.log("Professional Plan Found:", professional_plan)
-  console.log({ monthly_subscription_plan, annual_subscription_plan, professional_plan });
+  console.log("Virtual Wine Plan Found:", virtual_wine_plan)
+  console.log({ monthly_subscription_plan, annual_subscription_plan, professional_plan, virtual_wine_plan });
 
   if (!isInitialized) {
     return <div>Please log in</div>;
@@ -118,71 +123,128 @@ export default function SubscribePage() {
         Become a member to see the calendar</p>
       </div>
 
-      <div className="mx-auto max-w-4xl grid grid-cols-1 gap-8 md:grid-cols-2 items-start">
-        {monthly_subscription_plan && (() => {
-          const product = monthly_subscription_plan.webBillingProduct
-          const dualPrice = getDualCurrencyPrice(product)
-          return (
-            <div key={monthly_subscription_plan.identifier} className="rounded-2xl border border-border p-8 shadow-sm">
-              <h2 className="text-lg font-semibold leading-8 text-foreground">{product.displayName}</h2>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">{product.description || 'Access all standard features.'}</p>
-              <p className="mt-6 flex items-baseline gap-x-1">
-                <span className="text-4xl font-bold tracking-tight text-foreground">{dualPrice.zar}</span>
-                <span className="text-sm font-semibold leading-6 text-muted-foreground">/month</span>
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {dualPrice.usd} USD
-              </p>
-              <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-muted-foreground xl:mt-10">
-                <li className="flex gap-x-3">Calendar booking request</li>
-                <li className="flex gap-x-3">Curated unique packages</li>
-                <li className="flex gap-x-3">Invite guests</li>
-              </ul>
-              <button
-                onClick={() => handlePurchase(monthly_subscription_plan)}
-                className="mt-8 block w-full rounded-md bg-secondary px-3.5 py-2.5 text-center text-sm font-semibold text-secondary-foreground shadow-sm hover:bg-secondary/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-              >
-                Pay way later
-              </button>
-            </div>
-          )
-        })()}
-
-        {annual_subscription_plan && (() => {
-          const product = annual_subscription_plan.webBillingProduct
-          const dualPrice = getDualCurrencyPrice(product)
-          return (
-            <div key={annual_subscription_plan.identifier} className="relative rounded-2xl border border-primary p-8 shadow-lg">
-              <div className="absolute top-0 -translate-y-1/2 transform rounded-full bg-primary px-3 py-1 text-xs font-semibold tracking-wide text-primary-foreground">
-                Most popular
-              </div>
-              <h2 className="text-lg font-semibold leading-8 text-foreground">{product.displayName}</h2>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">{product.description || 'Get the best value with annual billing.'}</p>
-              <p className="mt-6 flex items-baseline gap-x-1">
-                <span className="text-4xl font-bold tracking-tight text-foreground">{dualPrice.zar}</span>
-                <span className="text-sm font-semibold leading-6 text-muted-foreground">/year</span>
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {dualPrice.usd} USD
-              </p>
-              <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-muted-foreground xl:mt-10">
-                <li className="flex gap-x-3">Calendar booking request</li>
-                <li className="flex gap-x-3">Curated unique packages</li>
-                <li className="flex gap-x-3">Invite guests</li>
-                <li className="flex gap-x-3">Welcome meeting</li>
-              </ul>
-              <button
-                onClick={() => handlePurchase(annual_subscription_plan)}
-                className="mt-8 block w-full rounded-md bg-primary px-3.5 py-2.5 text-center text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-              >
-                Book Now - Save
-              </button>
-            </div>
-          )
-        })()}
+      {/* Entitlement Toggle */}
+      <div className="mx-auto max-w-4xl mb-8 flex justify-center">
+        <div className="flex items-center space-x-4 p-4 bg-card rounded-lg border border-border">
+          <Label htmlFor="entitlement-toggle" className="text-sm font-medium">
+            Standard Access
+          </Label>
+          <Switch
+            id="entitlement-toggle"
+            checked={showProEntitlements}
+            onCheckedChange={setShowProEntitlements}
+          />
+          <Label htmlFor="entitlement-toggle" className="text-sm font-medium">
+            Pro Access
+          </Label>
+        </div>
       </div>
 
-      {professional_plan && (() => {
+      {/* Standard Entitlement Products */}
+      {!showProEntitlements && (
+        <div className="mx-auto max-w-4xl grid grid-cols-1 gap-8 md:grid-cols-2 items-start">
+          {virtual_wine_plan && (() => {
+            const product = virtual_wine_plan.webBillingProduct
+            const dualPrice = getDualCurrencyPrice(product)
+            return (
+              <div key={virtual_wine_plan.identifier} className="rounded-2xl border border-border p-8 shadow-sm">
+                <h2 className="text-lg font-semibold leading-8 text-foreground">{product.displayName}</h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{product.description || 'Weekly virtual wine tasting experience.'}</p>
+                <p className="mt-6 flex items-baseline gap-x-1">
+                  <span className="text-4xl font-bold tracking-tight text-foreground">{dualPrice.zar}</span>
+                  <span className="text-sm font-semibold leading-6 text-muted-foreground">/week</span>
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {dualPrice.usd} USD
+                </p>
+                <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-muted-foreground xl:mt-10">
+                  <li className="flex gap-x-3">Virtual wine tasting</li>
+                  <li className="flex gap-x-3">Expert sommelier</li>
+                  <li className="flex gap-x-3">Premium wine selection</li>
+                  <li className="flex gap-x-3">Interactive experience</li>
+                  <li className="flex gap-x-3">Digital tasting notes</li>
+                </ul>
+                <button
+                  onClick={() => handlePurchase(virtual_wine_plan)}
+                  className="mt-8 block w-full rounded-md bg-secondary px-3.5 py-2.5 text-center text-sm font-semibold text-secondary-foreground shadow-sm hover:bg-secondary/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                >
+                  Start Wine Experience
+                </button>
+              </div>
+            )
+          })()}
+        </div>
+      )}
+
+      {/* Pro Entitlement Products */}
+      {showProEntitlements && (
+        <div className="mx-auto max-w-4xl grid grid-cols-1 gap-8 md:grid-cols-2 items-start">
+          {monthly_subscription_plan && (() => {
+            const product = monthly_subscription_plan.webBillingProduct
+            const dualPrice = getDualCurrencyPrice(product)
+            return (
+              <div key={monthly_subscription_plan.identifier} className="rounded-2xl border border-border p-8 shadow-sm">
+                <h2 className="text-lg font-semibold leading-8 text-foreground">{product.displayName}</h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{product.description || 'Access all standard features.'}</p>
+                <p className="mt-6 flex items-baseline gap-x-1">
+                  <span className="text-4xl font-bold tracking-tight text-foreground">{dualPrice.zar}</span>
+                  <span className="text-sm font-semibold leading-6 text-muted-foreground">/month</span>
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {dualPrice.usd} USD
+                </p>
+                <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-muted-foreground xl:mt-10">
+                  <li className="flex gap-x-3">Calendar booking request</li>
+                  <li className="flex gap-x-3">Curated unique packages</li>
+                  <li className="flex gap-x-3">Invite guests</li>
+                </ul>
+                <button
+                  onClick={() => handlePurchase(monthly_subscription_plan)}
+                  className="mt-8 block w-full rounded-md bg-secondary px-3.5 py-2.5 text-center text-sm font-semibold text-secondary-foreground shadow-sm hover:bg-secondary/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                >
+                  Pay way later
+                </button>
+              </div>
+            )
+          })()}
+
+          {annual_subscription_plan && (() => {
+            const product = annual_subscription_plan.webBillingProduct
+            const dualPrice = getDualCurrencyPrice(product)
+            return (
+              <div key={annual_subscription_plan.identifier} className="relative rounded-2xl border border-primary p-8 shadow-lg">
+                <div className="absolute top-0 -translate-y-1/2 transform rounded-full bg-primary px-3 py-1 text-xs font-semibold tracking-wide text-primary-foreground">
+                  Most popular
+                </div>
+                <h2 className="text-lg font-semibold leading-8 text-foreground">{product.displayName}</h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{product.description || 'Get the best value with annual billing.'}</p>
+                <p className="mt-6 flex items-baseline gap-x-1">
+                  <span className="text-4xl font-bold tracking-tight text-foreground">{dualPrice.zar}</span>
+                  <span className="text-sm font-semibold leading-6 text-muted-foreground">/year</span>
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {dualPrice.usd} USD
+                </p>
+                <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-muted-foreground xl:mt-10">
+                  <li className="flex gap-x-3">Calendar booking request</li>
+                  <li className="flex gap-x-3">Curated unique packages</li>
+                  <li className="flex gap-x-3">Invite guests</li>
+                  <li className="flex gap-x-3">Welcome meeting</li>
+                </ul>
+                <button
+                  onClick={() => handlePurchase(annual_subscription_plan)}
+                  className="mt-8 block w-full rounded-md bg-primary px-3.5 py-2.5 text-center text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+                >
+                  Book Now - Save
+                </button>
+              </div>
+            )
+          })()}
+        </div>
+      )}
+
+      {/* Professional Plan - Always visible but styled differently for Pro */}
+      {showProEntitlements && professional_plan && (() => {
         const product = professional_plan.webBillingProduct;
         const dualPrice = getDualCurrencyPrice(product);
         return (
