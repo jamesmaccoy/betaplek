@@ -66,7 +66,18 @@ export default function SubscribePage() {
       await purchases.purchase({
         rcPackage: pkg
       })
-      router.push('/admin')
+      
+      // Smart redirect based on package type
+      if (pkg.identifier === '$rc_weekly') {
+        // Virtual wine package grants standard entitlement
+        router.push('/bookings')
+      } else if (pkg.identifier === '$rc_six_month') {
+        // Professional plan grants admin entitlement
+        router.push('/admin')
+      } else {
+        // Default for other packages (monthly/annual subscriptions)
+        router.push('/bookings')
+      }
     } catch (purchaseError) {
       const rcError = purchaseError as PurchasesError
       console.error('RevenueCat Purchase Error (Full Object):', rcError)
