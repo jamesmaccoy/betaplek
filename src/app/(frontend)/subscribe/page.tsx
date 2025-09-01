@@ -96,7 +96,7 @@ export default function SubscribePage() {
   const monthly_subscription_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "$rc_monthly");
   const annual_subscription_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "$rc_annual");
   const professional_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "$rc_six_month");
-  const virtual_wine_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "virtual_wine");
+  const virtual_wine_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "$rc_weekly");
   
   console.log("Monthly Plan Found:", monthly_subscription_plan)
   console.log("Annual Plan Found:", annual_subscription_plan)
