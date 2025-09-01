@@ -193,23 +193,23 @@ export default function SubscribePage() {
                 <ul role="list" className="mt-10 space-y-4 text-base leading-6 text-muted-foreground">
                   <li className="flex gap-x-3 items-center">
                     <span className="text-primary text-xl">🍷</span>
-                    <span>Virtual wine tasting with expert sommelier</span>
+                    <span>Booking access for a week</span>
                   </li>
                   <li className="flex gap-x-3 items-center">
                     <span className="text-primary text-xl">🥂</span>
-                    <span>Premium wine selection curated for you</span>
+                    <span>New wine farms each week</span>
                   </li>
                   <li className="flex gap-x-3 items-center">
                     <span className="text-primary text-xl">🎯</span>
-                    <span>Interactive virtual experience</span>
+                    <span>Curated selection of the capes finest wines</span>
                   </li>
                   <li className="flex gap-x-3 items-center">
                     <span className="text-primary text-xl">📝</span>
-                    <span>Digital tasting notes and recommendations</span>
+                    <span>Have your order waiting for you</span>
                   </li>
                   <li className="flex gap-x-3 items-center">
                     <span className="text-primary text-xl">🌟</span>
-                    <span>Weekly sessions with wine education</span>
+                    <span>Weekly sessions with wine makers</span>
                   </li>
                 </ul>
                 
@@ -217,7 +217,7 @@ export default function SubscribePage() {
                   onClick={() => handlePurchase(virtual_wine_plan)}
                   className="mt-10 block w-full rounded-md bg-primary px-6 py-4 text-center text-lg font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-all duration-200"
                 >
-                  Start Your Wine Journey
+                  Get access by pre ordering wine
                 </button>
               </div>
             )
