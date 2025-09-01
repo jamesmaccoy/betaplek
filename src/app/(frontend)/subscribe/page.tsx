@@ -96,14 +96,18 @@ export default function SubscribePage() {
   const monthly_subscription_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "$rc_monthly");
   const annual_subscription_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "$rc_annual");
   const professional_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "$rc_six_month");
-  const virtual_wine_plan = perNightOffering?.availablePackages.find(pkg => pkg.identifier === "virtual_wine");
+  const virtual_wine_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "virtual_wine");
   
   console.log("Monthly Plan Found:", monthly_subscription_plan)
   console.log("Annual Plan Found:", annual_subscription_plan)
   console.log("Professional Plan Found:", professional_plan)
   console.log("Virtual Wine Plan Found:", virtual_wine_plan)
+  console.log("Admin Offering:", adminOffering?.identifier)
+  console.log("Admin Packages:", adminOffering?.availablePackages?.map(p => p.identifier))
   console.log("Per Night Offering:", perNightOffering?.identifier)
   console.log("Per Night Packages:", perNightOffering?.availablePackages?.map(p => p.identifier))
+  console.log("Show Pro Entitlements:", showProEntitlements)
+  console.log("Virtual Wine Plan exists:", !!virtual_wine_plan)
   console.log({ monthly_subscription_plan, annual_subscription_plan, professional_plan, virtual_wine_plan });
 
   if (!isInitialized) {
@@ -145,7 +149,7 @@ export default function SubscribePage() {
       {/* Standard Access Products */}
       {!showProEntitlements && (
         <div className="mx-auto max-w-4xl">
-          {virtual_wine_plan && (() => {
+          {virtual_wine_plan ? (() => {
             const product = virtual_wine_plan.webBillingProduct
             const dualPrice = getDualCurrencyPrice(product)
             
@@ -203,7 +207,12 @@ export default function SubscribePage() {
                 </button>
               </div>
             )
-          })()}
+          })() : (
+            <div className="text-center p-8">
+              <p className="text-muted-foreground">Virtual wine package not found. Check console for details.</p>
+              <p className="text-sm text-muted-foreground mt-2">Debug: virtual_wine_plan = {String(virtual_wine_plan)}</p>
+            </div>
+          )}
         </div>
       )}
 
