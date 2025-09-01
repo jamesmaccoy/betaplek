@@ -28,7 +28,7 @@ export default function SubscribePage() {
 
   useEffect(() => {
     if (!isLoading && isSubscribed) {
-      console.log('User already subscribed, redirecting to /admin from useEffect.')
+      console.log('User already subscribed, redirecting to /bookings from useEffect.')
       router.push('/bookings')
     }
   }, [isLoading, isSubscribed, router])
@@ -89,25 +89,25 @@ export default function SubscribePage() {
     }
   }
 
-  // Find the correct offering
+  // Find the correct offerings
   const adminOffering = offerings.find(offering => offering.identifier === "simpleplek_admin");
+  const perNightOffering = offerings.find(offering => offering.identifier === "per_night");
 
   const monthly_subscription_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "$rc_monthly");
   const annual_subscription_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "$rc_annual");
   const professional_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "$rc_six_month");
-  const virtual_wine_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "wine");
+  const virtual_wine_plan = perNightOffering?.availablePackages.find(pkg => pkg.identifier === "virtual_wine");
   
   console.log("Monthly Plan Found:", monthly_subscription_plan)
   console.log("Annual Plan Found:", annual_subscription_plan)
   console.log("Professional Plan Found:", professional_plan)
   console.log("Virtual Wine Plan Found:", virtual_wine_plan)
+  console.log("Per Night Offering:", perNightOffering?.identifier)
+  console.log("Per Night Packages:", perNightOffering?.availablePackages?.map(p => p.identifier))
   console.log({ monthly_subscription_plan, annual_subscription_plan, professional_plan, virtual_wine_plan });
 
   if (!isInitialized) {
     return <div>Please log in</div>;
-  }
-  if (isSubscribed) {
-    return <div>You are already subscribed!</div>;
   }
 
   return (
@@ -140,7 +140,7 @@ export default function SubscribePage() {
         </div>
       </div>
 
-      {/* Virtual Wine Package - Always visible for all users */}
+      {/* Virtual Wine Package - Available to all users */}
       {virtual_wine_plan && (() => {
         const product = virtual_wine_plan.webBillingProduct
         const dualPrice = getDualCurrencyPrice(product)
@@ -152,26 +152,18 @@ export default function SubscribePage() {
           showProEntitlements,
           hasStandardAccess,
           hasNoAccess,
-          virtual_wine_plan: !!virtual_wine_plan
+          virtual_wine_plan: !!virtual_wine_plan,
+          product: product?.displayName
         })
         
         return (
           <div className="mx-auto max-w-4xl">
             <div className="relative rounded-2xl border border-primary p-8 shadow-lg max-w-2xl mx-auto">
               <div className="absolute top-0 -translate-y-1/2 transform rounded-full bg-primary px-3 py-1 text-xs font-semibold tracking-wide text-primary-foreground">
-                {hasNoAccess ? 'Upgrade to Access' : 'Featured Experience'}
+                Featured Experience
               </div>
               <h2 className="text-2xl font-semibold leading-8 text-foreground text-center">{product.displayName}</h2>
               <p className="mt-4 text-lg leading-6 text-muted-foreground text-center">{product.description || 'Weekly virtual wine tasting experience.'}</p>
-              
-              {hasNoAccess && (
-                <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                  <p className="text-amber-800 text-center font-medium">
-                    🔒 Upgrade to Standard Access to unlock this experience
-                  </p>
-                </div>
-              )}
-              
               <div className="mt-8 text-center">
                 <p className="flex items-baseline gap-x-1 justify-center">
                   <span className="text-5xl font-bold tracking-tight text-foreground">{dualPrice.zar}</span>
@@ -204,26 +196,12 @@ export default function SubscribePage() {
                 </li>
               </ul>
               
-              {!isSubscribed ? (
-                <div className="mt-10 space-y-4">
-                  <button
-                    onClick={() => setShowProEntitlements(false)}
-                    className="block w-full rounded-md bg-primary px-6 py-4 text-center text-lg font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-all duration-200"
-                  >
-                    Switch to Standard Access
-                  </button>
-                  <p className="text-sm text-muted-foreground text-center">
-                    Use the toggle above to switch to Standard Access and unlock this experience
-                  </p>
-                </div>
-              ) : (
-                <button
-                  onClick={() => handlePurchase(virtual_wine_plan)}
-                  className="mt-10 block w-full rounded-md bg-primary px-6 py-4 text-center text-lg font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-all duration-200"
-                >
-                  Start Your Wine Journey
-                </button>
-              )}
+              <button
+                onClick={() => handlePurchase(virtual_wine_plan)}
+                className="mt-10 block w-full rounded-md bg-primary px-6 py-4 text-center text-lg font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-all duration-200"
+              >
+                Start Your Wine Journey
+              </button>
             </div>
           </div>
         )
