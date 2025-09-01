@@ -92,11 +92,12 @@ export default function SubscribePage() {
   // Find the correct offerings
   const adminOffering = offerings.find(offering => offering.identifier === "simpleplek_admin");
   const perNightOffering = offerings.find(offering => offering.identifier === "per_night");
+  const standardOffering = offerings.find(offering => offering.identifier === "Standard");
 
   const monthly_subscription_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "$rc_monthly");
   const annual_subscription_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "$rc_annual");
   const professional_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "$rc_six_month");
-  const virtual_wine_plan = adminOffering?.availablePackages.find(pkg => pkg.identifier === "$rc_weekly");
+  const virtual_wine_plan = standardOffering?.availablePackages.find(pkg => pkg.identifier === "$rc_weekly");
   
   console.log("Monthly Plan Found:", monthly_subscription_plan)
   console.log("Annual Plan Found:", annual_subscription_plan)
@@ -104,6 +105,8 @@ export default function SubscribePage() {
   console.log("Virtual Wine Plan Found:", virtual_wine_plan)
   console.log("Admin Offering:", adminOffering?.identifier)
   console.log("Admin Packages:", adminOffering?.availablePackages?.map(p => p.identifier))
+  console.log("Standard Offering:", standardOffering?.identifier)
+  console.log("Standard Packages:", standardOffering?.availablePackages?.map(p => p.identifier))
   console.log("Per Night Offering:", perNightOffering?.identifier)
   console.log("Per Night Packages:", perNightOffering?.availablePackages?.map(p => p.identifier))
   console.log("Show Pro Entitlements:", showProEntitlements)
