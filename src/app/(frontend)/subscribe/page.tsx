@@ -217,7 +217,7 @@ export default function SubscribePage() {
                   onClick={() => handlePurchase(virtual_wine_plan)}
                   className="mt-10 block w-full rounded-md bg-primary px-6 py-4 text-center text-lg font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-all duration-200"
                 >
-                  Subscribe to Simpleplek Virtual Wine
+                  Subscribe to Simple Plek
                 </button>
               </div>
             )

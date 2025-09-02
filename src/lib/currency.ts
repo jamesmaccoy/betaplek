@@ -89,9 +89,9 @@ export function convertUSDToZAR(usdAmount: number): number {
 // Configurable ZAR price overrides for specific products
 const ZAR_PRICE_OVERRIDES: Record<string, number> = {
   'virtual_wine': 185.00,      // Weekly subscription in ZAR (Bottle of Virtual Wine)
-  'monthly_subscription': 352.00,    // Monthly subscription in ZAR ($20.00 → R352.00)
-  'annual_subscription': 3529.00,     // Annual subscription in ZAR ($200.00 → R3,529.00)
-  'subscription_pro': 882.00,  // Professional subscription in ZAR ($50.00 → R882.00)
+  'monthly_subscription': 350.00,    // Monthly subscription in ZAR ($20.00 → R352.00)
+  'annual_subscription': 3530.00,     // Annual subscription in ZAR ($200.00 → R3,529.00)
+  'subscription_pro': 880.00,  // Professional subscription in ZAR ($50.00 → R882.00)
   // Add more overrides as needed
 }
 
