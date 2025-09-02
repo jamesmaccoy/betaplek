@@ -177,7 +177,7 @@ export default function SubscribePage() {
             return (
               <div className="relative rounded-2xl border border-primary p-8 shadow-lg max-w-2xl mx-auto">
                 <div className="absolute top-0 -translate-y-1/2 transform rounded-full bg-primary px-3 py-1 text-xs font-semibold tracking-wide text-primary-foreground">
-                  Virtual wine
+                  Standard Plan
                 </div>
                 <h2 className="text-2xl font-semibold leading-8 text-foreground text-center">{product.displayName}</h2>
                 <p className="mt-4 text-lg leading-6 text-muted-foreground text-center">{product.description || 'Weekly virtual wine tasting experience.'}</p>
