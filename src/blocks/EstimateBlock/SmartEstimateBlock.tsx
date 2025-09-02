@@ -102,7 +102,7 @@ const PackageCard = ({
   onSelect: () => void 
 }) => {
   const total = pkg.baseRate || calculateTotal(baseRate, duration, pkg.multiplier)
-  const pricePerNight = pkg.baseRate ? pkg.baseRate : (total / duration)
+  const pricePerNight = pkg.baseRate ? baseRate : (total / duration)
   const multiplierText = pkg.baseRate 
     ? 'Fixed package price' 
     : pkg.multiplier === 1 
@@ -1523,7 +1523,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
                     R{(selectedPackage.baseRate || calculateTotal(baseRate, duration, selectedPackage.multiplier)).toFixed(0)}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    R{(selectedPackage.baseRate ? selectedPackage.baseRate : (calculateTotal(baseRate, duration, selectedPackage.multiplier) / duration)).toFixed(0)}/night
+                    R{(selectedPackage.baseRate ? baseRate : (calculateTotal(baseRate, duration, selectedPackage.multiplier) / duration)).toFixed(0)}/night
                   </div>
                   {!selectedPackage.baseRate && selectedPackage.multiplier !== 1 && (
                     <div className="text-xs text-muted-foreground">
