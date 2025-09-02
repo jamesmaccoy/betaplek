@@ -177,7 +177,7 @@ export default function SubscribePage() {
             return (
               <div className="relative rounded-2xl border border-primary p-8 shadow-lg max-w-2xl mx-auto">
                 <div className="absolute top-0 -translate-y-1/2 transform rounded-full bg-primary px-3 py-1 text-xs font-semibold tracking-wide text-primary-foreground">
-                  Featured Experience
+                  Virtual wine
                 </div>
                 <h2 className="text-2xl font-semibold leading-8 text-foreground text-center">{product.displayName}</h2>
                 <p className="mt-4 text-lg leading-6 text-muted-foreground text-center">{product.description || 'Weekly virtual wine tasting experience.'}</p>
@@ -197,7 +197,7 @@ export default function SubscribePage() {
                   </li>
                   <li className="flex gap-x-3 items-center">
                     <span className="text-primary text-xl">🥂</span>
-                    <span>New wine farms each week</span>
+                    <span>Pop up wine tasting experience at selected</span>
                   </li>
                   <li className="flex gap-x-3 items-center">
                     <span className="text-primary text-xl">🎯</span>
@@ -205,7 +205,7 @@ export default function SubscribePage() {
                   </li>
                   <li className="flex gap-x-3 items-center">
                     <span className="text-primary text-xl">📝</span>
-                    <span>Have your order waiting for you</span>
+                    <span>Have your order waiting for you at your plek</span>
                   </li>
                   <li className="flex gap-x-3 items-center">
                     <span className="text-primary text-xl">🌟</span>
@@ -217,7 +217,7 @@ export default function SubscribePage() {
                   onClick={() => handlePurchase(virtual_wine_plan)}
                   className="mt-10 block w-full rounded-md bg-primary px-6 py-4 text-center text-lg font-semibold text-primary-foreground shadow-lg hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-all duration-200"
                 >
-                  Get access by pre ordering wine
+                  Subscribe to Simpleplek Virtual Wine
                 </button>
               </div>
             )
