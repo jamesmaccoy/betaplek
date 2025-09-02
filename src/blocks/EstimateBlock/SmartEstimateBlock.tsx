@@ -101,13 +101,15 @@ const PackageCard = ({
   isSelected: boolean
   onSelect: () => void 
 }) => {
-  const total = calculateTotal(baseRate, duration, pkg.multiplier)
-  const pricePerNight = total / duration
-  const multiplierText = pkg.multiplier === 1 
-    ? 'Base rate' 
-    : pkg.multiplier > 1 
-      ? `+${((pkg.multiplier - 1) * 100).toFixed(0)}%` 
-      : `-${((1 - pkg.multiplier) * 100).toFixed(0)}%`
+  const total = pkg.baseRate || calculateTotal(baseRate, duration, pkg.multiplier)
+  const pricePerNight = pkg.baseRate ? pkg.baseRate : (total / duration)
+  const multiplierText = pkg.baseRate 
+    ? 'Fixed package price' 
+    : pkg.multiplier === 1 
+      ? 'Base rate' 
+      : pkg.multiplier > 1 
+        ? `+${((pkg.multiplier - 1) * 100).toFixed(0)}%` 
+        : `-${((1 - pkg.multiplier) * 100).toFixed(0)}%`
   
   return (
     <Card 
@@ -479,7 +481,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
     setBookingError(null)
     
     try {
-      const total = calculateTotal(baseRate, duration, selectedPackage.multiplier)
+      const total = selectedPackage.baseRate || calculateTotal(baseRate, duration, selectedPackage.multiplier)
       
       // Create estimate first
       console.log('Creating estimate with package:', {
@@ -540,7 +542,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       const revenueCatPackage = offerings.find((pkg) => {
         const identifier = pkg.webBillingProduct?.identifier
         const revenueCatId = selectedPackage.revenueCatId
-        const mappedRevenueCatId = getRevenueCatPackageId(revenueCatId)
+        const mappedRevenueCatId = revenueCatId ? getRevenueCatPackageId(revenueCatId) : undefined
         
         console.log('Checking RevenueCat package:', {
           identifier,
@@ -647,7 +649,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         console.log('❌ This means the payment modal will be bypassed!')
         console.log('❌ Available offerings:', offerings.map(pkg => pkg.webBillingProduct?.identifier))
         console.log('❌ Looking for:', selectedPackage.revenueCatId)
-        console.log('❌ Mapped to:', getRevenueCatPackageId(selectedPackage.revenueCatId))
+        console.log('❌ Mapped to:', selectedPackage.revenueCatId ? getRevenueCatPackageId(selectedPackage.revenueCatId) : 'undefined')
         
         // Confirm the estimate with payment validation (for fallback case)
         const confirmResponse = await fetch(`/api/estimates/${estimate.id}/confirm`, {
@@ -738,7 +740,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         ? endDate.toISOString()
         : new Date(Date.now() + (duration || 1) * 24 * 60 * 60 * 1000).toISOString()
       const multiplier = selectedPackage?.multiplier ?? 1
-      const total = calculateTotal(baseRate, duration || 1, multiplier)
+              const total = selectedPackage?.baseRate || calculateTotal(baseRate, duration || 1, multiplier)
 
       const resp = await fetch('/api/estimates', {
         method: 'POST',
@@ -1518,12 +1520,12 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
                 </div>
                 <div className="text-right">
                   <div className="text-lg font-bold text-primary">
-                    R{calculateTotal(baseRate, duration, selectedPackage.multiplier).toFixed(0)}
+                    R{(selectedPackage.baseRate || calculateTotal(baseRate, duration, selectedPackage.multiplier)).toFixed(0)}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    R{(calculateTotal(baseRate, duration, selectedPackage.multiplier) / duration).toFixed(0)}/night
+                    R{(selectedPackage.baseRate ? selectedPackage.baseRate : (calculateTotal(baseRate, duration, selectedPackage.multiplier) / duration)).toFixed(0)}/night
                   </div>
-                  {selectedPackage.multiplier !== 1 && (
+                  {!selectedPackage.baseRate && selectedPackage.multiplier !== 1 && (
                     <div className="text-xs text-muted-foreground">
                       {selectedPackage.multiplier > 1 ? '+' : ''}{((selectedPackage.multiplier - 1) * 100).toFixed(0)}% rate
                     </div>
