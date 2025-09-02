@@ -86,9 +86,28 @@ export function convertUSDToZAR(usdAmount: number): number {
   return usdAmount * exchangeRate
 }
 
+// Configurable ZAR price overrides for specific products
+const ZAR_PRICE_OVERRIDES: Record<string, number> = {
+  '$rc_weekly': 185.00,      // Weekly subscription in ZAR
+  '$rc_monthly': 352.00,    // Monthly subscription in ZAR  
+  '$rc_annual': 3529.00,     // Annual subscription in ZAR
+  '$rc_six_month': 882.00,  // 6-month professional plan in ZAR
+  // Add more overrides as needed
+}
+
 // Function to get both USD and ZAR prices
 export function getDualCurrencyPrice(product: any): { usd: string; zar: string } {
   if (!product) return { usd: 'N/A', zar: 'N/A' }
+  
+  // Check if we have a ZAR price override for this product
+  const productId = product.identifier || product.id
+  if (productId && ZAR_PRICE_OVERRIDES[productId]) {
+    const zarOverride = ZAR_PRICE_OVERRIDES[productId]
+    return {
+      usd: product.currentPrice?.formattedPrice || `$${product.currentPrice?.amount ? (product.currentPrice.amount / 100).toFixed(2) : '0.00'}`,
+      zar: formatAmountToZAR(zarOverride)
+    }
+  }
   
   // Check if RevenueCat is already providing formatted prices
   if (product.currentPrice?.formattedPrice) {
