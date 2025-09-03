@@ -529,11 +529,19 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         source: selectedPackage.source
       })
       
+      // Log all available package mappings for debugging
+      console.log('📋 Available package mappings:', {
+        'per_night': 'per_night_customer',
+        'Weekly': 'weekly_customer', 
+        'week_x2_customer': 'week_x2_customer'
+      })
+      
       // Handle known package ID mismatches between database and RevenueCat
       const getRevenueCatPackageId = (revenueCatId: string) => {
         const mappings: Record<string, string> = {
           'per_night': 'per_night_customer', // Database has per_night, RevenueCat has per_night_customer
           'Weekly': 'weekly_customer', // Database has Weekly, RevenueCat has weekly_customer (Standard Weekly)
+          'week_x2_customer': 'week_x2_customer', // Database has week_x2_customer, RevenueCat has week_x2_customer
         }
         return mappings[revenueCatId] || revenueCatId
       }
