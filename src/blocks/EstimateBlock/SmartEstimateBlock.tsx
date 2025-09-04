@@ -23,6 +23,7 @@ interface Package {
   description: string
   multiplier: number
   category: string
+  entitlement?: 'standard' | 'pro'
   minNights: number
   maxNights: number
   revenueCatId?: string
@@ -231,7 +232,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   const recognitionRef = useRef<any>(null)
 
   // Helper function to filter packages based on customer entitlement
-  // This ensures that pro-only packages (like gathering_monthly) are only shown to pro users
+  // This ensures that pro-only packages are only shown to pro users
   // Also filters out addon packages which should only appear on the booking page
   const filterPackagesByEntitlement = useCallback((packages: Package[]): Package[] => {
     // Reduce logging to prevent performance issues
@@ -245,12 +246,22 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         return false
       }
       
-      // Filter out pro-only packages for non-pro users
+      // Check package entitlement - if package requires pro, user must be pro
+      if (pkg.entitlement === 'pro' && customerEntitlement !== 'pro') {
+        return false
+      }
+      
+      // Check package entitlement - if package requires standard, user must have standard or pro
+      if (pkg.entitlement === 'standard' && customerEntitlement === 'none') {
+        return false
+      }
+      
+      // Legacy: Filter out pro-only packages by revenueCatId for non-pro users
       if (pkg.revenueCatId === 'gathering_monthly' && customerEntitlement !== 'pro') {
         return false
       }
       
-      // Filter out other pro-only packages
+      // Legacy: Filter out other pro-only packages by revenueCatId
       const proOnlyPackages = ['gathering_monthly', 'hosted3nights', 'hosted7nights', 'hosted_extended', 'per_night_luxury']
       if (proOnlyPackages.includes(pkg.revenueCatId || '') && customerEntitlement !== 'pro') {
         return false
@@ -785,19 +796,41 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       fetch(`/api/packages/post/${postId}`)
         .then(res => res.json())
         .then(data => {
+          console.log('📦 Raw packages from API:', data.packages)
+          
           // Filter packages inline to avoid dependency issues
           const filtered = (data.packages || []).filter((pkg: Package) => {
             if (!pkg.isEnabled) return false
             
-            // Filter out pro-only packages for non-pro users
+            // Filter out addon packages - these should only appear on the booking page
+            if (pkg.category === 'addon') return false
+            
+            // Check package entitlement - if package requires pro, user must be pro
+            if (pkg.entitlement === 'pro' && customerEntitlement !== 'pro') return false
+            
+            // Check package entitlement - if package requires standard, user must have standard or pro
+            if (pkg.entitlement === 'standard' && customerEntitlement === 'none') return false
+            
+            // Legacy: Filter out pro-only packages for non-pro users
             if (pkg.revenueCatId === 'gathering_monthly' && customerEntitlement !== 'pro') return false
             
-            // Filter out other pro-only packages
+            // Legacy: Filter out other pro-only packages
             const proOnlyPackages = ['gathering_monthly', 'hosted3nights', 'hosted7nights', 'hosted_extended', 'per_night_luxury']
             if (proOnlyPackages.includes(pkg.revenueCatId || '') && customerEntitlement !== 'pro') return false
             
             return true
           })
+          
+          console.log('📦 Filtered packages:', filtered.map((pkg: Package) => ({
+            name: pkg.name,
+            category: pkg.category,
+            entitlement: pkg.entitlement,
+            revenueCatId: pkg.revenueCatId,
+            source: pkg.source,
+            isEnabled: pkg.isEnabled
+          })))
+          console.log('👤 Current customer entitlement:', customerEntitlement)
+          
           setPackages(filtered)
           loadedRef.current = true
         })
@@ -907,6 +940,20 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       
       // Sort packages by relevance and select top 3
       const sortedPackages = suitablePackages.sort((a: any, b: any) => {
+        // Debug logging for package sorting
+        console.log('🔍 Sorting package A:', { 
+          name: a.name, 
+          category: a.category, 
+          revenueCatId: a.revenueCatId,
+          source: a.source 
+        })
+        console.log('🔍 Sorting package B:', { 
+          name: b.name, 
+          category: b.category, 
+          revenueCatId: b.revenueCatId,
+          source: b.source 
+        })
+        
         // Prioritize packages that exactly match the duration
         const aExactMatch = startDate && endDate ? 
           (duration >= a.minNights && duration <= a.maxNights) : false
@@ -918,9 +965,12 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         
         // Then sort by category priority (special > hosted > standard)
         // Note: addon packages are filtered out earlier and should not appear here
+        // RevenueCat packages without category field get default priority
         const categoryPriority: Record<string, number> = { special: 3, hosted: 2, standard: 1 }
-        const aPriority = categoryPriority[a.category as string] || 1
-        const bPriority = categoryPriority[b.category as string] || 1
+        const aPriority = a.category ? categoryPriority[a.category as string] || 1 : 1
+        const bPriority = b.category ? categoryPriority[b.category as string] || 1 : 1
+        
+        console.log('🔍 Category priorities:', { aPriority, bPriority })
         
         if (aPriority !== bPriority) return bPriority - aPriority
         
@@ -952,7 +1002,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         .then(res => res.json())
         .then(data => {
           // Apply entitlement filtering first
-          const allPackages = filterPackagesByEntitlement((data.packages || []).filter((pkg: any) => pkg.isEnabled))
+          const allPackages = filterPackagesByEntitlement((data.packages || []).filter((pkg: Package) => pkg.isEnabled))
           
           // Filter packages by duration if dates are selected
           let suitablePackages = allPackages
