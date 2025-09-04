@@ -435,12 +435,12 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
     setCustomerEntitlement(entitlement)
   }, [subscriptionStatus])
 
-  // Load RevenueCat offerings when initialized
+  // Load RevenueCat offerings when initialized, entitlement changes, or packages change
   useEffect(() => {
-    if (isInitialized) {
+    if (isInitialized && packages.length > 0) {
       loadOfferings()
     }
-  }, [isInitialized])
+  }, [isInitialized, customerEntitlement, packages])
 
   const loadOfferings = async () => {
     try {
@@ -464,7 +464,61 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         index === self.findIndex(p => p.webBillingProduct?.identifier === pkg.webBillingProduct?.identifier)
       )
       
-      setOfferings(uniquePackages)
+      // Filter RevenueCat packages based on entitlement
+      const filteredOfferings = uniquePackages.filter((pkg) => {
+        const identifier = pkg.webBillingProduct?.identifier
+        
+        // First, try to find the corresponding database package to get its entitlement
+        const databasePackage = packages.find(dbPkg => 
+          dbPkg.revenueCatId === identifier || 
+          dbPkg.id === identifier
+        )
+        
+        let requiredEntitlement: 'standard' | 'pro' | undefined
+        
+        if (databasePackage) {
+          // Use the database package's entitlement field (source of truth)
+          requiredEntitlement = databasePackage.entitlement
+        } else {
+          // Fallback: Map RevenueCat identifiers to entitlement requirements
+          // This is only used for RevenueCat packages that don't exist in the database
+          const entitlementMap: Record<string, 'standard' | 'pro'> = {
+            'gathering_monthly': 'pro',       // Pro entitlement
+            // Add other RevenueCat-only packages here if needed
+          }
+          requiredEntitlement = entitlementMap[identifier || '']
+        }
+        
+        // If no entitlement requirement, allow for all users
+        if (!requiredEntitlement) return true
+        
+        // Check if user has required entitlement
+        if (requiredEntitlement === 'pro' && customerEntitlement !== 'pro') return false
+        if (requiredEntitlement === 'standard' && customerEntitlement === 'none') return false
+        
+        return true
+      })
+      
+      console.log('🎯 RevenueCat packages filtered by entitlement:', {
+        total: uniquePackages.length,
+        filtered: filteredOfferings.length,
+        customerEntitlement,
+        filteredPackages: filteredOfferings.map(pkg => {
+          const identifier = pkg.webBillingProduct?.identifier
+          const databasePackage = packages.find(dbPkg => 
+            dbPkg.revenueCatId === identifier || 
+            dbPkg.id === identifier
+          )
+          return {
+            identifier,
+            title: pkg.webBillingProduct?.title,
+            entitlementSource: databasePackage ? 'database' : 'fallback',
+            entitlement: databasePackage?.entitlement || 'none'
+          }
+        })
+      })
+      
+      setOfferings(filteredOfferings)
     } catch (err) {
       console.error('Error loading offerings:', err)
     }
