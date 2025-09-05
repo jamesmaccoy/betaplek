@@ -246,6 +246,11 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         return false
       }
       
+      // Special category packages are available to everyone (premium experience for non-subscribers)
+      if (pkg.category === 'special') {
+        return true
+      }
+      
       // Check package entitlement - if package requires pro, user must be pro
       if (pkg.entitlement === 'pro' && customerEntitlement !== 'pro') {
         return false
@@ -256,8 +261,8 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         return false
       }
       
-      // For Standard subscribers, only show hosted and special packages (not regular standard packages)
-      if (customerEntitlement === 'standard' && pkg.entitlement === 'standard' && !['hosted', 'special'].includes(pkg.category)) {
+      // For non-subscribers, only show hosted and special packages (premium experience)
+      if (customerEntitlement === 'none' && !['hosted', 'special'].includes(pkg.category)) {
         return false
       }
       
@@ -859,14 +864,17 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
             // Filter out addon packages - these should only appear on the booking page
             if (pkg.category === 'addon') return false
             
+            // Special category packages are available to everyone (premium experience for non-subscribers)
+            if (pkg.category === 'special') return true
+            
             // Check package entitlement - if package requires pro, user must be pro
             if (pkg.entitlement === 'pro' && customerEntitlement !== 'pro') return false
             
             // Check package entitlement - if package requires standard, user must have standard or pro
             if (pkg.entitlement === 'standard' && customerEntitlement === 'none') return false
             
-            // For Standard subscribers, only show hosted and special packages (not regular standard packages)
-            if (customerEntitlement === 'standard' && pkg.entitlement === 'standard' && !['hosted', 'special'].includes(pkg.category)) return false
+            // For non-subscribers, only show hosted and special packages (premium experience)
+            if (customerEntitlement === 'none' && !['hosted', 'special'].includes(pkg.category)) return false
             
             // Legacy: Filter out pro-only packages for non-pro users
             // Only keep this for packages that don't have entitlement field in database
