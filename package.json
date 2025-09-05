@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
+    "postinstall": "npm install --include=optional sharp",
     "postbuild": "next-sitemap --config next-sitemap.config.cjs",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
     "dev:prod": "cross-env NODE_OPTIONS=--no-deprecation rm -rf .next && pnpm build && pnpm start",
@@ -75,7 +76,7 @@
     "react-dom": "^19.0.0",
     "react-hook-form": "7.45.4",
     "sass": "^1.85.1",
-    "sharp": "^0.34.2",
+    "sharp": "^0.34.3",
     "storybook": "^9.0.0",
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7"
