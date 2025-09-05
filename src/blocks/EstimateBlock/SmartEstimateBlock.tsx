@@ -256,6 +256,11 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         return false
       }
       
+      // For Standard subscribers, only show hosted and special packages (not regular standard packages)
+      if (customerEntitlement === 'standard' && pkg.entitlement === 'standard' && !['hosted', 'special'].includes(pkg.category)) {
+        return false
+      }
+      
       // Legacy: Filter out pro-only packages by revenueCatId for non-pro users
       // Only keep this for packages that don't have entitlement field in database
       if (pkg.revenueCatId === 'gathering_monthly' && customerEntitlement !== 'pro') {
@@ -859,6 +864,9 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
             
             // Check package entitlement - if package requires standard, user must have standard or pro
             if (pkg.entitlement === 'standard' && customerEntitlement === 'none') return false
+            
+            // For Standard subscribers, only show hosted and special packages (not regular standard packages)
+            if (customerEntitlement === 'standard' && pkg.entitlement === 'standard' && !['hosted', 'special'].includes(pkg.category)) return false
             
             // Legacy: Filter out pro-only packages for non-pro users
             // Only keep this for packages that don't have entitlement field in database
