@@ -107,10 +107,10 @@ const PackageCard = ({
   const multiplierText = pkg.baseRate 
     ? 'Fixed package price' 
     : pkg.multiplier === 1 
-      ? 'Base rate' 
-      : pkg.multiplier > 1 
-        ? `+${((pkg.multiplier - 1) * 100).toFixed(0)}%` 
-        : `-${((1 - pkg.multiplier) * 100).toFixed(0)}%`
+    ? 'Base rate' 
+    : pkg.multiplier > 1 
+      ? `+${((pkg.multiplier - 1) * 100).toFixed(0)}%` 
+      : `-${((1 - pkg.multiplier) * 100).toFixed(0)}%`
   
   return (
     <Card 
@@ -257,13 +257,8 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       }
       
       // Legacy: Filter out pro-only packages by revenueCatId for non-pro users
+      // Only keep this for packages that don't have entitlement field in database
       if (pkg.revenueCatId === 'gathering_monthly' && customerEntitlement !== 'pro') {
-        return false
-      }
-      
-      // Legacy: Filter out other pro-only packages by revenueCatId
-      const proOnlyPackages = ['gathering_monthly', 'hosted3nights', 'hosted7nights', 'hosted_extended', 'per_night_luxury']
-      if (proOnlyPackages.includes(pkg.revenueCatId || '') && customerEntitlement !== 'pro') {
         return false
       }
       
@@ -866,11 +861,8 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
             if (pkg.entitlement === 'standard' && customerEntitlement === 'none') return false
             
             // Legacy: Filter out pro-only packages for non-pro users
+            // Only keep this for packages that don't have entitlement field in database
             if (pkg.revenueCatId === 'gathering_monthly' && customerEntitlement !== 'pro') return false
-            
-            // Legacy: Filter out other pro-only packages
-            const proOnlyPackages = ['gathering_monthly', 'hosted3nights', 'hosted7nights', 'hosted_extended', 'per_night_luxury']
-            if (proOnlyPackages.includes(pkg.revenueCatId || '') && customerEntitlement !== 'pro') return false
             
             return true
           })
