@@ -66,17 +66,25 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         
         setIsInitialized(true)
 
-        // Only try to get customer info if user is authenticated
-        if (!currentUser) {
+        // Only try to get customer info if user is authenticated and has valid ID
+        if (!currentUser || !currentUser.id || currentUser.id === '[Not provided]' || currentUser.id === '') {
+          console.log('No valid user for RevenueCat customer info')
           setCustomerInfo(null)
           setError(null)
           return
         }
         
-        const info = await purchases.getCustomerInfo()
-        console.log('Customer info:', info)
-        setCustomerInfo(info)
-        setError(null)
+        try {
+          const info = await purchases.getCustomerInfo()
+          console.log('Customer info:', info)
+          setCustomerInfo(info)
+          setError(null)
+        } catch (customerInfoError) {
+          console.error('Failed to get customer info:', customerInfoError)
+          // Don't set this as a fatal error - just log it
+          setCustomerInfo(null)
+          setError(null) // Clear error since this is expected for unauthenticated users
+        }
       } catch (err) {
         console.error('RevenueCat getCustomerInfo error:', err)
         setError(err instanceof Error ? err : new Error('Failed to load customer info'))

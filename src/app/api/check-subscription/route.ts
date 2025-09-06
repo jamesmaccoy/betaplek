@@ -32,6 +32,18 @@ export async function GET(request: NextRequest) {
     // Extract active entitlement IDs
     const activeEntitlements = Object.keys(customerInfo.entitlements.active || {});
     const hasActiveSubscription = activeEntitlements.length > 0;
+    
+    console.log('🔍 Subscription Check Debug:', {
+      userId,
+      activeEntitlements,
+      hasActiveSubscription,
+      allEntitlements: customerInfo.entitlements,
+      customerInfo: {
+        originalAppUserId: customerInfo.originalAppUserId,
+        firstSeen: customerInfo.firstSeen,
+        originalPurchaseDate: customerInfo.originalPurchaseDate
+      }
+    });
 
     // Set the RevenueCat customer ID in a cookie for cross-device sync
     const response = NextResponse.json({ 

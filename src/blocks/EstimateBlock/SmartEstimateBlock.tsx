@@ -462,7 +462,14 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
 
   // Update customer entitlement when subscription status changes
   useEffect(() => {
+    console.log('🔄 Subscription status changed:', {
+      isSubscribed: subscriptionStatus.isSubscribed,
+      entitlements: subscriptionStatus.entitlements,
+      isLoading: subscriptionStatus.isLoading,
+      error: subscriptionStatus.error
+    })
     const entitlement = getCustomerEntitlement(subscriptionStatus)
+    console.log('🔄 Calculated entitlement:', entitlement)
     setCustomerEntitlement(entitlement)
   }, [subscriptionStatus])
 
@@ -880,7 +887,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
           
           console.log('🎯 Setting packages state:', {
             filteredCount: filtered.length,
-            filteredPackages: filtered.map(pkg => ({
+            filteredPackages: filtered.map((pkg: Package) => ({
               name: pkg.name,
               category: pkg.category,
               entitlement: pkg.entitlement
