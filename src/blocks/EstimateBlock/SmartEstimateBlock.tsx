@@ -274,7 +274,9 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       
       // Tier 2: Standard subscribers - Only see standard packages (basic/cheaper options)
       if (customerEntitlement === 'standard') {
-        return pkg.entitlement === 'standard' && pkg.category === 'standard'
+        // If package has no entitlement field, assume it's standard if category is standard
+        const packageEntitlement = pkg.entitlement || (pkg.category === 'standard' ? 'standard' : 'none')
+        return packageEntitlement === 'standard' && pkg.category === 'standard'
       }
       
       // Tier 3: Pro subscribers - See everything (all packages)
@@ -852,7 +854,9 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
             
             // Tier 2: Standard subscribers - Only see standard packages (basic/cheaper options)
             if (customerEntitlement === 'standard') {
-              return pkg.entitlement === 'standard' && pkg.category === 'standard'
+              // If package has no entitlement field, assume it's standard if category is standard
+              const packageEntitlement = pkg.entitlement || (pkg.category === 'standard' ? 'standard' : 'none')
+              return packageEntitlement === 'standard' && pkg.category === 'standard'
             }
             
             // Tier 3: Pro subscribers - See everything (all packages)
