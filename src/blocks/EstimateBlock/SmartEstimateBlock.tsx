@@ -80,6 +80,15 @@ const QuickActions = ({ onAction }: { onAction: (action: string, data?: any) => 
     <Button 
       variant="outline" 
       size="sm" 
+      onClick={() => onAction('debug_packages')}
+      className="text-xs"
+    >
+      <Package className="h-3 w-3 mr-1" />
+      Debug Packages
+    </Button>
+    <Button 
+      variant="outline" 
+      size="sm" 
       onClick={() => onAction('get_recommendation')}
       className="text-xs"
     >
@@ -869,6 +878,14 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
             shouldSeeSpecial: customerEntitlement === 'none' || customerEntitlement === 'pro'
           })
           
+          console.log('🎯 Setting packages state:', {
+            filteredCount: filtered.length,
+            filteredPackages: filtered.map(pkg => ({
+              name: pkg.name,
+              category: pkg.category,
+              entitlement: pkg.entitlement
+            }))
+          })
           setPackages(filtered)
           loadedRef.current = true
         })
@@ -943,6 +960,17 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
           message = `I'd love to give you personalized recommendations! To suggest the best packages for your needs, please select your travel dates first using the "Select Dates" button above.`
         }
         break
+      case 'debug_packages':
+        console.log('🐛 DEBUG: Current state:', {
+          packages: packages,
+          packagesLength: packages.length,
+          customerEntitlement,
+          startDate,
+          endDate,
+          duration
+        })
+        message = `Debug info logged to console. Packages loaded: ${packages.length}, Entitlement: ${customerEntitlement}`
+        break
       default:
         message = 'I can help you with that! What would you like to know?'
     }
@@ -952,10 +980,29 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   }
 
   const showAvailablePackages = () => {
+    console.log('🎯 showAvailablePackages called with:', {
+      packagesLength: packages.length,
+      packages: packages.map(pkg => ({
+        name: pkg.name,
+        category: pkg.category,
+        entitlement: pkg.entitlement,
+        isEnabled: pkg.isEnabled
+      })),
+      customerEntitlement
+    })
+    
     // Use existing packages instead of making new API calls
     if (packages.length > 0) {
       // Apply entitlement filtering first
       const filteredPackages = filterPackagesByEntitlement(packages)
+      console.log('🎯 After entitlement filtering:', {
+        filteredCount: filteredPackages.length,
+        filteredPackages: filteredPackages.map(pkg => ({
+          name: pkg.name,
+          category: pkg.category,
+          entitlement: pkg.entitlement
+        }))
+      })
       
       // Filter packages by duration if dates are selected
       let suitablePackages = filteredPackages
