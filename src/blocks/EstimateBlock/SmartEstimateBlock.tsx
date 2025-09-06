@@ -235,7 +235,17 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   // This ensures that pro-only packages are only shown to pro users
   // Also filters out addon packages which should only appear on the booking page
   const filterPackagesByEntitlement = useCallback((packages: Package[]): Package[] => {
-    // Reduce logging to prevent performance issues
+    console.log('🔍 filterPackagesByEntitlement called with:', {
+      totalPackages: packages.length,
+      customerEntitlement,
+      packages: packages.map(pkg => ({
+        name: pkg.name,
+        category: pkg.category,
+        entitlement: pkg.entitlement,
+        isEnabled: pkg.isEnabled
+      }))
+    })
+    
     const filtered = packages.filter((pkg: Package) => {
       if (!pkg.isEnabled) {
         return false
@@ -246,24 +256,21 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         return false
       }
       
-      // Special category packages are available to everyone (premium experience for non-subscribers)
-      if (pkg.category === 'special') {
+      // 3-Tier System Implementation:
+      
+      // Tier 1: Non-subscribers (none) - Only see hosted/special packages (premium experience)
+      if (customerEntitlement === 'none') {
+        return ['hosted', 'special'].includes(pkg.category)
+      }
+      
+      // Tier 2: Standard subscribers - Only see standard packages (basic/cheaper options)
+      if (customerEntitlement === 'standard') {
+        return pkg.entitlement === 'standard' && pkg.category === 'standard'
+      }
+      
+      // Tier 3: Pro subscribers - See everything (all packages)
+      if (customerEntitlement === 'pro') {
         return true
-      }
-      
-      // Check package entitlement - if package requires pro, user must be pro
-      if (pkg.entitlement === 'pro' && customerEntitlement !== 'pro') {
-        return false
-      }
-      
-      // Check package entitlement - if package requires standard, user must have standard or pro
-      if (pkg.entitlement === 'standard' && customerEntitlement === 'none') {
-        return false
-      }
-      
-      // For Standard subscribers, only show hosted and special packages (not regular standard packages)
-      if (customerEntitlement === 'standard' && pkg.entitlement === 'standard' && !['hosted', 'special'].includes(pkg.category)) {
-        return false
       }
       
       // Legacy: Filter out pro-only packages by revenueCatId for non-pro users
@@ -273,6 +280,16 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       }
       
       return true
+    })
+    
+    console.log('✅ filterPackagesByEntitlement result:', {
+      originalCount: packages.length,
+      filteredCount: filtered.length,
+      filteredPackages: filtered.map(pkg => ({
+        name: pkg.name,
+        category: pkg.category,
+        entitlement: pkg.entitlement
+      }))
     })
     
     return filtered
@@ -810,17 +827,22 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
             // Filter out addon packages - these should only appear on the booking page
             if (pkg.category === 'addon') return false
             
-            // Special category packages are available to everyone (premium experience for non-subscribers)
-            if (pkg.category === 'special') return true
+            // 3-Tier System Implementation:
             
-            // Check package entitlement - if package requires pro, user must be pro
-            if (pkg.entitlement === 'pro' && customerEntitlement !== 'pro') return false
+            // Tier 1: Non-subscribers (none) - Only see hosted/special packages (premium experience)
+            if (customerEntitlement === 'none') {
+              return ['hosted', 'special'].includes(pkg.category)
+            }
             
-            // Check package entitlement - if package requires standard, user must have standard or pro
-            if (pkg.entitlement === 'standard' && customerEntitlement === 'none') return false
+            // Tier 2: Standard subscribers - Only see standard packages (basic/cheaper options)
+            if (customerEntitlement === 'standard') {
+              return pkg.entitlement === 'standard' && pkg.category === 'standard'
+            }
             
-            // For Standard subscribers, only show hosted and special packages (not regular standard packages)
-            if (customerEntitlement === 'standard' && pkg.entitlement === 'standard' && !['hosted', 'special'].includes(pkg.category)) return false
+            // Tier 3: Pro subscribers - See everything (all packages)
+            if (customerEntitlement === 'pro') {
+              return true
+            }
             
             // Legacy: Filter out pro-only packages for non-pro users
             // Only keep this for packages that don't have entitlement field in database
@@ -838,6 +860,14 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
             isEnabled: pkg.isEnabled
           })))
           console.log('👤 Current customer entitlement:', customerEntitlement)
+          console.log('🎯 3-Tier System Debug:', {
+            tier: customerEntitlement === 'none' ? 'Tier 1 (Non-subscriber)' : 
+                  customerEntitlement === 'standard' ? 'Tier 2 (Standard)' : 
+                  'Tier 3 (Pro)',
+            shouldSeeHosted: customerEntitlement === 'none' || customerEntitlement === 'pro',
+            shouldSeeStandard: customerEntitlement === 'standard' || customerEntitlement === 'pro',
+            shouldSeeSpecial: customerEntitlement === 'none' || customerEntitlement === 'pro'
+          })
           
           setPackages(filtered)
           loadedRef.current = true
