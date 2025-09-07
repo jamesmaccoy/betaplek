@@ -276,7 +276,18 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       if (customerEntitlement === 'standard') {
         // If package has no entitlement field, assume it's standard if category is standard
         const packageEntitlement = pkg.entitlement || (pkg.category === 'standard' ? 'standard' : 'none')
-        return packageEntitlement === 'standard' && pkg.category === 'standard'
+        const shouldShow = packageEntitlement === 'standard' && pkg.category === 'standard'
+        
+        console.log('🔍 Standard subscriber package check:', {
+          packageName: pkg.name,
+          packageCategory: pkg.category,
+          packageEntitlement: pkg.entitlement,
+          calculatedEntitlement: packageEntitlement,
+          shouldShow,
+          reason: shouldShow ? 'Package matches standard criteria' : `Package category '${pkg.category}' is not 'standard'`
+        })
+        
+        return shouldShow
       }
       
       // Tier 3: Pro subscribers - See everything (all packages)
@@ -856,7 +867,18 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
             if (customerEntitlement === 'standard') {
               // If package has no entitlement field, assume it's standard if category is standard
               const packageEntitlement = pkg.entitlement || (pkg.category === 'standard' ? 'standard' : 'none')
-              return packageEntitlement === 'standard' && pkg.category === 'standard'
+              const shouldShow = packageEntitlement === 'standard' && pkg.category === 'standard'
+              
+              console.log('🔍 Inline Standard subscriber package check:', {
+                packageName: pkg.name,
+                packageCategory: pkg.category,
+                packageEntitlement: pkg.entitlement,
+                calculatedEntitlement: packageEntitlement,
+                shouldShow,
+                reason: shouldShow ? 'Package matches standard criteria' : `Package category '${pkg.category}' is not 'standard'`
+              })
+              
+              return shouldShow
             }
             
             // Tier 3: Pro subscribers - See everything (all packages)
