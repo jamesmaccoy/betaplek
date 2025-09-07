@@ -272,19 +272,17 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         return ['hosted', 'special'].includes(pkg.category)
       }
       
-      // Tier 2: Standard subscribers - Only see standard packages (basic/cheaper options)
+      // Tier 2: Standard subscribers - See standard + hosted + special (better than non-subscribers)
       if (customerEntitlement === 'standard') {
-        // If package has no entitlement field, assume it's standard if category is standard
-        const packageEntitlement = pkg.entitlement || (pkg.category === 'standard' ? 'standard' : 'none')
-        const shouldShow = packageEntitlement === 'standard' && pkg.category === 'standard'
+        // Standard subscribers get more than non-subscribers
+        const shouldShow = ['standard', 'hosted', 'special'].includes(pkg.category)
         
         console.log('🔍 Standard subscriber package check:', {
           packageName: pkg.name,
           packageCategory: pkg.category,
           packageEntitlement: pkg.entitlement,
-          calculatedEntitlement: packageEntitlement,
           shouldShow,
-          reason: shouldShow ? 'Package matches standard criteria' : `Package category '${pkg.category}' is not 'standard'`
+          reason: shouldShow ? `Package category '${pkg.category}' is available to Standard subscribers` : `Package category '${pkg.category}' is not available to Standard subscribers`
         })
         
         return shouldShow
@@ -863,19 +861,17 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
               return ['hosted', 'special'].includes(pkg.category)
             }
             
-            // Tier 2: Standard subscribers - Only see standard packages (basic/cheaper options)
+            // Tier 2: Standard subscribers - See standard + hosted + special (better than non-subscribers)
             if (customerEntitlement === 'standard') {
-              // If package has no entitlement field, assume it's standard if category is standard
-              const packageEntitlement = pkg.entitlement || (pkg.category === 'standard' ? 'standard' : 'none')
-              const shouldShow = packageEntitlement === 'standard' && pkg.category === 'standard'
+              // Standard subscribers get more than non-subscribers
+              const shouldShow = ['standard', 'hosted', 'special'].includes(pkg.category)
               
               console.log('🔍 Inline Standard subscriber package check:', {
                 packageName: pkg.name,
                 packageCategory: pkg.category,
                 packageEntitlement: pkg.entitlement,
-                calculatedEntitlement: packageEntitlement,
                 shouldShow,
-                reason: shouldShow ? 'Package matches standard criteria' : `Package category '${pkg.category}' is not 'standard'`
+                reason: shouldShow ? `Package category '${pkg.category}' is available to Standard subscribers` : `Package category '${pkg.category}' is not available to Standard subscribers`
               })
               
               return shouldShow
