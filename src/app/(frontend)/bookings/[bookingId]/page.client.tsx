@@ -6,12 +6,12 @@ import { formatDateTime } from '@/utilities/formatDateTime'
 import { PlusCircleIcon, TrashIcon, UserIcon, FileText, Lock } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import InviteUrlDialog from './_components/invite-url-dialog'
+import SimplePageRenderer from './_components/SimplePageRenderer'
 import { Button } from '@/components/ui/button'
 import { useRevenueCat } from '@/providers/RevenueCat'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Calendar } from '@/components/ui/calendar'
 import { DateRange } from 'react-day-picker'
-import { RenderBlocks } from '@/blocks/RenderBlocks'
 
 type Props = {
   data: Booking
@@ -290,9 +290,7 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
                         </div>
                       </div>
                       {page.layout && (
-                        <div className="prose prose-sm max-w-none">
-                          <RenderBlocks blocks={page.layout} />
-                        </div>
+                        <SimplePageRenderer page={page} />
                       )}
                     </div>
                   ))}
