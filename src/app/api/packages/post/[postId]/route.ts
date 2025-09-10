@@ -31,7 +31,7 @@ export async function GET(
         post: { equals: postId },
         isEnabled: { equals: true }
       },
-      depth: 1,
+      depth: 2, // Increased depth to include related page data
     })
 
     // Get RevenueCat products
@@ -113,6 +113,7 @@ export async function GET(
           baseRate: pkg.baseRate,
           isEnabled: pkg.isEnabled && isDbPackageEnabledForPost(pkg.id),
           features: pkg.features?.map((f: any) => f.feature) || [],
+          relatedPage: (pkg as any).relatedPage, // Include related page data
           source: 'database',
           hasCustomName: !!customName
         }

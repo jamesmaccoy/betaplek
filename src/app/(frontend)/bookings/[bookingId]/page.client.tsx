@@ -3,7 +3,7 @@
 import { Media } from '@/components/Media'
 import { Booking, User } from '@/payload-types'
 import { formatDateTime } from '@/utilities/formatDateTime'
-import { PlusCircleIcon, TrashIcon, UserIcon, FileText } from 'lucide-react'
+import { PlusCircleIcon, TrashIcon, UserIcon, FileText, Lock } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import InviteUrlDialog from './_components/invite-url-dialog'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,7 @@ import { useRevenueCat } from '@/providers/RevenueCat'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Calendar } from '@/components/ui/calendar'
 import { DateRange } from 'react-day-picker'
+import { RenderBlocks } from '@/blocks/RenderBlocks'
 
 type Props = {
   data: Booking
@@ -32,6 +33,7 @@ interface AddonPackage {
   baseRate?: number;
   isEnabled: boolean;
   features: any[];
+  relatedPage?: any; // Related page data
   source: string;
   hasCustomName: boolean;
 }
@@ -61,6 +63,10 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const { isInitialized } = useRevenueCat();
 
+  // Related pages state
+  const [relatedPages, setRelatedPages] = useState<any[]>([])
+  const [loadingPages, setLoadingPages] = useState(true)
+
   useEffect(() => {
     const loadAddonPackages = async () => {
       setLoadingAddons(true)
@@ -88,6 +94,24 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
     
     loadAddonPackages()
   }, [data?.post])
+
+  // Collect related pages from addon packages
+  useEffect(() => {
+    if (addonPackages.length > 0) {
+      const pages = addonPackages
+        .filter(pkg => pkg.relatedPage)
+        .map(pkg => ({
+          ...pkg.relatedPage,
+          packageName: pkg.name,
+          packageId: pkg.id
+        }))
+      
+      setRelatedPages(pages)
+      setLoadingPages(false)
+    } else if (!loadingAddons) {
+      setLoadingPages(false)
+    }
+  }, [addonPackages, loadingAddons])
 
   const removeGuestHandler = async (guestId: string) => {
     const res = await fetch(`/api/bookings/${data.id}/guests/${guestId}`, {
@@ -118,6 +142,12 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
             <UserIcon className="h-5 w-5" />
             <span className="hidden sm:inline">Guests</span>
           </TabsTrigger>
+          {relatedPages.length > 0 && (
+            <TabsTrigger value="sensitive" className="px-3 py-2 rounded-full flex items-center gap-2 data-[state=active]:bg-secondary data-[state=active]:text-foreground">
+              <Lock className="h-5 w-5" />
+              <span className="hidden sm:inline">Check-in Info</span>
+            </TabsTrigger>
+          )}
         </TabsList>
         <TabsContent value="details">
           {data && 'post' in data && typeof data?.post !== 'string' ? (
@@ -232,6 +262,45 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
               })}
           </div>
         </TabsContent>
+        {relatedPages.length > 0 && (
+          <TabsContent value="sensitive">
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Lock className="h-5 w-5 text-muted-foreground" />
+                <h2 className="text-2xl font-bold">Check-in Information</h2>
+              </div>
+              <div className="text-sm text-muted-foreground mb-4">
+                This information is only visible to you and your guests. Please keep it confidential.
+              </div>
+              {loadingPages ? (
+                <p>Loading check-in information...</p>
+              ) : (
+                <div className="space-y-6">
+                  {relatedPages.map((page, index) => (
+                    <div key={page.id || index} className="border rounded-lg p-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="p-2 bg-primary/10 rounded-full">
+                          <Lock className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-lg">{page.title}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Related to: {page.packageName}
+                          </p>
+                        </div>
+                      </div>
+                      {page.layout && (
+                        <div className="prose prose-sm max-w-none">
+                          <RenderBlocks blocks={page.layout} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
       {/* Addon packages from database */}
       <div className="mt-10 max-w-screen-md mx-auto">

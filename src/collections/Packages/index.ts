@@ -84,6 +84,16 @@ const Packages: CollectionConfig = {
       min: 1 
     },
     { name: 'revenueCatId', type: 'text' },
+    {
+      name: 'relatedPage',
+      type: 'relationship',
+      relationTo: 'pages',
+      required: false,
+      admin: { 
+        position: 'sidebar',
+        description: 'Link to a page containing sensitive information like check-in instructions or house manual'
+      },
+    },
     { name: 'isEnabled', type: 'checkbox', defaultValue: true },
     { name: 'baseRate', type: 'number', required: false },
   ],

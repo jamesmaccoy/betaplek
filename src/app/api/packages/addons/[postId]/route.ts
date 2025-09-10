@@ -30,7 +30,7 @@ export async function GET(
         isEnabled: { equals: true },
         category: { equals: 'addon' }
       },
-      depth: 1,
+      depth: 2, // Increased depth to include related page data
     })
     
     // Helper function to get custom name from packageSettings
@@ -75,6 +75,7 @@ export async function GET(
         baseRate: pkg.baseRate,
         isEnabled: pkg.isEnabled && isDbPackageEnabledForPost(pkg.id),
         features: pkg.features?.map((f: any) => f.feature) || [],
+        relatedPage: (pkg as any).relatedPage, // Include related page data
         source: 'database',
         hasCustomName: !!customName
       }
