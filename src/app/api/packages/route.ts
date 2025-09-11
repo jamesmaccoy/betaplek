@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const packages = await payload.find({
       collection: 'packages',
       where: Object.keys(where).length > 0 ? where : undefined,
-      depth: 1,
+      depth: 2, // Increased depth to include related page data
     })
     
     return NextResponse.json(packages)

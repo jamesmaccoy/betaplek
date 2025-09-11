@@ -68,7 +68,7 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
   const [loadingPages, setLoadingPages] = useState(true)
 
   useEffect(() => {
-    const loadAddonPackages = async () => {
+    const loadPackages = async () => {
       setLoadingAddons(true)
       try {
         // Get the post ID from the booking data
@@ -77,41 +77,53 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
           throw new Error('No post ID found')
         }
         
-        const response = await fetch(`/api/packages/addons/${postId}`)
-        if (!response.ok) {
-          throw new Error('Failed to fetch addon packages')
+        // Fetch both addon packages and all packages to check for related pages
+        const [addonsResponse, allPackagesResponse] = await Promise.all([
+          fetch(`/api/packages/addons/${postId}`),
+          fetch(`/api/packages/post/${postId}`)
+        ])
+        
+        if (!addonsResponse.ok || !allPackagesResponse.ok) {
+          throw new Error('Failed to fetch packages')
         }
         
-        const responseData = await response.json()
-        setAddonPackages(responseData.addons || [])
+        const [addonsData, allPackagesData] = await Promise.all([
+          addonsResponse.json(),
+          allPackagesResponse.json()
+        ])
+        
+        setAddonPackages(addonsData.addons || [])
+        
+        // Also collect related pages from all packages (not just addons)
+        const allPackages = allPackagesData.packages || []
+        const packagesWithPages = allPackages.filter((pkg: any) => pkg.relatedPage)
+        
+        if (packagesWithPages.length > 0) {
+          const pages = packagesWithPages.map((pkg: any) => ({
+            ...pkg.relatedPage,
+            packageName: pkg.name,
+            packageId: pkg.id
+          }))
+          
+          setRelatedPages(pages)
+        }
       } catch (err) {
-        console.error('Error loading addon packages:', err)
-        setPaymentError('Failed to load add-ons')
+        console.error('Error loading packages:', err)
+        setPaymentError('Failed to load packages')
       } finally {
         setLoadingAddons(false)
       }
     }
     
-    loadAddonPackages()
+    loadPackages()
   }, [data?.post])
 
-  // Collect related pages from addon packages
+  // Set loading pages to false when packages are loaded
   useEffect(() => {
-    if (addonPackages.length > 0) {
-      const pages = addonPackages
-        .filter(pkg => pkg.relatedPage)
-        .map(pkg => ({
-          ...pkg.relatedPage,
-          packageName: pkg.name,
-          packageId: pkg.id
-        }))
-      
-      setRelatedPages(pages)
-      setLoadingPages(false)
-    } else if (!loadingAddons) {
+    if (!loadingAddons) {
       setLoadingPages(false)
     }
-  }, [addonPackages, loadingAddons])
+  }, [loadingAddons])
 
   const removeGuestHandler = async (guestId: string) => {
     const res = await fetch(`/api/bookings/${data.id}/guests/${guestId}`, {

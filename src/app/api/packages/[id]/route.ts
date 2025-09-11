@@ -13,7 +13,7 @@ export async function GET(
     const packageDoc = await payload.findByID({
       collection: 'packages',
       id,
-      depth: 1,
+      depth: 2, // Increased depth to include related page data
     })
     
     return NextResponse.json(packageDoc)
