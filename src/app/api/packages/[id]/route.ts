@@ -16,10 +16,6 @@ export async function GET(
       depth: 2, // Increased depth to include related page data
     })
     
-    // Debug logging to see what's being returned
-    console.log('Package doc relatedPage:', packageDoc.relatedPage)
-    console.log('Package doc keys:', Object.keys(packageDoc))
-    
     return NextResponse.json(packageDoc)
   } catch (error) {
     console.error('Error fetching package:', error)
@@ -240,6 +236,11 @@ export async function PATCH(
       console.log('Setting revenueCatId to:', cleanData.revenueCatId)
     }
     
+    if (body.relatedPage !== undefined) {
+      cleanData.relatedPage = body.relatedPage ? String(body.relatedPage).trim() : null
+      console.log('Setting relatedPage to:', cleanData.relatedPage)
+    }
+    
     if (body.baseRate !== undefined) {
       if (body.baseRate === null || body.baseRate === '') {
         cleanData.baseRate = null
@@ -279,9 +280,9 @@ export async function PATCH(
     console.log('Clean data for update:', cleanData)
     console.log('Number of fields to update:', Object.keys(cleanData).length)
     console.log('Fields that were processed:', Object.keys(cleanData))
-    console.log('Expected fields:', ['post', 'name', 'description', 'multiplier', 'features', 'category', 'entitlement', 'minNights', 'maxNights', 'revenueCatId', 'isEnabled', 'baseRate'])
+    console.log('Expected fields:', ['post', 'name', 'description', 'multiplier', 'features', 'category', 'entitlement', 'minNights', 'maxNights', 'revenueCatId', 'relatedPage', 'isEnabled', 'baseRate'])
     console.log('Received fields:', Object.keys(body))
-    console.log('Missing field validation for:', Object.keys(body).filter(key => !['post', 'name', 'description', 'multiplier', 'features', 'category', 'entitlement', 'minNights', 'maxNights', 'revenueCatId', 'isEnabled', 'baseRate'].includes(key)))
+    console.log('Missing field validation for:', Object.keys(body).filter(key => !['post', 'name', 'description', 'multiplier', 'features', 'category', 'entitlement', 'minNights', 'maxNights', 'revenueCatId', 'relatedPage', 'isEnabled', 'baseRate'].includes(key)))
     
     if (Object.keys(cleanData).length === 0) {
       console.warn('No valid fields to update')
