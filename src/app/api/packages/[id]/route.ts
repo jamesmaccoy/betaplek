@@ -16,6 +16,10 @@ export async function GET(
       depth: 2, // Increased depth to include related page data
     })
     
+    // Debug logging to see what's being returned
+    console.log('Package doc relatedPage:', packageDoc.relatedPage)
+    console.log('Package doc keys:', Object.keys(packageDoc))
+    
     return NextResponse.json(packageDoc)
   } catch (error) {
     console.error('Error fetching package:', error)

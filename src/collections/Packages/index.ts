@@ -89,6 +89,7 @@ const Packages: CollectionConfig = {
       type: 'relationship',
       relationTo: 'pages',
       required: false,
+      hasMany: false,
       admin: { 
         position: 'sidebar',
         description: 'Link to a page containing sensitive information like check-in instructions or house manual'
