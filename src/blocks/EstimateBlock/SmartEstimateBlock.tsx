@@ -234,6 +234,9 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   // Ref to prevent package suggestions from being triggered repeatedly
   const packagesSuggestedRef = useRef(false)
   
+  // Ref to store original packages for re-filtering
+  const originalPackagesRef = useRef<Package[]>([])
+  
   const subscriptionStatus = useSubscription()
   const [customerEntitlement, setCustomerEntitlement] = useState<CustomerEntitlement>('none')
   
@@ -482,7 +485,14 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
     const entitlement = getCustomerEntitlement(subscriptionStatus)
     console.log('🔄 Calculated entitlement:', entitlement)
     setCustomerEntitlement(entitlement)
-  }, [subscriptionStatus])
+    
+    // Re-filter packages when entitlement changes
+    if (originalPackagesRef.current.length > 0) {
+      console.log('🔄 Re-filtering packages due to entitlement change')
+      const filtered = filterPackagesByEntitlement(originalPackagesRef.current)
+      setPackages(filtered)
+    }
+  }, [subscriptionStatus, filterPackagesByEntitlement])
 
   // Load RevenueCat offerings when initialized
   useEffect(() => {
@@ -915,6 +925,9 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
               entitlement: pkg.entitlement
             }))
           })
+          
+          // Store original packages for re-filtering
+          originalPackagesRef.current = data.packages || []
           setPackages(filtered)
           loadedRef.current = true
         })

@@ -402,34 +402,12 @@ export interface Package {
   minNights?: number | null;
   maxNights?: number | null;
   revenueCatId?: string | null;
+  /**
+   * Link to a page containing sensitive information like check-in instructions or house manual
+   */
+  relatedPage?: (string | null) | Page;
   isEnabled?: boolean | null;
   baseRate?: number | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "estimates".
- */
-export interface Estimate {
-  id: string;
-  title: string;
-  customer: string | User;
-  token?: string | null;
-  guests?: (string | User)[] | null;
-  total: number;
-  selectedPackage?: {
-    package?: (string | null) | Package;
-    customName?: string | null;
-    enabled?: boolean | null;
-  };
-  slug?: string | null;
-  slugLock?: boolean | null;
-  post: string | Post;
-  paymentStatus?: ('paid' | 'unpaid') | null;
-  fromDate: string;
-  toDate: string;
-  packageType?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -838,6 +816,32 @@ export interface Form {
         id?: string | null;
       }[]
     | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "estimates".
+ */
+export interface Estimate {
+  id: string;
+  title: string;
+  customer: string | User;
+  token?: string | null;
+  guests?: (string | User)[] | null;
+  total: number;
+  selectedPackage?: {
+    package?: (string | null) | Package;
+    customName?: string | null;
+    enabled?: boolean | null;
+  };
+  slug?: string | null;
+  slugLock?: boolean | null;
+  post: string | Post;
+  paymentStatus?: ('paid' | 'unpaid') | null;
+  fromDate: string;
+  toDate: string;
+  packageType?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1508,6 +1512,7 @@ export interface PackagesSelect<T extends boolean = true> {
   minNights?: T;
   maxNights?: T;
   revenueCatId?: T;
+  relatedPage?: T;
   isEnabled?: T;
   baseRate?: T;
   updatedAt?: T;
