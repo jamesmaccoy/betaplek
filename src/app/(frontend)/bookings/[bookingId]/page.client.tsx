@@ -12,6 +12,7 @@ import { useRevenueCat } from '@/providers/RevenueCat'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Calendar } from '@/components/ui/calendar'
 import { DateRange } from 'react-day-picker'
+import { AIAssistant } from '@/components/AIAssistant/AIAssistant'
 
 type Props = {
   data: Booking
@@ -165,6 +166,55 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
     }
 
     setRemovedGuests((prev) => [...prev, guestId])
+  }
+
+  // Create booking context for AI Assistant
+  const getBookingContext = () => {
+    const booking = data
+    const post = typeof booking?.post === 'string' ? null : booking?.post
+    
+    return {
+      context: 'booking-details',
+      booking: {
+        id: booking?.id,
+        title: booking?.title,
+        fromDate: booking?.fromDate,
+        toDate: booking?.toDate,
+        paymentStatus: booking?.paymentStatus,
+        createdAt: booking?.createdAt
+      },
+      property: post ? {
+        id: post.id,
+        title: post.title,
+        description: post.meta?.description || '',
+        content: post.content
+      } : null,
+      guests: {
+        customer: typeof booking?.customer === 'string' ? null : {
+          id: booking?.customer?.id,
+          name: booking?.customer?.name,
+          email: booking?.customer?.email
+        },
+        guests: booking?.guests?.filter(guest => typeof guest !== 'string').map(guest => ({
+          id: guest.id,
+          name: guest.name,
+          email: guest.email
+        })) || []
+      },
+      addons: addonPackages.map(addon => ({
+        id: addon.id,
+        name: addon.name,
+        description: addon.description,
+        price: (addon.baseRate || 0) * addon.multiplier,
+        features: addon.features
+      })),
+      checkinInfo: relatedPages.map(page => ({
+        id: page.id,
+        title: page.title,
+        packageName: page.packageName,
+        content: page.layout
+      }))
+    }
   }
 
   return (
@@ -408,6 +458,21 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
         {paymentError && <div className="text-red-500 mt-2">{paymentError}</div>}
         {paymentSuccess && <div className="text-green-600 mt-2">Add-on purchased successfully!</div>}
       </div>
+      
+      {/* AI Assistant with booking context */}
+      <AIAssistant />
+      
+      {/* Set context for AI Assistant */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            window.addEventListener('load', function() {
+              const context = ${JSON.stringify(getBookingContext())};
+              window.bookingContext = context;
+            });
+          `
+        }}
+      />
     </div>
   )
 }

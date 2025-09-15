@@ -110,10 +110,21 @@ export const AIAssistant = () => {
       }
     }
 
+    // Check for booking context on page load
+    const checkBookingContext = () => {
+      if ((window as any).bookingContext) {
+        setCurrentContext((window as any).bookingContext)
+      }
+    }
+
     window.addEventListener('openAIAssistant', handleOpenAIAssistant as EventListener)
+    
+    // Check for booking context after a short delay to ensure it's set
+    const timeoutId = setTimeout(checkBookingContext, 100)
     
     return () => {
       window.removeEventListener('openAIAssistant', handleOpenAIAssistant as EventListener)
+      clearTimeout(timeoutId)
     }
   }, [])
 
@@ -382,6 +393,37 @@ export const AIAssistant = () => {
           setMessages((prev) => [...prev, assistantMessage])
           speak('Sorry, I encountered an error while generating update suggestions.')
         }
+      } else if (currentContext?.context === 'booking-details') {
+        // Handle booking-specific queries
+        const bookingContext = currentContext
+        
+        // Create a comprehensive context string for the AI
+        const contextString = `
+Booking Context:
+- Property: ${bookingContext.property?.title || 'Unknown property'}
+- Booking Title: ${bookingContext.booking?.title || 'Unknown'}
+- Booking ID: ${bookingContext.booking?.id || 'Unknown'}
+- Dates: ${bookingContext.booking?.fromDate ? new Date(bookingContext.booking.fromDate).toLocaleDateString() : 'Unknown'} to ${bookingContext.booking?.toDate ? new Date(bookingContext.booking.toDate).toLocaleDateString() : 'Unknown'}
+- Payment Status: ${bookingContext.booking?.paymentStatus || 'Unknown'}
+- Customer: ${bookingContext.guests?.customer?.name || 'Unknown'}
+- Guests: ${bookingContext.guests?.guests?.map((g: any) => g.name).join(', ') || 'None'}
+- Available Add-ons: ${bookingContext.addons?.map((a: any) => `${a.name} (R${a.price})`).join(', ') || 'None'}
+- Check-in Information: ${bookingContext.checkinInfo?.map((c: any) => c.title).join(', ') || 'None'}
+        `
+        
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            message: `${contextString}\n\nUser question: ${messageToSend}`,
+            context: 'booking-details'
+          }),
+        })
+
+        const data = await response.json()
+        const assistantMessage: Message = { role: 'assistant', content: data.message }
+        setMessages((prev) => [...prev, assistantMessage])
+        speak(data.message)
       } else {
         // Regular chat API call
         const response = await fetch('/api/chat', {
@@ -429,6 +471,9 @@ export const AIAssistant = () => {
             <h3 className="font-semibold">AI Assistant</h3>
             {currentContext?.context === 'package-suggestions' && (
               <p className="text-xs text-muted-foreground">Package suggestions mode</p>
+            )}
+            {currentContext?.context === 'booking-details' && (
+              <p className="text-xs text-muted-foreground">Booking assistant - I can help with your booking details, guests, and check-in info</p>
             )}
           </div>
           
