@@ -99,12 +99,37 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
         const packagesWithPages = allPackages.filter((pkg: any) => pkg.relatedPage)
         
         if (packagesWithPages.length > 0) {
-          const pages = packagesWithPages.map((pkg: any) => ({
-            ...pkg.relatedPage,
-            packageName: pkg.name,
-            packageId: pkg.id
-          }))
+          // Fetch full page data for each related page
+          const pagePromises = packagesWithPages.map(async (pkg: any) => {
+            try {
+              const pageResponse = await fetch(`/api/pages/${pkg.relatedPage.id}?depth=2&draft=false&locale=undefined`)
+              if (pageResponse.ok) {
+                const fullPageData = await pageResponse.json()
+                return {
+                  ...fullPageData,
+                  packageName: pkg.name,
+                  packageId: pkg.id
+                }
+              } else {
+                // Fallback to basic data if full fetch fails
+                return {
+                  ...pkg.relatedPage,
+                  packageName: pkg.name,
+                  packageId: pkg.id
+                }
+              }
+            } catch (error) {
+              console.error(`Error fetching page ${pkg.relatedPage.id}:`, error)
+              // Fallback to basic data
+              return {
+                ...pkg.relatedPage,
+                packageName: pkg.name,
+                packageId: pkg.id
+              }
+            }
+          })
           
+          const pages = await Promise.all(pagePromises)
           setRelatedPages(pages)
         }
       } catch (err) {
