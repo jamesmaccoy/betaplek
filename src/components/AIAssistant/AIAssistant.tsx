@@ -110,17 +110,19 @@ export const AIAssistant = () => {
       }
     }
 
-    // Check for booking context on page load
-    const checkBookingContext = () => {
+    // Check for context on page load
+    const checkContext = () => {
       if ((window as any).bookingContext) {
         setCurrentContext((window as any).bookingContext)
+      } else if ((window as any).postContext) {
+        setCurrentContext((window as any).postContext)
       }
     }
 
     window.addEventListener('openAIAssistant', handleOpenAIAssistant as EventListener)
     
-    // Check for booking context after a short delay to ensure it's set
-    const timeoutId = setTimeout(checkBookingContext, 100)
+    // Check for context after a short delay to ensure it's set
+    const timeoutId = setTimeout(checkContext, 100)
     
     return () => {
       window.removeEventListener('openAIAssistant', handleOpenAIAssistant as EventListener)
@@ -409,6 +411,9 @@ Booking Context:
 - Guests: ${bookingContext.guests?.guests?.map((g: any) => g.name).join(', ') || 'None'}
 - Available Add-ons: ${bookingContext.addons?.map((a: any) => `${a.name} (R${a.price})`).join(', ') || 'None'}
 - Check-in Information: ${bookingContext.checkinInfo?.map((c: any) => c.title).join(', ') || 'None'}
+
+Property Article Content:
+${bookingContext.property?.content ? JSON.stringify(bookingContext.property.content) : 'No property content available'}
         `
         
         const response = await fetch('/api/chat', {
@@ -417,6 +422,35 @@ Booking Context:
           body: JSON.stringify({ 
             message: `${contextString}\n\nUser question: ${messageToSend}`,
             context: 'booking-details'
+          }),
+        })
+
+        const data = await response.json()
+        const assistantMessage: Message = { role: 'assistant', content: data.message }
+        setMessages((prev) => [...prev, assistantMessage])
+        speak(data.message)
+      } else if (currentContext?.context === 'post-article') {
+        // Handle post article queries
+        const postContext = currentContext
+        
+        // Create a comprehensive context string for the AI
+        const contextString = `
+Article Context:
+- Title: ${postContext.post?.title || 'Unknown title'}
+- Description: ${postContext.post?.description || 'No description'}
+- Base Rate: ${postContext.post?.baseRate ? `R${postContext.post.baseRate}` : 'Not set'}
+- Related Posts: ${postContext.post?.relatedPosts?.map((p: any) => p.title || p).join(', ') || 'None'}
+
+Full Article Content:
+${JSON.stringify(postContext.post?.content || 'No content available')}
+        `
+        
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            message: `${contextString}\n\nUser question: ${messageToSend}`,
+            context: 'post-article'
           }),
         })
 
@@ -474,6 +508,9 @@ Booking Context:
             )}
             {currentContext?.context === 'booking-details' && (
               <p className="text-xs text-muted-foreground">Booking assistant - I can help with your booking details, guests, and check-in info</p>
+            )}
+            {currentContext?.context === 'post-article' && (
+              <p className="text-xs text-muted-foreground">Article assistant - I can help you explore and understand this article content</p>
             )}
           </div>
           

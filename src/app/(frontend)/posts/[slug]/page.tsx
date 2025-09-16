@@ -52,7 +52,7 @@ export default async function Post({ params: paramsPromise }: Args) {
 
   return (
     <article className="pt-16 pb-16">
-     
+      <PageClient post={post} />
 
       {/* Allows redirects for valid pages too */}
       <PayloadRedirects disableNotFound url={url} />
@@ -69,7 +69,13 @@ export default async function Post({ params: paramsPromise }: Args) {
           postTitle={post.title}
           postDescription={post.meta?.description || ''}
         />
-          <RichText className="max-w-[48rem] mx-auto" data={post.content} enableGutter={false} />
+          <div className="text-center py-8">
+            <h2 className="text-2xl font-semibold mb-4">Article Content Available in AI Assistant</h2>
+            <p className="text-muted-foreground">
+              Use the AI Assistant (bottom right) to interact with this article content. 
+              Ask questions, get summaries, or explore specific topics from the article.
+            </p>
+          </div>
           {post.relatedPosts && post.relatedPosts.length > 0 && (
             <RelatedPosts
               className="mt-12 max-w-[52rem] lg:grid lg:grid-cols-subgrid col-start-1 col-span-3 grid-rows-[2fr]"

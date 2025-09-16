@@ -187,7 +187,9 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
         id: post.id,
         title: post.title,
         description: post.meta?.description || '',
-        content: post.content
+        content: post.content,
+        baseRate: post.baseRate,
+        relatedPosts: post.relatedPosts || []
       } : null,
       guests: {
         customer: typeof booking?.customer === 'string' ? null : {
