@@ -48,6 +48,7 @@ export interface PostPackage {
   minNights: number
   maxNights: number
   revenueCatId?: string
+  baseRate?: number // Package-specific base rate
   isEnabled: boolean
   source?: 'database' | 'revenuecat'
   hasCustomName?: boolean // Indicates if this package has a custom name set by host
@@ -79,6 +80,7 @@ export function usePackages(postId: string) {
           minNights: pkg.minNights,
           maxNights: pkg.maxNights,
           revenueCatId: pkg.revenueCatId,
+          baseRate: pkg.baseRate, // Include package-specific base rate
           isEnabled: pkg.isEnabled,
           source: pkg.source,
           hasCustomName: pkg.hasCustomName
@@ -136,7 +138,17 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
           ),
         )
       : 1
-  const _bookingTotal = data?.total ?? 0
+  
+  // Get the post's baseRate properly
+  const _postBaseRate = typeof data?.post === 'object' && data?.post?.baseRate 
+    ? Number(data.post.baseRate) 
+    : 150 // Default fallback
+  
+  // Use the estimate total if it's valid, otherwise calculate from baseRate
+  const _bookingTotal = data?.total && !isNaN(Number(data.total)) && Number(data.total) > 0
+    ? Number(data.total)
+    : _postBaseRate * _bookingDuration
+  
   const _postId = typeof data?.post === 'object' && data?.post?.id ? data.post.id : ''
   const { packages, loading, error } = usePackages(_postId)
 
@@ -271,44 +283,41 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
 
   // Update package price when package or duration changes
   useEffect(() => {
-    if (!selectedPackage || !offerings.length) return
+    if (!selectedPackage) return
 
-    const packageToUse = offerings.find(
-      (pkg) => pkg.webBillingProduct?.identifier === selectedPackage.revenueCatId,
-    )
+    // Use the post's baseRate for calculations
+    const basePrice = _postBaseRate
 
-    if (packageToUse?.webBillingProduct) {
-      const product = packageToUse.webBillingProduct as RevenueCatProduct
-      if (product.price) {
-        const basePrice = Number(product.price)
-        const multiplier = selectedPackage.multiplier
-        const calculatedPrice = basePrice * multiplier
-        setPackagePrice(calculatedPrice)
+    if (selectedPackage.baseRate && selectedPackage.baseRate > 0) {
+      // If package has its own baseRate, use that
+      setPackagePrice(selectedPackage.baseRate)
+    } else if (selectedPackage.revenueCatId && offerings.length > 0) {
+      // Try to find the package in RevenueCat offerings
+      const packageToUse = offerings.find(
+        (pkg) => pkg.webBillingProduct?.identifier === selectedPackage.revenueCatId,
+      )
+
+      if (packageToUse?.webBillingProduct) {
+        const product = packageToUse.webBillingProduct as RevenueCatProduct
+        if (product.price) {
+          // Use RevenueCat price
+          setPackagePrice(Number(product.price))
+        } else {
+          // Fallback to post baseRate with multiplier
+          const calculatedPrice = basePrice * selectedPackage.multiplier
+          setPackagePrice(calculatedPrice)
+        }
       } else {
-        const basePrice = Number(_bookingTotal)
-        const multiplier = selectedPackage.multiplier
-        const calculatedPrice = basePrice * multiplier
+        // Package not found in RevenueCat offerings, use post baseRate with multiplier
+        const calculatedPrice = basePrice * selectedPackage.multiplier
         setPackagePrice(calculatedPrice)
       }
     } else {
-      // Package not found in RevenueCat offerings
-      // For mock packages, we can still calculate the price based on the package data
-      if (selectedPackage.source === 'revenuecat' && selectedPackage.revenueCatId) {
-        console.warn(`Package ${selectedPackage.revenueCatId} not found in RevenueCat offerings, using fallback pricing`)
-        // Use the booking total as fallback for mock packages
-        const basePrice = Number(_bookingTotal)
-        const multiplier = selectedPackage.multiplier
-        const calculatedPrice = basePrice * multiplier
-        setPackagePrice(calculatedPrice)
-      } else {
-        // For database packages or other cases, use the booking total
-        const basePrice = Number(_bookingTotal)
-        const multiplier = selectedPackage.multiplier
-        const calculatedPrice = basePrice * multiplier
-        setPackagePrice(calculatedPrice)
-      }
+      // For database packages or other cases, use post baseRate with multiplier
+      const calculatedPrice = basePrice * selectedPackage.multiplier
+      setPackagePrice(calculatedPrice)
     }
-  }, [selectedPackage, offerings, _bookingTotal])
+  }, [selectedPackage, offerings, _postBaseRate])
 
   const formatPrice = (price: number | null) => {
     if (price === null) return 'N/A'
@@ -714,13 +723,22 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
                                   </div>
                                 </div>
                                 <div className="text-right">
-                                  <span className="text-lg font-bold">
-                                    {pkg.multiplier === 1
+                                  <div className="text-lg font-bold">
+                                    {pkg.baseRate && pkg.baseRate > 0
+                                      ? `R${pkg.baseRate.toFixed(0)}/night`
+                                      : pkg.multiplier === 1
                                       ? 'Base rate'
                                       : pkg.multiplier > 1
                                       ? `+${((pkg.multiplier - 1) * 100).toFixed(0)}%`
                                       : `-${((1 - pkg.multiplier) * 100).toFixed(0)}%`}
-                                  </span>
+                                  </div>
+                                  {pkg.baseRate && pkg.baseRate > 0 && pkg.multiplier !== 1 && (
+                                    <div className="text-xs text-muted-foreground">
+                                      {pkg.multiplier > 1
+                                        ? `+${((pkg.multiplier - 1) * 100).toFixed(0)}% rate`
+                                        : `-${((1 - pkg.multiplier) * 100).toFixed(0)}% rate`}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </CardHeader>
@@ -793,6 +811,10 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-muted-foreground">Rate per night:</span>
                     <span className="font-medium">{formatPrice(packagePrice)}</span>
+                  </div>
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-muted-foreground">Base rate:</span>
+                    <span className="font-medium">R{_postBaseRate.toFixed(0)}/night</span>
                   </div>
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-muted-foreground">Duration:</span>

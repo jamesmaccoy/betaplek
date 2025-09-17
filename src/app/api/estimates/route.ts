@@ -20,7 +20,6 @@ export async function POST(request: NextRequest) {
     console.log('Package type (lowercase):', packageType.toLowerCase())
     let pkg: any = null
     let multiplier = 1
-    let baseRate = 150
     let customName: string | null = null // Store custom name from package settings
 
     // Get the post data to access packageSettings for custom names
@@ -34,6 +33,9 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.log('Failed to fetch post data:', error)
     }
+
+    // Initialize baseRate with post's baseRate or default
+    let baseRate = postData?.baseRate || 150
 
     // Helper function to check if package is enabled for this post
     const isPackageEnabledForPost = (packageId: string) => {
@@ -149,7 +151,7 @@ export async function POST(request: NextRequest) {
           }
           if (pkg) {
             multiplier = typeof pkg.multiplier === 'number' ? pkg.multiplier : 1
-            baseRate = typeof pkg.baseRate === 'number' ? pkg.baseRate : 150
+            baseRate = typeof pkg.baseRate === 'number' ? pkg.baseRate : (postData?.baseRate || 150)
             
             // Check for custom name in packageSettings
             if (postData?.packageSettings && Array.isArray(postData.packageSettings)) {
@@ -190,7 +192,7 @@ export async function POST(request: NextRequest) {
         }
         if (pkg) {
           multiplier = typeof pkg.multiplier === 'number' ? pkg.multiplier : 1
-          baseRate = typeof pkg.baseRate === 'number' ? pkg.baseRate : 150
+          baseRate = typeof pkg.baseRate === 'number' ? pkg.baseRate : (postData?.baseRate || 150)
           
           // Check for custom name in packageSettings
           if (postData?.packageSettings && Array.isArray(postData.packageSettings)) {
