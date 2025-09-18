@@ -101,7 +101,10 @@ interface RevenueCatError extends Error {
   code?: ErrorCode
 }
 
-interface RevenueCatProduct extends Product {
+interface RevenueCatProduct {
+  identifier?: string
+  title?: string
+  description?: string
   price?: number
   priceString?: string
   currencyCode?: string
@@ -298,7 +301,7 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
       )
 
       if (packageToUse?.webBillingProduct) {
-        const product = packageToUse.webBillingProduct as RevenueCatProduct
+        const product = packageToUse.webBillingProduct as unknown as RevenueCatProduct
         if (product.price) {
           // Use RevenueCat price
           setPackagePrice(Number(product.price))
@@ -858,6 +861,24 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
                   {paymentError}
                 </div>
               )}
+            </div>
+
+            {/* Invite Guests */}
+            <div className="bg-muted p-6 rounded-lg border border-border">
+              <h2 className="text-2xl font-semibold mb-4">Invite Guests</h2>
+              <p className="text-muted-foreground mb-4">
+                Share this estimate with your guests so they can view and contribute to the booking.
+              </p>
+              <InviteUrlDialog
+                trigger={
+                  <Button variant="outline" className="w-full">
+                    <UserIcon className="mr-2 h-4 w-4" />
+                    Share Estimate
+                  </Button>
+                }
+                estimateId={data.id}
+                type="estimates"
+              />
             </div>
           </div>
         </div>
