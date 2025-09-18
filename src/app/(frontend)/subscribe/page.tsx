@@ -136,9 +136,9 @@ export default function SubscribePage() {
         </div>
       )}
       <div className="mx-auto max-w-2xl text-center mb-12 sm:mb-16">
-        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">Stay at a self built plek</h1>
+        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">Access your hosts custom packages</h1>
         <p className="mt-4 text-lg leading-8 text-muted-foreground">
-        Become a member to see the calendar</p>
+        Availabiltiy calendar for the custodians and caretakers of the pleks</p>
       </div>
 
       {/* Entitlement Toggle */}
@@ -153,7 +153,7 @@ export default function SubscribePage() {
             onCheckedChange={setShowProEntitlements}
           />
           <Label htmlFor="entitlement-toggle" className="text-sm font-medium">
-            Pro Access
+            Unlock Pro Packages
           </Label>
         </div>
       </div>
@@ -248,15 +248,15 @@ export default function SubscribePage() {
                   {dualPrice.usd} USD
                 </p>
                 <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-muted-foreground xl:mt-10">
-                  <li className="flex gap-x-3">Calendar booking request</li>
-                  <li className="flex gap-x-3">Curated unique packages</li>
-                  <li className="flex gap-x-3">Invite guests</li>
+                  <li className="flex gap-x-3">monthly garden class</li>
+                  <li className="flex gap-x-3">CID greening initiative</li>
+                  <li className="flex gap-x-3">Unlock Month to month packages</li>
                 </ul>
                 <button
                   onClick={() => handlePurchase(monthly_subscription_plan)}
                   className="mt-8 block w-full rounded-md bg-secondary px-3.5 py-2.5 text-center text-sm font-semibold text-secondary-foreground shadow-sm hover:bg-secondary/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                 >
-                  Pay way later
+                  Subscribe to simple plek
                 </button>
               </div>
             )
@@ -280,16 +280,16 @@ export default function SubscribePage() {
                   {dualPrice.usd} USD
                 </p>
                 <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-muted-foreground xl:mt-10">
-                  <li className="flex gap-x-3">Calendar booking request</li>
-                  <li className="flex gap-x-3">Curated unique packages</li>
-                  <li className="flex gap-x-3">Invite guests</li>
-                  <li className="flex gap-x-3">Welcome meeting</li>
+                  <li className="flex gap-x-3">Studio - 🍤 Hosted packages</li>
+                  <li className="flex gap-x-3">CID greening initiative</li>
+                  <li className="flex gap-x-3">unlock all packages</li>
+                  <li className="flex gap-x-3">1 year agreement</li>
                 </ul>
                 <button
                   onClick={() => handlePurchase(annual_subscription_plan)}
                   className="mt-8 block w-full rounded-md bg-primary px-3.5 py-2.5 text-center text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
                 >
-                  Book Now - Save
+                  Unlock Now - Save
                 </button>
               </div>
             )
@@ -304,14 +304,14 @@ export default function SubscribePage() {
         return (
           <div 
             className="mt-16 pt-16 pb-16 md:border-t border-border bg-cover bg-center relative rounded-lg shadow-md"
-            style={{ backgroundImage: `url('https://www.simpleplek.co.za/api/media/file/Gallery%20shack%205.jpg.jpg')` }}
+            style={{ backgroundImage: `url('https://www.simpleplek.co.za/api/media/file/gardencommunity.jpg')` }}
           >
             <div className="absolute inset-0 bg-black/30 rounded-lg"></div> 
 
             <div className="relative max-w-4xl mx-auto px-4 flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12"> 
               
               <div className="text-center lg:text-left text-white">
-                 <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Host a plek</h2>
+                 <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Manage a plek</h2>
               </div>
 
               <div className="w-full max-w-md">
@@ -320,16 +320,16 @@ export default function SubscribePage() {
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">{product.description || 'Advanced features for professionals.'}</p>
                   <p className="mt-6 flex items-baseline gap-x-1">
                     <span className="text-4xl font-bold tracking-tight text-foreground">{dualPrice.zar}</span>
-                    <span className="text-sm font-semibold leading-6 text-muted-foreground">/term</span>
+                    <span className="text-sm font-semibold leading-6 text-muted-foreground">/biannual</span>
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {dualPrice.usd} USD
                   </p>
                   <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-muted-foreground xl:mt-10">
-                    <li className="flex gap-x-3">Insight report</li>
-                    <li className="flex gap-x-3">Calendar booking request</li>
-                    <li className="flex gap-x-3">Short term lease agreement</li>
-                    <li className="flex gap-x-3">Estimates for guests</li>
+                    <li className="flex gap-x-3">Share your plek</li>
+                    <li className="flex gap-x-3">Cieling prices to set expectations</li>
+                    <li className="flex gap-x-3">Reoccuring class payments</li>
+                    <li className="flex gap-x-3">Join the network of finest pleks in the cape</li>
                   </ul>
                   <button
                     onClick={() => handlePurchase(professional_plan)}
