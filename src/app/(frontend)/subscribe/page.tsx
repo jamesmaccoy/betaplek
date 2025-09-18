@@ -138,7 +138,7 @@ export default function SubscribePage() {
       <div className="mx-auto max-w-2xl text-center mb-12 sm:mb-16">
         <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">Finest pleks and access to their gardens</h1>
         <p className="mt-4 text-lg leading-8 text-muted-foreground">
-        There is a packages for each for each host and their caretakers </p>
+        Unique packages for each plek from their hosts</p>
       </div>
 
       {/* Entitlement Toggle */}
