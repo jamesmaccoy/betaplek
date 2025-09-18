@@ -136,9 +136,9 @@ export default function SubscribePage() {
         </div>
       )}
       <div className="mx-auto max-w-2xl text-center mb-12 sm:mb-16">
-        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">Access your hosts custom packages</h1>
+        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">Each plek is unique</h1>
         <p className="mt-4 text-lg leading-8 text-muted-foreground">
-        Availabiltiy calendar for the custodians and caretakers of the pleks</p>
+        There is a packages for each for each host and their caretakers </p>
       </div>
 
       {/* Entitlement Toggle */}
@@ -268,7 +268,7 @@ export default function SubscribePage() {
             return (
               <div key={annual_subscription_plan.identifier} className="relative rounded-2xl border border-primary p-8 shadow-lg">
                 <div className="absolute top-0 -translate-y-1/2 transform rounded-full bg-primary px-3 py-1 text-xs font-semibold tracking-wide text-primary-foreground">
-                  Most popular
+                  Save 20% on annual billing
                 </div>
                 <h2 className="text-lg font-semibold leading-8 text-foreground">{product.displayName}</h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">{product.description || 'Get the best value with annual billing.'}</p>
@@ -311,7 +311,7 @@ export default function SubscribePage() {
             <div className="relative max-w-4xl mx-auto px-4 flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12"> 
               
               <div className="text-center lg:text-left text-white">
-                 <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Manage a plek</h2>
+                 <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Host a plek & Manage packages</h2>
               </div>
 
               <div className="w-full max-w-md">
