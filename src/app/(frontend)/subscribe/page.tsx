@@ -192,12 +192,12 @@ export default function SubscribePage() {
                 </div>
                 <ul role="list" className="mt-10 space-y-4 text-base leading-6 text-muted-foreground">
                   <li className="flex gap-x-3 items-center">
-                    <span className="text-primary text-xl">🍷</span>
-                    <span>Booking access for a week</span>
+                    <span className="text-primary text-xl">🧘</span>
+                    <span>Booking access for a week to a garden class</span>
                   </li>
                   <li className="flex gap-x-3 items-center">
                     <span className="text-primary text-xl">🥂</span>
-                    <span>Pop up wine tasting experience at selected</span>
+                    <span>Wine tasting experience in spontaneous pop ups in extravogent</span>
                   </li>
                   <li className="flex gap-x-3 items-center">
                     <span className="text-primary text-xl">🎯</span>
@@ -208,8 +208,8 @@ export default function SubscribePage() {
                     <span>Have your order waiting for you at your plek</span>
                   </li>
                   <li className="flex gap-x-3 items-center">
-                    <span className="text-primary text-xl">🌟</span>
-                    <span>Weekly sessions with wine makers</span>
+                    <span className="text-primary text-xl">🍷</span>
+                    <span>Weekly sessions with wine makers - Garden yoga</span>
                   </li>
                 </ul>
                 
@@ -280,7 +280,7 @@ export default function SubscribePage() {
                   {dualPrice.usd} USD
                 </p>
                 <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-muted-foreground xl:mt-10">
-                  <li className="flex gap-x-3">Studio - 🍤 Hosted packages</li>
+                  <li className="flex gap-x-3">Hourly Studio - 🍤 Hosted all inclusive packages</li>
                   <li className="flex gap-x-3">CID greening initiative</li>
                   <li className="flex gap-x-3">unlock all packages</li>
                   <li className="flex gap-x-3">1 year access to Simple plek garden community</li>
@@ -304,7 +304,7 @@ export default function SubscribePage() {
         return (
           <div 
             className="mt-16 pt-16 pb-16 md:border-t border-border bg-cover bg-center relative rounded-lg shadow-md"
-            style={{ backgroundImage: `url('https://www.simpleplek.co.za/api/media/file/gardencommunity.jpg')` }}
+            style={{ backgroundImage: `url('https://www.simpleplek.co.za/api/media/file/gardencommunity%20(3).jpg')` }}
           >
             <div className="absolute inset-0 bg-black/30 rounded-lg"></div> 
 
@@ -312,7 +312,7 @@ export default function SubscribePage() {
               
               <div className="text-center lg:text-left text-white">
                  <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Host a masterclass at our Plek</h2>
-                 <p className="mt-4 text-lg leading-8 text-muted-foreground">Manage packages at using our sugegsted packages with capped pricing</p>
+                 <p className="mt-4 text-lg leading-8 text-muted-foreground">Manage packages using our sugegsted packages with capped pricing</p>
               </div>
 
               <div className="w-full max-w-md">
