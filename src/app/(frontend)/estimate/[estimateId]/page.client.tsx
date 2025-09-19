@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { useRevenueCat } from '@/providers/RevenueCat'
 import { Purchases, type Package, ErrorCode, type Product } from '@revenuecat/purchases-js'
 import { useRouter } from 'next/navigation'
-import { FileText, Loader2 } from 'lucide-react'
+import { FileText, Loader2, PlusCircleIcon, TrashIcon } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import {
   Card,
@@ -170,6 +170,29 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
 
   const subscriptionStatus = useSubscription()
   const [areDatesAvailable, setAreDatesAvailable] = useState(true)
+  const [removedGuests, setRemovedGuests] = useState<string[]>([])
+
+  // Remove guest handler for estimates
+  const removeGuestHandler = async (guestId: string) => {
+    try {
+      const res = await fetch(`/api/estimates/${data.id}/guests/${guestId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!res.ok) {
+        throw new Error('Failed to remove guest')
+      }
+
+      // Add to removed guests list to update UI immediately
+      setRemovedGuests(prev => [...prev, guestId])
+    } catch (error) {
+      console.error('Error removing guest:', error)
+    }
+  }
 
   // Update customer entitlement when subscription status changes
   useEffect(() => {
@@ -603,7 +626,6 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
   }
 
   return (
-    
     <div className="container py-16">
       <div className="mx-auto max-w-4xl">
         <div className="flex items-center space-x-4 mb-8">
@@ -615,7 +637,20 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <Tabs defaultValue="details" className="mt-10">
+          <TabsList className="mb-6 bg-muted p-2 rounded-full flex flex-row gap-2">
+            <TabsTrigger value="details" className="px-3 py-2 rounded-full flex items-center gap-2 data-[state=active]:bg-secondary data-[state=active]:text-foreground">
+              <FileText className="h-5 w-5" />
+              <span className="hidden sm:inline">Estimate Details</span>
+            </TabsTrigger>
+            <TabsTrigger value="guests" className="px-3 py-2 rounded-full flex items-center gap-2 data-[state=active]:bg-secondary data-[state=active]:text-foreground">
+              <UserIcon className="h-5 w-5" />
+              <span className="hidden sm:inline">Guests</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="details">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
             {/* Estimate Details */}
             {data ? (
@@ -863,25 +898,84 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
               )}
             </div>
 
-            {/* Invite Guests */}
-            <div className="bg-muted p-6 rounded-lg border border-border">
-              <h2 className="text-2xl font-semibold mb-4">Invite Guests</h2>
-              <p className="text-muted-foreground mb-4">
-                Share this estimate with your guests so they can view and contribute to the booking.
-              </p>
-              <InviteUrlDialog
-                trigger={
-                  <Button variant="outline" className="w-full">
-                    <UserIcon className="mr-2 h-4 w-4" />
-                    Share Estimate
-                  </Button>
-                }
-                estimateId={data.id}
-                type="estimates"
-              />
-            </div>
           </div>
         </div>
+          </TabsContent>
+
+          <TabsContent value="guests">
+            <div className="max-w-2xl mx-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold">Guests</h2>
+                {data &&
+                  'customer' in data &&
+                  typeof data?.customer !== 'string' &&
+                  data.customer?.id === user.id && (
+                    <InviteUrlDialog
+                      trigger={
+                        <Button>
+                          <PlusCircleIcon className="size-4 mr-2" />
+                          <span>Invite</span>
+                        </Button>
+                      }
+                      estimateId={data.id}
+                      type="estimates"
+                    />
+                  )}
+              </div>
+              <div className="mt-2 space-y-3">
+                <div className="shadow-sm p-2 border border-border rounded-lg flex items-center gap-2">
+                  <div className="p-2 border border-border rounded-full">
+                    <UserIcon className="size-6" />
+                  </div>
+                  <div>
+                    <div>{typeof data.customer === 'string' ? 'Customer' : data.customer?.name}</div>
+                    <div className="font-medium text-sm">Customer</div>
+                  </div>
+                </div>
+                {data.guests
+                  ?.filter((guest) =>
+                    typeof guest === 'string'
+                      ? !removedGuests.includes(guest)
+                      : !removedGuests.includes(guest.id),
+                  )
+                  ?.map((guest) => {
+                    if (typeof guest === 'string') {
+                      return <div key={guest}>{guest}</div>
+                    }
+                    return (
+                      <div
+                        key={guest.id}
+                        className="shadow-sm p-2 border border-border rounded-lg flex items-center gap-2 justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 border border-border rounded-full">
+                            <UserIcon className="size-6" />
+                          </div>
+                          <div>
+                            <div>{guest.name}</div>
+                            <div className="font-medium text-sm">Guest</div>
+                          </div>
+                        </div>
+                        {data &&
+                          'customer' in data &&
+                          typeof data?.customer !== 'string' &&
+                          data.customer?.id === user.id && (
+                            <Button
+                              variant="secondary"
+                              size="icon"
+                              onClick={() => removeGuestHandler(guest.id)}
+                            >
+                              <TrashIcon className="size-4" />
+                              <span className="sr-only">Remove Guest</span>
+                            </Button>
+                          )}
+                      </div>
+                    )
+                  })}
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )
