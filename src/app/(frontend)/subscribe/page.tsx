@@ -136,9 +136,9 @@ export default function SubscribePage() {
         </div>
       )}
       <div className="mx-auto max-w-2xl text-center mb-12 sm:mb-16">
-        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">Finest pleks and access to their gardens</h1>
+        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">Curated Simplek pleks and access to their garden</h1>
         <p className="mt-4 text-lg leading-8 text-muted-foreground">
-        Unique packages for each plek from their hosts</p>
+        Packages from each plek made by their hosts</p>
       </div>
 
       {/* Entitlement Toggle */}
