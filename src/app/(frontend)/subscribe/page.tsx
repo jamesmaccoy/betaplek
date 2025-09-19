@@ -197,7 +197,7 @@ export default function SubscribePage() {
                   </li>
                   <li className="flex gap-x-3 items-center">
                     <span className="text-primary text-xl">🥂</span>
-                    <span>Wine tasting experience in spontaneous pop ups in extravogent</span>
+                    <span>Wine tasting experience in spontaneous pop ups in extravogent locations</span>
                   </li>
                   <li className="flex gap-x-3 items-center">
                     <span className="text-primary text-xl">🎯</span>
@@ -209,7 +209,7 @@ export default function SubscribePage() {
                   </li>
                   <li className="flex gap-x-3 items-center">
                     <span className="text-primary text-xl">🍷</span>
-                    <span>Weekly sessions with wine makers - Garden yoga</span>
+                    <span>Weekly sessions with wine makers, and materclass Garden community</span>
                   </li>
                 </ul>
                 
@@ -330,7 +330,7 @@ export default function SubscribePage() {
                     <li className="flex gap-x-3">Share your plek booking with guests</li>
                     <li className="flex gap-x-3">Suggested capped pricing for your packages</li>
                     <li className="flex gap-x-3">Reoccuring payments for your masterclass</li>
-                    <li className="flex gap-x-3">Join the network of simple pleks and join garden community</li>
+                    <li className="flex gap-x-3">Join the network of simple pleks and their garden community</li>
                   </ul>
                   <button
                     onClick={() => handlePurchase(professional_plan)}
