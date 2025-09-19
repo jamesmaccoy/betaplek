@@ -311,7 +311,8 @@ export default function SubscribePage() {
             <div className="relative max-w-4xl mx-auto px-4 flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12"> 
               
               <div className="text-center lg:text-left text-white">
-                 <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Host a plek & Manage packages</h2>
+                 <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Host a masterclass at our Plek</h2>
+                 <p className="mt-4 text-lg leading-8 text-muted-foreground">Manage packages at using our sugegsted packages with capped pricing</p>
               </div>
 
               <div className="w-full max-w-md">
@@ -320,16 +321,16 @@ export default function SubscribePage() {
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">{product.description || 'Advanced features for professionals.'}</p>
                   <p className="mt-6 flex items-baseline gap-x-1">
                     <span className="text-4xl font-bold tracking-tight text-foreground">{dualPrice.zar}</span>
-                    <span className="text-sm font-semibold leading-6 text-muted-foreground">/biannual</span>
+                    <span className="text-sm font-semibold leading-6 text-muted-foreground">/bi-annual</span>
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {dualPrice.usd} USD
                   </p>
                   <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-muted-foreground xl:mt-10">
-                    <li className="flex gap-x-3">Share your plek</li>
-                    <li className="flex gap-x-3">Cieling prices to set expectations</li>
-                    <li className="flex gap-x-3">Reoccuring class payments</li>
-                    <li className="flex gap-x-3">Join the network of finest pleks in the cape</li>
+                    <li className="flex gap-x-3">Share your plek booking with guests</li>
+                    <li className="flex gap-x-3">Suggested capped pricing for your packages</li>
+                    <li className="flex gap-x-3">Reoccuring payments for your masterclass</li>
+                    <li className="flex gap-x-3">Join the network of simple pleks and join garden community</li>
                   </ul>
                   <button
                     onClick={() => handlePurchase(professional_plan)}
