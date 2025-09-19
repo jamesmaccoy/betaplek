@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { useRevenueCat } from '@/providers/RevenueCat'
 import { Purchases, type Package, ErrorCode, type Product } from '@revenuecat/purchases-js'
 import { useRouter } from 'next/navigation'
-import { FileText, Loader2 } from 'lucide-react'
+import { FileText, Loader2, PlusCircleIcon, TrashIcon } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import {
   Card,
@@ -48,6 +48,7 @@ export interface PostPackage {
   minNights: number
   maxNights: number
   revenueCatId?: string
+  baseRate?: number // Package-specific base rate
   isEnabled: boolean
   source?: 'database' | 'revenuecat'
   hasCustomName?: boolean // Indicates if this package has a custom name set by host
@@ -79,6 +80,7 @@ export function usePackages(postId: string) {
           minNights: pkg.minNights,
           maxNights: pkg.maxNights,
           revenueCatId: pkg.revenueCatId,
+          baseRate: pkg.baseRate, // Include package-specific base rate
           isEnabled: pkg.isEnabled,
           source: pkg.source,
           hasCustomName: pkg.hasCustomName
@@ -99,7 +101,10 @@ interface RevenueCatError extends Error {
   code?: ErrorCode
 }
 
-interface RevenueCatProduct extends Product {
+interface RevenueCatProduct {
+  identifier?: string
+  title?: string
+  description?: string
   price?: number
   priceString?: string
   currencyCode?: string
@@ -136,7 +141,17 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
           ),
         )
       : 1
-  const _bookingTotal = data?.total ?? 0
+  
+  // Get the post's baseRate properly
+  const _postBaseRate = typeof data?.post === 'object' && data?.post?.baseRate 
+    ? Number(data.post.baseRate) 
+    : 150 // Default fallback
+  
+  // Use the estimate total if it's valid, otherwise calculate from baseRate
+  const _bookingTotal = data?.total && !isNaN(Number(data.total)) && Number(data.total) > 0
+    ? Number(data.total)
+    : _postBaseRate * _bookingDuration
+  
   const _postId = typeof data?.post === 'object' && data?.post?.id ? data.post.id : ''
   const { packages, loading, error } = usePackages(_postId)
 
@@ -155,6 +170,29 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
 
   const subscriptionStatus = useSubscription()
   const [areDatesAvailable, setAreDatesAvailable] = useState(true)
+  const [removedGuests, setRemovedGuests] = useState<string[]>([])
+
+  // Remove guest handler for estimates
+  const removeGuestHandler = async (guestId: string) => {
+    try {
+      const res = await fetch(`/api/estimates/${data.id}/guests/${guestId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!res.ok) {
+        throw new Error('Failed to remove guest')
+      }
+
+      // Add to removed guests list to update UI immediately
+      setRemovedGuests(prev => [...prev, guestId])
+    } catch (error) {
+      console.error('Error removing guest:', error)
+    }
+  }
 
   // Update customer entitlement when subscription status changes
   useEffect(() => {
@@ -235,7 +273,8 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
   const loadOfferings = async () => {
     setLoadingOfferings(true)
     try {
-      const fetchedOfferings = await Purchases.getSharedInstance().getOfferings()
+      const purchases = await Purchases.getSharedInstance()
+      const fetchedOfferings = await purchases.getOfferings()
       console.log('Offerings:', fetchedOfferings)
       
       // Collect all packages from all offerings instead of just 'per_night'
@@ -270,44 +309,41 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
 
   // Update package price when package or duration changes
   useEffect(() => {
-    if (!selectedPackage || !offerings.length) return
+    if (!selectedPackage) return
 
-    const packageToUse = offerings.find(
-      (pkg) => pkg.webBillingProduct?.identifier === selectedPackage.revenueCatId,
-    )
+    // Use the post's baseRate for calculations
+    const basePrice = _postBaseRate
 
-    if (packageToUse?.webBillingProduct) {
-      const product = packageToUse.webBillingProduct as RevenueCatProduct
-      if (product.price) {
-        const basePrice = Number(product.price)
-        const multiplier = selectedPackage.multiplier
-        const calculatedPrice = basePrice * multiplier
-        setPackagePrice(calculatedPrice)
+    if (selectedPackage.baseRate && selectedPackage.baseRate > 0) {
+      // If package has its own baseRate, use that
+      setPackagePrice(selectedPackage.baseRate)
+    } else if (selectedPackage.revenueCatId && offerings.length > 0) {
+      // Try to find the package in RevenueCat offerings
+      const packageToUse = offerings.find(
+        (pkg) => pkg.webBillingProduct?.identifier === selectedPackage.revenueCatId,
+      )
+
+      if (packageToUse?.webBillingProduct) {
+        const product = packageToUse.webBillingProduct as unknown as RevenueCatProduct
+        if (product.price) {
+          // Use RevenueCat price
+          setPackagePrice(Number(product.price))
+        } else {
+          // Fallback to post baseRate with multiplier
+          const calculatedPrice = basePrice * selectedPackage.multiplier
+          setPackagePrice(calculatedPrice)
+        }
       } else {
-        const basePrice = Number(_bookingTotal)
-        const multiplier = selectedPackage.multiplier
-        const calculatedPrice = basePrice * multiplier
+        // Package not found in RevenueCat offerings, use post baseRate with multiplier
+        const calculatedPrice = basePrice * selectedPackage.multiplier
         setPackagePrice(calculatedPrice)
       }
     } else {
-      // Package not found in RevenueCat offerings
-      // For mock packages, we can still calculate the price based on the package data
-      if (selectedPackage.source === 'revenuecat' && selectedPackage.revenueCatId) {
-        console.warn(`Package ${selectedPackage.revenueCatId} not found in RevenueCat offerings, using fallback pricing`)
-        // Use the booking total as fallback for mock packages
-        const basePrice = Number(_bookingTotal)
-        const multiplier = selectedPackage.multiplier
-        const calculatedPrice = basePrice * multiplier
-        setPackagePrice(calculatedPrice)
-      } else {
-        // For database packages or other cases, use the booking total
-        const basePrice = Number(_bookingTotal)
-        const multiplier = selectedPackage.multiplier
-        const calculatedPrice = basePrice * multiplier
-        setPackagePrice(calculatedPrice)
-      }
+      // For database packages or other cases, use post baseRate with multiplier
+      const calculatedPrice = basePrice * selectedPackage.multiplier
+      setPackagePrice(calculatedPrice)
     }
-  }, [selectedPackage, offerings, _bookingTotal])
+  }, [selectedPackage, offerings, _postBaseRate])
 
   const formatPrice = (price: number | null) => {
     if (price === null) return 'N/A'
@@ -362,7 +398,8 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
           
           // Proceed with normal RevenueCat payment flow
           try {
-            const purchaseResult = await Purchases.getSharedInstance().purchase({
+            const purchases = await Purchases.getSharedInstance()
+            const purchaseResult = await purchases.purchase({
               rcPackage: gatheringPackage,
             })
 
@@ -589,7 +626,6 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
   }
 
   return (
-    
     <div className="container py-16">
       <div className="mx-auto max-w-4xl">
         <div className="flex items-center space-x-4 mb-8">
@@ -601,7 +637,20 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <Tabs defaultValue="details" className="mt-10">
+          <TabsList className="mb-6 bg-muted p-2 rounded-full flex flex-row gap-2">
+            <TabsTrigger value="details" className="px-3 py-2 rounded-full flex items-center gap-2 data-[state=active]:bg-secondary data-[state=active]:text-foreground">
+              <FileText className="h-5 w-5" />
+              <span className="hidden sm:inline">Estimate Details</span>
+            </TabsTrigger>
+            <TabsTrigger value="guests" className="px-3 py-2 rounded-full flex items-center gap-2 data-[state=active]:bg-secondary data-[state=active]:text-foreground">
+              <UserIcon className="h-5 w-5" />
+              <span className="hidden sm:inline">Guests</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="details">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
             {/* Estimate Details */}
             {data ? (
@@ -712,13 +761,22 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
                                   </div>
                                 </div>
                                 <div className="text-right">
-                                  <span className="text-lg font-bold">
-                                    {pkg.multiplier === 1
+                                  <div className="text-lg font-bold">
+                                    {pkg.baseRate && pkg.baseRate > 0
+                                      ? `R${pkg.baseRate.toFixed(0)}/night`
+                                      : pkg.multiplier === 1
                                       ? 'Base rate'
                                       : pkg.multiplier > 1
                                       ? `+${((pkg.multiplier - 1) * 100).toFixed(0)}%`
                                       : `-${((1 - pkg.multiplier) * 100).toFixed(0)}%`}
-                                  </span>
+                                  </div>
+                                  {pkg.baseRate && pkg.baseRate > 0 && pkg.multiplier !== 1 && (
+                                    <div className="text-xs text-muted-foreground">
+                                      {pkg.multiplier > 1
+                                        ? `+${((pkg.multiplier - 1) * 100).toFixed(0)}% rate`
+                                        : `-${((1 - pkg.multiplier) * 100).toFixed(0)}% rate`}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </CardHeader>
@@ -793,6 +851,10 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
                     <span className="font-medium">{formatPrice(packagePrice)}</span>
                   </div>
                   <div className="flex justify-between items-center mb-4">
+                    <span className="text-muted-foreground">Base rate:</span>
+                    <span className="font-medium">R{_postBaseRate.toFixed(0)}/night</span>
+                  </div>
+                  <div className="flex justify-between items-center mb-4">
                     <span className="text-muted-foreground">Duration:</span>
                     <span className="font-medium">{_bookingDuration} nights</span>
                   </div>
@@ -835,8 +897,85 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
                 </div>
               )}
             </div>
+
           </div>
         </div>
+          </TabsContent>
+
+          <TabsContent value="guests">
+            <div className="max-w-2xl mx-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold">Guests</h2>
+                {data &&
+                  'customer' in data &&
+                  typeof data?.customer !== 'string' &&
+                  data.customer?.id === user.id && (
+                    <InviteUrlDialog
+                      trigger={
+                        <Button>
+                          <PlusCircleIcon className="size-4 mr-2" />
+                          <span>Invite</span>
+                        </Button>
+                      }
+                      estimateId={data.id}
+                      type="estimates"
+                    />
+                  )}
+              </div>
+              <div className="mt-2 space-y-3">
+                <div className="shadow-sm p-2 border border-border rounded-lg flex items-center gap-2">
+                  <div className="p-2 border border-border rounded-full">
+                    <UserIcon className="size-6" />
+                  </div>
+                  <div>
+                    <div>{typeof data.customer === 'string' ? 'Customer' : data.customer?.name}</div>
+                    <div className="font-medium text-sm">Customer</div>
+                  </div>
+                </div>
+                {data.guests
+                  ?.filter((guest) =>
+                    typeof guest === 'string'
+                      ? !removedGuests.includes(guest)
+                      : !removedGuests.includes(guest.id),
+                  )
+                  ?.map((guest) => {
+                    if (typeof guest === 'string') {
+                      return <div key={guest}>{guest}</div>
+                    }
+                    return (
+                      <div
+                        key={guest.id}
+                        className="shadow-sm p-2 border border-border rounded-lg flex items-center gap-2 justify-between"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 border border-border rounded-full">
+                            <UserIcon className="size-6" />
+                          </div>
+                          <div>
+                            <div>{guest.name}</div>
+                            <div className="font-medium text-sm">Guest</div>
+                          </div>
+                        </div>
+                        {data &&
+                          'customer' in data &&
+                          typeof data?.customer !== 'string' &&
+                          data.customer?.id === user.id && (
+                            <Button
+                              variant="secondary"
+                              size="icon"
+                              onClick={() => removeGuestHandler(guest.id)}
+                            >
+                              <TrashIcon className="size-4" />
+                              <span className="sr-only">Remove Guest</span>
+                            </Button>
+                          )}
+                      </div>
+                    )
+                  })}
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )

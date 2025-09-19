@@ -13,7 +13,7 @@ export async function GET(
     const packageDoc = await payload.findByID({
       collection: 'packages',
       id,
-      depth: 1,
+      depth: 2, // Increased depth to include related page data
     })
     
     return NextResponse.json(packageDoc)
@@ -50,19 +50,83 @@ export async function PATCH(
     const { id } = await params
     let body: any = {}
     const contentType = request.headers.get('content-type') || ''
+    console.log('Content-Type:', contentType)
+    console.log('Request URL:', request.url)
+    console.log('Request method:', request.method)
+    
     if (contentType.includes('application/json')) {
       try {
+        // Clone the request to read the body
+        const clonedRequest = request.clone()
+        const rawBody = await clonedRequest.text()
+        console.log('Raw request body:', rawBody)
+        
         body = await request.json()
+        console.log('Successfully parsed JSON body')
       } catch (err) {
         console.warn('Could not parse JSON body:', err)
         body = {}
       }
+    } else if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
+      // Handle form data requests
+      try {
+        const formData = await request.formData()
+        body = {} as any
+        
+        // Convert FormData to regular object
+        for (const [key, value] of formData.entries()) {
+          if (key.includes('[') && key.includes(']')) {
+            // Handle nested form fields like "meta[title]"
+            const match = key.match(/^(\w+)\[(\w+)\]$/)
+            if (match && match.length >= 3) {
+              const parentKey = match[1]
+              const childKey = match[2]
+              if (parentKey && childKey) {
+                if (!body[parentKey]) body[parentKey] = {}
+                body[parentKey][childKey] = value
+              }
+            } else {
+              body[key] = value
+            }
+          } else {
+            body[key] = value
+          }
+        }
+        console.log('Successfully parsed form data body')
+      } catch (err) {
+        console.warn('Could not parse form data body:', err)
+        body = {}
+      }
     } else {
-      // Not JSON, ignore or handle as empty
-      body = {}
+      // Try to parse as JSON as fallback
+      try {
+        body = await request.json()
+        console.log('Successfully parsed body as JSON fallback')
+      } catch (err) {
+        console.warn('Could not parse body as JSON fallback:', err)
+        body = {}
+      }
+    }
+    
+    // Handle Payload admin interface format - data might be in _payload field
+    if (body._payload && typeof body._payload === 'string') {
+      try {
+        const payloadData = JSON.parse(body._payload)
+        console.log('Successfully parsed _payload field')
+        console.log('Payload data keys:', Object.keys(payloadData))
+        body = { ...body, ...payloadData }
+        delete body._payload // Remove the _payload field since we've extracted the data
+        console.log('Body after _payload processing:', Object.keys(body))
+      } catch (err) {
+        console.warn('Could not parse _payload field:', err)
+      }
     }
     
     console.log('PATCH request for package:', { id, body, user: user?.id || 'admin' })
+    console.log('Request body keys:', Object.keys(body))
+    console.log('Request body values:', Object.entries(body).map(([key, value]) => `${key}: ${typeof value} = ${JSON.stringify(value)}`))
+    console.log('Environment:', process.env.NODE_ENV)
+    console.log('Request headers:', Object.fromEntries(request.headers.entries()))
     
     // Validate the package exists first
     let existingPackage
@@ -87,6 +151,8 @@ export async function PATCH(
     
     // Validate the request body
     const cleanData: any = {}
+    
+    try {
     
     // Handle isEnabled field
     if (body.isEnabled !== undefined) {
@@ -126,9 +192,19 @@ export async function PATCH(
     }
     
     // Handle other fields
+    if (body.post !== undefined) {
+      cleanData.post = body.post
+      console.log('Setting post to:', cleanData.post)
+    }
+    
     if (body.category !== undefined) {
       cleanData.category = body.category
       console.log('Setting category to:', cleanData.category)
+    }
+    
+    if (body.entitlement !== undefined) {
+      cleanData.entitlement = body.entitlement
+      console.log('Setting entitlement to:', cleanData.entitlement)
     }
     
     if (body.minNights !== undefined) {
@@ -160,6 +236,11 @@ export async function PATCH(
       console.log('Setting revenueCatId to:', cleanData.revenueCatId)
     }
     
+    if (body.relatedPage !== undefined) {
+      cleanData.relatedPage = body.relatedPage ? String(body.relatedPage).trim() : null
+      console.log('Setting relatedPage to:', cleanData.relatedPage)
+    }
+    
     if (body.baseRate !== undefined) {
       if (body.baseRate === null || body.baseRate === '') {
         cleanData.baseRate = null
@@ -176,12 +257,45 @@ export async function PATCH(
       console.log('Setting baseRate to:', cleanData.baseRate)
     }
     
+    // Handle features field
+    if (body.features !== undefined) {
+      if (Array.isArray(body.features)) {
+        cleanData.features = body.features
+          .filter((feature: any) => feature && (typeof feature === 'string' || (typeof feature === 'object' && feature.feature)))
+          .map((feature: any) => {
+            if (typeof feature === 'string') {
+              return { feature: feature.trim() }
+            } else if (typeof feature === 'object' && feature.feature) {
+              return { feature: String(feature.feature).trim() }
+            }
+            return null
+          })
+          .filter(Boolean)
+      } else {
+        cleanData.features = []
+      }
+      console.log('Setting features to:', cleanData.features)
+    }
+    
     console.log('Clean data for update:', cleanData)
     console.log('Number of fields to update:', Object.keys(cleanData).length)
+    console.log('Fields that were processed:', Object.keys(cleanData))
+    console.log('Expected fields:', ['post', 'name', 'description', 'multiplier', 'features', 'category', 'entitlement', 'minNights', 'maxNights', 'revenueCatId', 'relatedPage', 'isEnabled', 'baseRate'])
+    console.log('Received fields:', Object.keys(body))
+    console.log('Missing field validation for:', Object.keys(body).filter(key => !['post', 'name', 'description', 'multiplier', 'features', 'category', 'entitlement', 'minNights', 'maxNights', 'revenueCatId', 'relatedPage', 'isEnabled', 'baseRate'].includes(key)))
     
     if (Object.keys(cleanData).length === 0) {
       console.warn('No valid fields to update')
+      console.warn('Request body was:', JSON.stringify(body))
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
+    }
+    
+    } catch (validationError) {
+      console.error('Error during validation:', validationError)
+      return NextResponse.json(
+        { error: 'Validation error', details: validationError instanceof Error ? validationError.message : 'Unknown validation error' },
+        { status: 400 }
+      )
     }
     
     // For admin requests, we might not have a user object

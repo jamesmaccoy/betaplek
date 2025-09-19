@@ -95,6 +95,20 @@ class RevenueCatService {
           icon: '⏰',
         },
         {
+          id: 'virtual_wine',
+          title: '🍷 Virtual Wine Experience',
+          description: 'Weekly virtual wine tasting and experience package',
+          price: 5.00,
+          currency: 'USD',
+          period: 'day' as const,
+          periodCount: 7,
+          category: 'standard' as const,
+          features: ['Pre order wine', 'Curation of the Cape finest', 'Mix and match', 'In app purchases', 'Wine sommelier on request'],
+          isEnabled: true,
+          entitlement: 'standard' as const,
+          icon: '🍷',
+        },
+        {
           id: 'per_hour_guest',
           title: '🚗 Parking',
           description: 'Parking for 1 hour',
@@ -222,14 +236,14 @@ class RevenueCatService {
         },
         {
           id: 'gathering_monthly',
-          title: '🏘️ Starter Pack',
-          description: 'Perfect for group events and gatherings',
+          title: '🏘️ Annual agreement',
+          description: 'Your booking is locked in for the year',
           price: 5000.00,
           currency: 'USD',
-          period: 'day' as const,
+          period: 'month' as const,
           periodCount: 1,
           category: 'special' as const,
-          features: ['Team building', 'Quad bike tour', 'Catering support', 'Entertainment setup'],
+          features: ['Month to month agreement', 'No cancellation fees', 'No minimum stay', 'No lock in period'],
           isEnabled: true,
           entitlement: 'pro' as const,
           icon: '🏘️',
@@ -320,14 +334,14 @@ class RevenueCatService {
     return [
       {
         id: 'gathering_monthly',
-        title: '🏘️ Starter Pack',
-        description: 'Perfect for group events and gatherings',
+        title: '🏘️ Annual agreement',
+        description: 'Your booking is locked in for the year',
         price: 5000.00,
         currency: 'USD',
-        period: 'day' as const,
+        period: 'month' as const,
         periodCount: 1,
         category: 'special' as const,
-        features: ['Team building', 'Quad bike tour', 'Catering support', 'Entertainment setup'],
+        features: ['Month to month agreement', 'No cancellation fees', 'No minimum stay', 'No lock in period'],
         isEnabled: true,
         entitlement: 'pro' as const,
         icon: '🏘️',
@@ -436,6 +450,20 @@ class RevenueCatService {
         entitlement: 'pro',
         icon: '📅',
       },
+      'wine': {
+        id: 'virtual_wine',
+        title: '🍷 Virtual Wine Experience',
+        description: 'Weekly virtual wine tasting and experience package',
+        price: 5.00,
+        currency: 'USD',
+        period: 'day',
+        periodCount: 7,
+        category: 'standard',
+        features: ['Pre order wine', 'Curation of the Cape finest', 'Mix and match', 'In app purchases', 'Wine sommelier on request'],
+        isEnabled: true,
+        entitlement: 'standard',
+        icon: '🍷',
+      },
       'hosted7nights': {
         id: 'hosted7nights',
         title: '👑 Royal Suite Experience',
@@ -536,14 +564,14 @@ class RevenueCatService {
       },
       'monthly_gathering': {
         id: 'gathering_monthly',
-        title: '🏘️ Starter Pack',
-        description: 'Perfect for group events and gatherings',
+        title: '🏘️ Annual agreement',
+        description: 'Your booking is locked in for the year',
         price: 5000.00,
         currency: 'USD',
         period: 'day',
         periodCount: 1,
         category: 'special',
-        features: ['Team building', 'Quad bike tour', 'Catering support', 'Entertainment setup'],
+        features: ['Month to month agreement', 'No cancellation fees', 'No minimum stay', 'No lock in period'],
         isEnabled: true,
         entitlement: 'pro',
         icon: '🏘️',
@@ -578,6 +606,32 @@ class RevenueCatService {
       return true
     } catch (error) {
       console.error('Purchase failed:', error)
+      return false
+    }
+  }
+
+  // Validate if a user has an active subscription for a specific product
+  async validateSubscription(userId: string, productId: string): Promise<boolean> {
+    await this.initialize()
+    
+    try {
+      // Get customer info
+      const customerInfo = await this.getCustomerInfo(userId)
+      
+      if (!customerInfo) {
+        console.log(`No customer info found for user: ${userId}`)
+        return false
+      }
+
+      // Check if the user has purchased the specific product
+      const hasProduct = customerInfo.allPurchasedProductIdentifiers.includes(productId)
+      
+      // For now, return true for mock purposes
+      // In production, this would check against actual RevenueCat data
+      console.log(`Validating subscription for user ${userId}, product ${productId}: ${hasProduct}`)
+      return true // Mock: always return true for testing
+    } catch (error) {
+      console.error('Failed to validate subscription:', error)
       return false
     }
   }

@@ -7,9 +7,7 @@ import { getPayload } from 'payload'
 import { draftMode } from 'next/headers'
 import React, { cache } from 'react'
 import RichText from '@/components/RichText'
-import { EstimateBlock } from '@/blocks/EstimateBlock/Component'
-
-
+import { SmartEstimateBlock } from '@/blocks/EstimateBlock/SmartEstimateBlock'
 
 import type { Post } from '@/payload-types'
 
@@ -54,7 +52,7 @@ export default async function Post({ params: paramsPromise }: Args) {
 
   return (
     <article className="pt-16 pb-16">
-     
+      <PageClient post={post} />
 
       {/* Allows redirects for valid pages too */}
       <PayloadRedirects disableNotFound url={url} />
@@ -65,8 +63,19 @@ export default async function Post({ params: paramsPromise }: Args) {
 
       <div className="flex flex-col items-center gap-4 pt-8">
         <div className="container">
-        <EstimateBlock postId={post.id} blockType="stayDuration" baseRate={typeof post.baseRate === 'number' ? post.baseRate : 0} />
-          <RichText className="max-w-[48rem] mx-auto" data={post.content} enableGutter={false} />
+        <SmartEstimateBlock 
+          postId={post.id} 
+          baseRate={typeof post.baseRate === 'number' ? post.baseRate : 0}
+          postTitle={post.title}
+          postDescription={post.meta?.description || ''}
+        />
+          <div className="text-center py-8">
+            <h2 className="text-2xl font-semibold mb-4">Article Content Available in AI Assistant</h2>
+            <p className="text-muted-foreground">
+              Use the AI Assistant (bottom right) to interact with this article content. 
+              Ask questions, get summaries, or explore specific topics from the article.
+            </p>
+          </div>
           {post.relatedPosts && post.relatedPosts.length > 0 && (
             <RelatedPosts
               className="mt-12 max-w-[52rem] lg:grid lg:grid-cols-subgrid col-start-1 col-span-3 grid-rows-[2fr]"

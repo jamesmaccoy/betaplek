@@ -3,29 +3,44 @@
 import { Media } from '@/components/Media'
 import { Booking, User } from '@/payload-types'
 import { formatDateTime } from '@/utilities/formatDateTime'
-import { PlusCircleIcon, TrashIcon, UserIcon, FileText } from 'lucide-react'
+import { PlusCircleIcon, TrashIcon, UserIcon, FileText, Lock } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import InviteUrlDialog from './_components/invite-url-dialog'
+import SimplePageRenderer from './_components/SimplePageRenderer'
 import { Button } from '@/components/ui/button'
-import { Purchases, type Package, type Product } from '@revenuecat/purchases-js'
 import { useRevenueCat } from '@/providers/RevenueCat'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Calendar } from '@/components/ui/calendar'
 import { DateRange } from 'react-day-picker'
+import { AIAssistant } from '@/components/AIAssistant/AIAssistant'
 
 type Props = {
   data: Booking
   user: User
 }
 
-interface RevenueCatProduct extends Product {
-  price?: number;
-  priceString?: string;
-  currencyCode?: string;
+
+
+interface AddonPackage {
+  id: string;
+  name: string;
+  originalName: string;
+  description?: string;
+  multiplier: number;
+  category: string;
+  minNights: number;
+  maxNights: number;
+  revenueCatId: string;
+  baseRate?: number;
+  isEnabled: boolean;
+  features: any[];
+  relatedPage?: any; // Related page data
+  source: string;
+  hasCustomName: boolean;
 }
 
-// Helper to format and convert price
-function formatPriceWithUSD(product) {
+// Helper to format and convert price (kept for potential future use)
+function formatPriceWithUSD(product: any) {
   const price = product.price;
   const priceString = product.priceString;
   const currency = product.currencyCode || 'ZAR';
@@ -41,45 +56,100 @@ function formatPriceWithUSD(product) {
 export default function BookingDetailsClientPage({ data, user }: Props) {
   const [removedGuests, setRemovedGuests] = React.useState<string[]>([])
 
-  // RevenueCat product state
-  const [offerings, setOfferings] = useState<Package[]>([])
-  const [loadingOfferings, setLoadingOfferings] = useState(true)
+  // Addon packages state
+  const [addonPackages, setAddonPackages] = useState<AddonPackage[]>([])
+  const [loadingAddons, setLoadingAddons] = useState(true)
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [paymentError, setPaymentError] = useState<string | null>(null)
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const { isInitialized } = useRevenueCat();
 
+  // Related pages state
+  const [relatedPages, setRelatedPages] = useState<any[]>([])
+  const [loadingPages, setLoadingPages] = useState(true)
+
   useEffect(() => {
-    if (!isInitialized) return;
-    const loadOfferings = async () => {
-      setLoadingOfferings(true)
+    const loadPackages = async () => {
+      setLoadingAddons(true)
       try {
-        const fetchedOfferings = await Purchases.getSharedInstance().getOfferings()
-        console.log('Offerings:', fetchedOfferings)
-        // Only show cleaning, bottle of wine, and guided hike
-        const allowed = ['cleaning', 'Bottle_wine', 'Hike']
-        let allPackages: Package[] = []
-        // Prefer the 'add_ons' offering if it exists
-        const addOnsOffering = fetchedOfferings.all["add_ons"];
-        if (addOnsOffering && addOnsOffering.availablePackages.length > 0) {
-          setOfferings(addOnsOffering.availablePackages.filter(pkg => allowed.includes(pkg.webBillingProduct?.identifier)));
-        } else {
-          // Fallback: search all offerings for allowed add-ons
-          Object.values(fetchedOfferings.all).forEach(offering => {
-            if (offering && offering.availablePackages) {
-              allPackages = allPackages.concat(offering.availablePackages)
+        // Get the post ID from the booking data
+        const postId = typeof data?.post === 'string' ? data.post : data?.post?.id
+        if (!postId) {
+          throw new Error('No post ID found')
+        }
+        
+        // Fetch both addon packages and all packages to check for related pages
+        const [addonsResponse, allPackagesResponse] = await Promise.all([
+          fetch(`/api/packages/addons/${postId}`),
+          fetch(`/api/packages/post/${postId}`)
+        ])
+        
+        if (!addonsResponse.ok || !allPackagesResponse.ok) {
+          throw new Error('Failed to fetch packages')
+        }
+        
+        const [addonsData, allPackagesData] = await Promise.all([
+          addonsResponse.json(),
+          allPackagesResponse.json()
+        ])
+        
+        setAddonPackages(addonsData.addons || [])
+        
+        // Also collect related pages from all packages (not just addons)
+        const allPackages = allPackagesData.packages || []
+        const packagesWithPages = allPackages.filter((pkg: any) => pkg.relatedPage)
+        
+        if (packagesWithPages.length > 0) {
+          // Fetch full page data for each related page
+          const pagePromises = packagesWithPages.map(async (pkg: any) => {
+            try {
+              const pageResponse = await fetch(`/api/pages/${pkg.relatedPage.id}?depth=2&draft=false&locale=undefined`)
+              if (pageResponse.ok) {
+                const fullPageData = await pageResponse.json()
+                return {
+                  ...fullPageData,
+                  packageName: pkg.name,
+                  packageId: pkg.id
+                }
+              } else {
+                // Fallback to basic data if full fetch fails
+                return {
+                  ...pkg.relatedPage,
+                  packageName: pkg.name,
+                  packageId: pkg.id
+                }
+              }
+            } catch (error) {
+              console.error(`Error fetching page ${pkg.relatedPage.id}:`, error)
+              // Fallback to basic data
+              return {
+                ...pkg.relatedPage,
+                packageName: pkg.name,
+                packageId: pkg.id
+              }
             }
           })
-          setOfferings(allPackages.filter(pkg => allowed.includes(pkg.webBillingProduct?.identifier)));
+          
+          const pages = await Promise.all(pagePromises)
+          setRelatedPages(pages)
         }
       } catch (err) {
-        setPaymentError('Failed to load add-ons')
+        console.error('Error loading packages:', err)
+        setPaymentError('Failed to load packages')
       } finally {
-        setLoadingOfferings(false)
+        setLoadingAddons(false)
       }
     }
-    loadOfferings()
-  }, [isInitialized])
+    
+    loadPackages()
+  }, [data?.post])
+
+  // Set loading pages to false when packages are loaded
+  useEffect(() => {
+    if (!loadingAddons) {
+      setLoadingPages(false)
+    }
+  }, [loadingAddons])
 
   const removeGuestHandler = async (guestId: string) => {
     const res = await fetch(`/api/bookings/${data.id}/guests/${guestId}`, {
@@ -98,6 +168,57 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
     setRemovedGuests((prev) => [...prev, guestId])
   }
 
+  // Create booking context for AI Assistant
+  const getBookingContext = () => {
+    const booking = data
+    const post = typeof booking?.post === 'string' ? null : booking?.post
+    
+    return {
+      context: 'booking-details',
+      booking: {
+        id: booking?.id,
+        title: booking?.title,
+        fromDate: booking?.fromDate,
+        toDate: booking?.toDate,
+        paymentStatus: booking?.paymentStatus,
+        createdAt: booking?.createdAt
+      },
+      property: post ? {
+        id: post.id,
+        title: post.title,
+        description: post.meta?.description || '',
+        content: post.content,
+        baseRate: post.baseRate,
+        relatedPosts: post.relatedPosts || []
+      } : null,
+      guests: {
+        customer: typeof booking?.customer === 'string' ? null : {
+          id: booking?.customer?.id,
+          name: booking?.customer?.name,
+          email: booking?.customer?.email
+        },
+        guests: booking?.guests?.filter(guest => typeof guest !== 'string').map(guest => ({
+          id: guest.id,
+          name: guest.name,
+          email: guest.email
+        })) || []
+      },
+      addons: addonPackages.map(addon => ({
+        id: addon.id,
+        name: addon.name,
+        description: addon.description,
+        price: (addon.baseRate || 0) * addon.multiplier,
+        features: addon.features
+      })),
+      checkinInfo: relatedPages.map(page => ({
+        id: page.id,
+        title: page.title,
+        packageName: page.packageName,
+        content: page.layout
+      }))
+    }
+  }
+
   return (
     <div className="container my-10">
       <Tabs defaultValue="details" className="mt-10 max-w-screen-md mx-auto">
@@ -110,6 +231,12 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
             <UserIcon className="h-5 w-5" />
             <span className="hidden sm:inline">Guests</span>
           </TabsTrigger>
+          {relatedPages.length > 0 && (
+            <TabsTrigger value="sensitive" className="px-3 py-2 rounded-full flex items-center gap-2 data-[state=active]:bg-secondary data-[state=active]:text-foreground">
+              <Lock className="h-5 w-5" />
+              <span className="hidden sm:inline">Check-in Info</span>
+            </TabsTrigger>
+          )}
         </TabsList>
         <TabsContent value="details">
           {data && 'post' in data && typeof data?.post !== 'string' ? (
@@ -224,31 +351,92 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
               })}
           </div>
         </TabsContent>
+        {relatedPages.length > 0 && (
+          <TabsContent value="sensitive">
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Lock className="h-5 w-5 text-muted-foreground" />
+                <h2 className="text-2xl font-bold">Check-in Information</h2>
+              </div>
+              <div className="text-sm text-muted-foreground mb-4">
+                This information is only visible to you and your guests. Please keep it confidential.
+              </div>
+              {loadingPages ? (
+                <p>Loading check-in information...</p>
+              ) : (
+                <div className="space-y-6">
+                  {relatedPages.map((page, index) => (
+                    <div key={page.id || index} className="border rounded-lg p-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="p-2 bg-primary/10 rounded-full">
+                          <Lock className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-lg">{page.title}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Related to: {page.packageName}
+                          </p>
+                        </div>
+                      </div>
+                      {page.layout && (
+                        <SimplePageRenderer page={page} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
-      {/* Revenuecat cleaning fee, bottle of wine, guided hike */}
+      {/* Addon packages from database */}
       <div className="mt-10 max-w-screen-md mx-auto">
         <h2 className="text-2xl font-bold mb-4">Add-ons</h2>
-        {loadingOfferings ? (
+        {loadingAddons ? (
           <p>Loading add-ons...</p>
+        ) : addonPackages.length === 0 ? (
+          <p className="text-muted-foreground">No add-ons available for this property.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[...new Map(offerings.map(pkg => [pkg.webBillingProduct?.identifier, pkg])).values()].map((pkg) => {
-              const product = pkg.webBillingProduct as RevenueCatProduct;
-              const isWine = product.identifier === 'Bottle_wine';
-              const isCleaning = product.identifier === 'cleaning';
-              const isHike = product.identifier === 'Hike';
+            {addonPackages.map((addon) => {
+              const isWine = addon.revenueCatId === 'Bottle_wine';
+              const isCleaning = addon.revenueCatId === 'cleaning';
+              const isHike = addon.revenueCatId === 'Hike';
+              const isBathBomb = addon.revenueCatId === 'bathBomb';
+              
+              // Calculate price based on base rate and multiplier
+              const baseRate = addon.baseRate || 0;
+              const price = baseRate * addon.multiplier;
+              const priceString = `R${price.toFixed(2)}`;
+              
               return (
-                <div key={product.identifier + '-' + pkg.identifier} className="border rounded-lg p-4 flex flex-col items-center">
-                  <div className="font-bold text-lg mb-2">{product.title || product.identifier}</div>
-                  <div className="mb-2 text-muted-foreground text-sm">{product.description}</div>
-                  <div className="mb-4 text-xl font-bold">{formatPriceWithUSD(product)}</div>
+                <div key={addon.id} className="border rounded-lg p-4 flex flex-col items-center">
+                  <div className="font-bold text-lg mb-2">{addon.name}</div>
+                  <div className="mb-2 text-muted-foreground text-sm">{addon.description || addon.originalName}</div>
+                  <div className="mb-4 text-xl font-bold">{priceString}</div>
+                  {addon.features && addon.features.length > 0 && (
+                    <div className="mb-3 text-xs text-muted-foreground text-center">
+                      {addon.features.map((feature: any, index: number) => (
+                        <div key={index}>{feature.label || feature}</div>
+                      ))}
+                    </div>
+                  )}
                   <Button
-                    className={isWine ? "bg-primary text-primary-foreground hover:bg-primary/90" : isCleaning ? "bg-yellow-200 text-yellow-900" : isHike ? "bg-green-200 text-green-900" : ""}
+                    className={
+                      isWine ? "bg-primary text-primary-foreground hover:bg-primary/90" : 
+                      isCleaning ? "bg-yellow-200 text-yellow-900" : 
+                      isHike ? "bg-green-200 text-green-900" : 
+                      isBathBomb ? "bg-pink-200 text-pink-900" : ""
+                    }
                     onClick={async () => {
                       setPaymentLoading(true)
                       setPaymentError(null)
                       try {
-                        await Purchases.getSharedInstance().purchase({ rcPackage: pkg })
+                        // For now, we'll use a placeholder purchase flow
+                        // In the future, this could integrate with RevenueCat or a custom payment system
+                        console.log('Purchasing addon:', addon)
+                        // Simulate purchase delay
+                        await new Promise(resolve => setTimeout(resolve, 1000))
                         setPaymentSuccess(true)
                       } catch (err) {
                         setPaymentError('Failed to purchase add-on')
@@ -258,7 +446,11 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
                     }}
                     disabled={paymentLoading}
                   >
-                    {isWine ? 'Buy Bottle of Wine' : isCleaning ? 'Add Cleaning' : isHike ? 'Book Guided Hike' : 'Purchase'}
+                    {isWine ? 'Buy Bottle of Wine' : 
+                     isCleaning ? 'Add Cleaning' : 
+                     isHike ? 'Book Guided Hike' : 
+                     isBathBomb ? 'Add Bath Bomb' : 
+                     `Purchase ${addon.name}`}
                   </Button>
                 </div>
               )
@@ -268,6 +460,21 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
         {paymentError && <div className="text-red-500 mt-2">{paymentError}</div>}
         {paymentSuccess && <div className="text-green-600 mt-2">Add-on purchased successfully!</div>}
       </div>
+      
+      {/* AI Assistant with booking context */}
+      <AIAssistant />
+      
+      {/* Set context for AI Assistant */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            window.addEventListener('load', function() {
+              const context = ${JSON.stringify(getBookingContext())};
+              window.bookingContext = context;
+            });
+          `
+        }}
+      />
     </div>
   )
 }

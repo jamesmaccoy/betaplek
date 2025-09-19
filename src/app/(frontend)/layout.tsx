@@ -15,7 +15,7 @@ import { draftMode } from 'next/headers'
 
 import './globals.css'
 import { getServerSideURL } from '@/utilities/getURL'
-import { AIAssistant } from '@/components/AIAssistant/AIAssistant'
+
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { isEnabled } = await draftMode()
@@ -38,7 +38,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <Header />
           {children}
           <Footer />
-          <AIAssistant />
+          
         </Providers>
       </body>
     </html>

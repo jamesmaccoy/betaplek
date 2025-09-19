@@ -59,6 +59,16 @@ const Packages: CollectionConfig = {
       required: false, // Changed to false to prevent forced defaults
       defaultValue: 'standard',
     },
+    {
+      name: 'entitlement',
+      type: 'select',
+      options: [
+        { label: 'Standard', value: 'standard' },
+        { label: 'Pro', value: 'pro' },
+      ],
+      required: false,
+      defaultValue: 'standard',
+    },
     { 
       name: 'minNights', 
       type: 'number', 
@@ -74,6 +84,17 @@ const Packages: CollectionConfig = {
       min: 1 
     },
     { name: 'revenueCatId', type: 'text' },
+    {
+      name: 'relatedPage',
+      type: 'relationship',
+      relationTo: 'pages',
+      required: false,
+      hasMany: false,
+      admin: { 
+        position: 'sidebar',
+        description: 'Link to a page containing sensitive information like check-in instructions or house manual'
+      },
+    },
     { name: 'isEnabled', type: 'checkbox', defaultValue: true },
     { name: 'baseRate', type: 'number', required: false },
   ],

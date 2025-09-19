@@ -52,6 +52,22 @@ interface Message {
   content: string
 }
 
+interface PackageSuggestion {
+  revenueCatId: string
+  suggestedName: string
+  description: string
+  features: string[]
+  baseRate?: number
+  details: {
+    minNights?: number
+    maxNights?: number
+    multiplier?: number
+    category?: string
+    customerTierRequired?: string
+    features?: string
+  }
+}
+
 const LoadingDots = () => {
   return (
     <div className="flex space-x-1 items-center">
@@ -70,11 +86,49 @@ export const AIAssistant = () => {
   const [isListening, setIsListening] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [micError, setMicError] = useState<string | null>(null)
+  const [packageSuggestions, setPackageSuggestions] = useState<PackageSuggestion[]>([])
+  const [currentContext, setCurrentContext] = useState<any>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const recognitionRef = useRef<SpeechRecognition | null>(null)
   const synthRef = useRef<SpeechSynthesis | null>(null)
   const isProcessingRef = useRef(false)
   const finalTranscriptRef = useRef('')
+
+  useEffect(() => {
+    // Listen for custom events to open AI Assistant with context
+    const handleOpenAIAssistant = (event: CustomEvent) => {
+      setIsOpen(true)
+      setCurrentContext(event.detail)
+      
+      // If there's a predefined message, send it automatically
+      if (event.detail?.message) {
+        setInput(event.detail.message)
+        // Auto-send after a brief delay
+        setTimeout(() => {
+          handleSubmit(new Event('submit') as any)
+        }, 100)
+      }
+    }
+
+    // Check for context on page load
+    const checkContext = () => {
+      if ((window as any).bookingContext) {
+        setCurrentContext((window as any).bookingContext)
+      } else if ((window as any).postContext) {
+        setCurrentContext((window as any).postContext)
+      }
+    }
+
+    window.addEventListener('openAIAssistant', handleOpenAIAssistant as EventListener)
+    
+    // Check for context after a short delay to ensure it's set
+    const timeoutId = setTimeout(checkContext, 100)
+    
+    return () => {
+      window.removeEventListener('openAIAssistant', handleOpenAIAssistant as EventListener)
+      clearTimeout(timeoutId)
+    }
+  }, [])
 
   useEffect(() => {
     // Initialize speech recognition
@@ -218,16 +272,205 @@ export const AIAssistant = () => {
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: messageToSend }),
-      })
+      // Check if this is a package suggestion request
+      if (currentContext?.context === 'package-suggestions' || 
+          messageToSend.toLowerCase().includes('package') || 
+          messageToSend.toLowerCase().includes('suggest')) {
+        
+        // Call package suggestions API
+        const res = await fetch('/api/packages/suggest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            description: messageToSend, 
+            postId: currentContext?.postId,
+            hostContext: true 
+          }),
+        })
+        
+        if (res.ok) {
+          const data = await res.json()
+          const suggestions: PackageSuggestion[] = Array.isArray(data.recommendations) ? data.recommendations : []
+          
+          if (suggestions.length > 0) {
+            setPackageSuggestions(suggestions)
+            
+            // Create a formatted response
+            const suggestionText = suggestions.map(s => 
+              `**${s.suggestedName}**\n` +
+              `${s.description}\n` +
+              `- Duration: ${s.details.minNights}-${s.details.maxNights} nights\n` +
+              `- Category: ${s.details.category}\n` +
+              `- Multiplier: ${s.details.multiplier}x\n` +
+              `- Entitlement: ${s.details.customerTierRequired}\n` +
+              `- Base Rate: ${s.baseRate ? `R${s.baseRate}` : 'Not set'}\n` +
+              `- Features: ${s.features && s.features.length > 0 ? s.features.join(', ') : (s.details.features || 'Standard features')}`
+            ).join('\n\n')
+            
+            const assistantMessage: Message = { 
+              role: 'assistant', 
+              content: `Here are some package suggestions based on your needs:\n\n${suggestionText}\n\nYou can click "Add Package" on any of these suggestions to create them.` 
+            }
+            setMessages((prev) => [...prev, assistantMessage])
+            speak('I found some package suggestions for you. Check the cards below.')
+          } else {
+            const assistantMessage: Message = { 
+              role: 'assistant', 
+              content: `I couldn't find specific package suggestions for "${messageToSend}". Try describing your needs more specifically, such as "I need a luxury weekend package" or "I want to offer hourly rentals for events".` 
+            }
+            setMessages((prev) => [...prev, assistantMessage])
+            speak('I couldn\'t find specific package suggestions. Please try describing your needs more specifically.')
+          }
+        } else {
+          const assistantMessage: Message = { 
+            role: 'assistant', 
+            content: 'Sorry, I encountered an error while generating package suggestions. Please try again.' 
+          }
+          setMessages((prev) => [...prev, assistantMessage])
+          speak('Sorry, I encountered an error while generating package suggestions.')
+        }
+      } else if (currentContext?.context === 'package-rename') {
+        // Handle package renaming with enhanced suggestions
+        const currentName = currentContext?.currentName || 'this package'
+        const postId = currentContext?.postId
+        
+        // Call the general chat API with package renaming context
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            message: `I want to rename my "${currentName}" package. ${messageToSend}. Please suggest a better name, description, and key features that would appeal to guests. Make it specific to this property and the package type.`,
+            context: 'package-rename'
+          }),
+        })
+        
+        if (res.ok) {
+          const data = await res.json()
+          const assistantMessage: Message = { 
+            role: 'assistant', 
+            content: data.response || 'I\'ve provided some suggestions for renaming your package. You can review and apply them as needed.' 
+          }
+          setMessages((prev) => [...prev, assistantMessage])
+          speak('I\'ve provided suggestions for renaming your package.')
+        } else {
+          const assistantMessage: Message = { 
+            role: 'assistant', 
+            content: 'Sorry, I encountered an error while generating renaming suggestions. Please try again.' 
+          }
+          setMessages((prev) => [...prev, assistantMessage])
+          speak('Sorry, I encountered an error while generating renaming suggestions.')
+        }
+      } else if (currentContext?.context === 'package-update') {
+        // Handle package updates including category changes
+        const currentName = currentContext?.currentName || 'this package'
+        const currentCategory = currentContext?.currentCategory || 'unknown'
+        const postId = currentContext?.postId
+        const packageId = currentContext?.packageId
+        
+        // Call the general chat API with package update context
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            message: `I want to update my "${currentName}" package (currently ${currentCategory} category). ${messageToSend}. Please suggest appropriate changes including category, name, description, features, and base rate if needed. Make it specific to this property and the requested changes.`,
+            context: 'package-update',
+            packageId,
+            postId
+          }),
+        })
+        
+        if (res.ok) {
+          const data = await res.json()
+          const assistantMessage: Message = { 
+            role: 'assistant', 
+            content: data.response || 'I\'ve provided some suggestions for updating your package. You can review and apply them as needed.' 
+          }
+          setMessages((prev) => [...prev, assistantMessage])
+          speak('I\'ve provided suggestions for updating your package.')
+        } else {
+          const assistantMessage: Message = { 
+            role: 'assistant', 
+            content: 'Sorry, I encountered an error while generating update suggestions. Please try again.' 
+          }
+          setMessages((prev) => [...prev, assistantMessage])
+          speak('Sorry, I encountered an error while generating update suggestions.')
+        }
+      } else if (currentContext?.context === 'booking-details') {
+        // Handle booking-specific queries
+        const bookingContext = currentContext
+        
+        // Create a comprehensive context string for the AI
+        const contextString = `
+Booking Context:
+- Property: ${bookingContext.property?.title || 'Unknown property'}
+- Booking Title: ${bookingContext.booking?.title || 'Unknown'}
+- Booking ID: ${bookingContext.booking?.id || 'Unknown'}
+- Dates: ${bookingContext.booking?.fromDate ? new Date(bookingContext.booking.fromDate).toLocaleDateString() : 'Unknown'} to ${bookingContext.booking?.toDate ? new Date(bookingContext.booking.toDate).toLocaleDateString() : 'Unknown'}
+- Payment Status: ${bookingContext.booking?.paymentStatus || 'Unknown'}
+- Customer: ${bookingContext.guests?.customer?.name || 'Unknown'}
+- Guests: ${bookingContext.guests?.guests?.map((g: any) => g.name).join(', ') || 'None'}
+- Available Add-ons: ${bookingContext.addons?.map((a: any) => `${a.name} (R${a.price})`).join(', ') || 'None'}
+- Check-in Information: ${bookingContext.checkinInfo?.map((c: any) => c.title).join(', ') || 'None'}
 
-      const data = await response.json()
-      const assistantMessage: Message = { role: 'assistant', content: data.message }
-      setMessages((prev) => [...prev, assistantMessage])
-      speak(data.message)
+Property Article Content:
+${bookingContext.property?.content ? JSON.stringify(bookingContext.property.content) : 'No property content available'}
+        `
+        
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            message: `${contextString}\n\nUser question: ${messageToSend}`,
+            context: 'booking-details'
+          }),
+        })
+
+        const data = await response.json()
+        const assistantMessage: Message = { role: 'assistant', content: data.message }
+        setMessages((prev) => [...prev, assistantMessage])
+        speak(data.message)
+      } else if (currentContext?.context === 'post-article') {
+        // Handle post article queries
+        const postContext = currentContext
+        
+        // Create a comprehensive context string for the AI
+        const contextString = `
+Article Context:
+- Title: ${postContext.post?.title || 'Unknown title'}
+- Description: ${postContext.post?.description || 'No description'}
+- Base Rate: ${postContext.post?.baseRate ? `R${postContext.post.baseRate}` : 'Not set'}
+- Related Posts: ${postContext.post?.relatedPosts?.map((p: any) => p.title || p).join(', ') || 'None'}
+
+Full Article Content:
+${JSON.stringify(postContext.post?.content || 'No content available')}
+        `
+        
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            message: `${contextString}\n\nUser question: ${messageToSend}`,
+            context: 'post-article'
+          }),
+        })
+
+        const data = await response.json()
+        const assistantMessage: Message = { role: 'assistant', content: data.message }
+        setMessages((prev) => [...prev, assistantMessage])
+        speak(data.message)
+      } else {
+        // Regular chat API call
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: messageToSend }),
+        })
+
+        const data = await response.json()
+        const assistantMessage: Message = { role: 'assistant', content: data.message }
+        setMessages((prev) => [...prev, assistantMessage])
+        speak(data.message)
+      }
     } catch (error) {
       console.error('Error:', error)
       const errorMessage = 'Sorry, I encountered an error. Please try again.'
@@ -257,11 +500,21 @@ export const AIAssistant = () => {
       </Button>
 
       {isOpen && (
-        <Card className="absolute bottom-16 right-0 w-[350px] shadow-lg">
+        <Card className="absolute bottom-16 right-0 w-[400px] shadow-lg">
           <div className="p-4 border-b">
             <h3 className="font-semibold">AI Assistant</h3>
+            {currentContext?.context === 'package-suggestions' && (
+              <p className="text-xs text-muted-foreground">Package suggestions mode</p>
+            )}
+            {currentContext?.context === 'booking-details' && (
+              <p className="text-xs text-muted-foreground">Booking assistant - I can help with your booking details, guests, and check-in info</p>
+            )}
+            {currentContext?.context === 'post-article' && (
+              <p className="text-xs text-muted-foreground">Article assistant - I can help you explore and understand this article content</p>
+            )}
           </div>
-          <ScrollArea ref={scrollRef} className="h-[340px] p-4">
+          
+          <ScrollArea ref={scrollRef} className="h-[300px] p-4">
             {messages.map((message, index) => (
               <div
                 key={index}
@@ -284,6 +537,51 @@ export const AIAssistant = () => {
               </div>
             )}
           </ScrollArea>
+          
+          {/* Package Suggestions Display */}
+          {packageSuggestions.length > 0 && (
+            <div className="border-t p-4 max-h-[200px] overflow-y-auto">
+              <h4 className="font-medium text-sm mb-2">Suggested Packages:</h4>
+              <div className="space-y-2">
+                {packageSuggestions.map((suggestion, index) => (
+                  <div key={index} className="text-xs bg-muted p-2 rounded">
+                    <div className="font-medium">{suggestion.suggestedName}</div>
+                    <div className="text-muted-foreground">{suggestion.description}</div>
+                    {suggestion.features && suggestion.features.length > 0 && (
+                      <div className="mt-1 text-xs text-blue-600">
+                        Features: {suggestion.features.join(', ')}
+                      </div>
+                    )}
+                    <div className="mt-1 text-xs">
+                      {suggestion.details.minNights}-{suggestion.details.maxNights} nights • {suggestion.details.category} • {suggestion.details.multiplier}x
+                      {suggestion.baseRate && ` • R${suggestion.baseRate}`}
+                    </div>
+                    <div className="mt-2">
+                      <Button 
+                        size="sm" 
+                        className="text-xs h-6 px-2"
+                        onClick={() => {
+                          // Dispatch event to apply this suggestion
+                          const event = new CustomEvent('applyPackageSuggestion', { 
+                            detail: { 
+                              suggestion,
+                              postId: currentContext?.postId
+                            }
+                          })
+                          window.dispatchEvent(event)
+                          // Close AI Assistant after applying
+                          setIsOpen(false)
+                        }}
+                      >
+                        Apply Suggestion
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit} className="border-t p-4">
             <div className="flex gap-2">
               <Input
