@@ -136,7 +136,7 @@ export default function SubscribePage() {
         </div>
       )}
       <div className="mx-auto max-w-2xl text-center mb-12 sm:mb-16">
-        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">Curated Simplek pleks and access to their garden</h1>
+        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">Curated Simplek pleks and access to garden community/h1>
         <p className="mt-4 text-lg leading-8 text-muted-foreground">
         Packages from each plek made by their hosts</p>
       </div>
@@ -153,7 +153,7 @@ export default function SubscribePage() {
             onCheckedChange={setShowProEntitlements}
           />
           <Label htmlFor="entitlement-toggle" className="text-sm font-medium">
-            Unlock Pro Packages
+            Unlock Pro Pleks
           </Label>
         </div>
       </div>
@@ -248,7 +248,7 @@ export default function SubscribePage() {
                   {dualPrice.usd} USD
                 </p>
                 <ul role="list" className="mt-8 space-y-3 text-sm leading-6 text-muted-foreground xl:mt-10">
-                  <li className="flex gap-x-3">monthly garden class</li>
+                  <li className="flex gap-x-3">🧘‍♂️ Monthly Yoga deck</li>
                   <li className="flex gap-x-3">CID greening initiative</li>
                   <li className="flex gap-x-3">Unlock Month to month packages</li>
                 </ul>
@@ -268,7 +268,7 @@ export default function SubscribePage() {
             return (
               <div key={annual_subscription_plan.identifier} className="relative rounded-2xl border border-primary p-8 shadow-lg">
                 <div className="absolute top-0 -translate-y-1/2 transform rounded-full bg-primary px-3 py-1 text-xs font-semibold tracking-wide text-primary-foreground">
-                  Save 20% on pro plan
+                   Pro - Save 20%
                 </div>
                 <h2 className="text-lg font-semibold leading-8 text-foreground">{product.displayName}</h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">{product.description || 'Get the best value with annual billing.'}</p>
@@ -283,7 +283,7 @@ export default function SubscribePage() {
                   <li className="flex gap-x-3">Studio - 🍤 Hosted packages</li>
                   <li className="flex gap-x-3">CID greening initiative</li>
                   <li className="flex gap-x-3">unlock all packages</li>
-                  <li className="flex gap-x-3">1 year agreement</li>
+                  <li className="flex gap-x-3">1 year access to Simple plek garden community</li>
                 </ul>
                 <button
                   onClick={() => handlePurchase(annual_subscription_plan)}
