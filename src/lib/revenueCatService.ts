@@ -42,7 +42,6 @@ class RevenueCatService {
       
       // For web implementation, we'll use REST API calls instead of the JS SDK
       // The purchases-js SDK is mainly for actual purchase flows
-      console.log('RevenueCat service initialized with API key')
       this.initialized = true
     } catch (error) {
       console.error('Failed to initialize RevenueCat:', error)
@@ -56,7 +55,6 @@ class RevenueCatService {
     
     try {
       // Always return RevenueCat products, never fallback products
-      console.log('Fetching products from RevenueCat...')
       return await this.getRevenueCatProducts()
     } catch (error) {
       console.error('Failed to fetch RevenueCat products:', error)
@@ -320,7 +318,6 @@ class RevenueCatService {
         },
       ]
 
-      console.log(`Loaded ${actualProducts.length} products from RevenueCat configuration`)
       return actualProducts
     } catch (error) {
       console.error('Failed to fetch from RevenueCat API:', error)

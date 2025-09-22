@@ -123,7 +123,6 @@ export default function PackageDashboard({ postId }: PackageDashboardProps) {
       const products = await response.json()
       setAvailableProducts(products)
       
-      console.log(`Loaded ${products.length} available products from RevenueCat`)
     } catch (err: any) {
       console.error('Failed to load available products:', err)
       

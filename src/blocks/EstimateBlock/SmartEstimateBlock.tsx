@@ -313,11 +313,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
     setAvailabilityError(null)
     
     try {
-      console.log('Checking availability for dates:', {
-        fromDate: fromDate.toISOString(),
-        toDate: toDate.toISOString(),
-        postId
-      })
       
       const response = await fetch(
         `/api/bookings/check-availability?postId=${postId}&startDate=${fromDate.toISOString()}&endDate=${toDate.toISOString()}`
@@ -326,7 +321,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       if (response.ok) {
         const data = await response.json()
         const isAvailable = data.isAvailable
-        console.log('Availability check result:', { isAvailable, data })
         
         setAreDatesAvailable(isAvailable)
         
@@ -962,29 +956,11 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   }
 
   const showAvailablePackages = () => {
-    console.log('🎯 showAvailablePackages called with:', {
-      packagesLength: packages.length,
-      packages: packages.map(pkg => ({
-        name: pkg.name,
-        category: pkg.category,
-        entitlement: pkg.entitlement,
-        isEnabled: pkg.isEnabled
-      })),
-      customerEntitlement
-    })
     
     // Use existing packages instead of making new API calls
     if (packages.length > 0) {
       // Apply entitlement filtering first
       const filteredPackages = filterPackagesByEntitlement(packages)
-      console.log('🎯 After entitlement filtering:', {
-        filteredCount: filteredPackages.length,
-        filteredPackages: filteredPackages.map(pkg => ({
-          name: pkg.name,
-          category: pkg.category,
-          entitlement: pkg.entitlement
-        }))
-      })
       
       // Filter packages by duration if dates are selected
       let suitablePackages = filteredPackages
