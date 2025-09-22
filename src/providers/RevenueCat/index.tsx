@@ -36,7 +36,7 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         // Debug user information
         console.log('RevenueCat Debug - Current user:', {
           hasUser: !!currentUser,
-          userId: currentUser?.id,
+          userId: currentUser?.id ? '[REDACTED]' : 'none',
           userIdType: typeof currentUser?.id,
           userIdValid: currentUser?.id && currentUser.id !== '[Not provided]'
         })
@@ -53,7 +53,7 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         // Only add appUserId if we have a valid user ID
         if (currentUser?.id && currentUser.id !== '[Not provided]' && currentUser.id !== '') {
           configOptions.appUserId = String(currentUser.id)
-          console.log('Setting RevenueCat appUserId:', currentUser.id)
+          console.log('Setting RevenueCat appUserId: [REDACTED]')
         } else {
           console.log('No valid user ID for RevenueCat, using anonymous user')
         }
@@ -76,7 +76,7 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         
         try {
           const info = await purchases.getCustomerInfo()
-          console.log('Customer info:', info)
+          console.log('Customer info: [REDACTED - contains sensitive subscription data]')
           setCustomerInfo(info)
           setError(null)
         } catch (customerInfoError) {

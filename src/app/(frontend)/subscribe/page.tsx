@@ -36,11 +36,11 @@ export default function SubscribePage() {
   const loadOfferings = async () => {
     setLoadingOfferings(true)
     try {
-      console.log('RevenueCat API Key:', process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_SDK_KEY)
-      console.log('Current User:', currentUser)
+      console.log('RevenueCat API Key: [REDACTED]')
+      console.log('Current User: [REDACTED - contains user data]')
       const purchases = await Purchases.getSharedInstance()
       const fetchedOfferings = await purchases.getOfferings()
-      console.log("Fetched Offerings Object:", fetchedOfferings)
+      console.log("Fetched Offerings Object: [REDACTED - contains subscription data]")
       if (fetchedOfferings.all) {
         setOfferings(Object.values(fetchedOfferings.all))
       } else {

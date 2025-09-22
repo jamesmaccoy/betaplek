@@ -619,7 +619,7 @@ class RevenueCatService {
       const customerInfo = await this.getCustomerInfo(userId)
       
       if (!customerInfo) {
-        console.log(`No customer info found for user: ${userId}`)
+        console.log(`No customer info found for user: [REDACTED]`)
         return false
       }
 
@@ -628,7 +628,7 @@ class RevenueCatService {
       
       // For now, return true for mock purposes
       // In production, this would check against actual RevenueCat data
-      console.log(`Validating subscription for user ${userId}, product ${productId}: ${hasProduct}`)
+      console.log(`Validating subscription for user [REDACTED], product ${productId}: ${hasProduct}`)
       return true // Mock: always return true for testing
     } catch (error) {
       console.error('Failed to validate subscription:', error)
