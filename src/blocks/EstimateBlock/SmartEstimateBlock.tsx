@@ -983,19 +983,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       
       // Sort packages by relevance and select top 3
       const sortedPackages = suitablePackages.sort((a: any, b: any) => {
-        // Debug logging for package sorting
-        console.log('🔍 Sorting package A:', { 
-          name: a.name, 
-          category: a.category, 
-          revenueCatId: a.revenueCatId,
-          source: a.source 
-        })
-        console.log('🔍 Sorting package B:', { 
-          name: b.name, 
-          category: b.category, 
-          revenueCatId: b.revenueCatId,
-          source: b.source 
-        })
         
         // Prioritize packages that exactly match the duration
         const aExactMatch = startDate && endDate ? 
@@ -1013,7 +1000,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         const aPriority = a.category ? categoryPriority[a.category as string] || 1 : 1
         const bPriority = b.category ? categoryPriority[b.category as string] || 1 : 1
         
-        console.log('🔍 Category priorities:', { aPriority, bPriority })
         
         if (aPriority !== bPriority) return bPriority - aPriority
         
