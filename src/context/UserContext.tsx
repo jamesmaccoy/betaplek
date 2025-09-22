@@ -28,8 +28,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const data = await req.json()
       console.log('👤 UserContext - Fetched user data:', {
         hasUser: !!data?.user,
-        userId: data?.user?.id,
-        userEmail: data?.user?.email,
+        userId: data?.user?.id ? '[REDACTED]' : 'none',
+        userEmail: data?.user?.email ? '[REDACTED]' : 'none',
         userRole: data?.user?.role,
         responseStatus: req.status
       })
