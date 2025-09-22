@@ -23,7 +23,7 @@ interface RevenueCatError extends Error {
 }
 
 // Add type for RevenueCat product with additional properties
-interface RevenueCatProduct extends Product {
+interface RevenueCatProduct extends Omit<Product, 'price'> {
   price?: number;
   priceString?: string;
   currencyCode?: string;
@@ -316,11 +316,11 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
   useEffect(() => {
     if (!selectedPackage) return
 
-    const selectedPackageDetails = packageDetails[selectedPackage]
+    const selectedPackageDetails = packageDetails[selectedPackage as keyof typeof packageDetails]
     if (!selectedPackageDetails) return
 
     const basePrice = Number(bookingTotal)
-    const multiplier = selectedPackageDetails.multiplier
+    const multiplier = typeof selectedPackageDetails.multiplier === "number" ? selectedPackageDetails.multiplier : 1
     const discountedPerNight = basePrice * multiplier
     const discountedTotal = discountedPerNight * selectedDuration
     setPackagePrice(discountedPerNight)
