@@ -55,14 +55,10 @@ export const useSubscription = (entitlementId?: string): SubscriptionStatus => {
         }
 
         // If not subscribed client-side, check with the API
-        console.log('🔄 useSubscription - Checking with API...')
         const response = await fetch('/api/check-subscription', {
           credentials: 'include',
         })
 
-        // DETAILED LOGGING START
-        console.log('useSubscription - API Response Status:', response.status);
-        console.log('useSubscription - API Response OK:', response.ok);
         
         const responseData = await response.json();
         

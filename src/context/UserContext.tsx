@@ -26,13 +26,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
       })
       const data = await req.json()
-      console.log('👤 UserContext - Fetched user data:', {
-        hasUser: !!data?.user,
-        userId: data?.user?.id ? '[REDACTED]' : 'none',
-        userEmail: data?.user?.email ? '[REDACTED]' : 'none',
-        userRole: data?.user?.role,
-        responseStatus: req.status
-      })
       setCurrentUser(data?.user || null)
     } catch (error) {
       console.error('Error fetching current user:', error);

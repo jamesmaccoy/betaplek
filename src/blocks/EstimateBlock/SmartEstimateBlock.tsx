@@ -247,16 +247,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   // This ensures that pro-only packages are only shown to pro users
   // Also filters out addon packages which should only appear on the booking page
   const filterPackagesByEntitlement = useCallback((packages: Package[]): Package[] => {
-    console.log('🔍 filterPackagesByEntitlement called with:', {
-      totalPackages: packages.length,
-      customerEntitlement,
-      packages: packages.map(pkg => ({
-        name: pkg.name,
-        category: pkg.category,
-        entitlement: pkg.entitlement,
-        isEnabled: pkg.isEnabled
-      }))
-    })
     
     const filtered = packages.filter((pkg: Package) => {
       if (!pkg.isEnabled) {
@@ -280,13 +270,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         // Standard subscribers get more than non-subscribers
         const shouldShow = ['standard', 'hosted', 'special'].includes(pkg.category)
         
-        console.log('🔍 Standard subscriber package check:', {
-          packageName: pkg.name,
-          packageCategory: pkg.category,
-          packageEntitlement: pkg.entitlement,
-          shouldShow,
-          reason: shouldShow ? `Package category '${pkg.category}' is available to Standard subscribers` : `Package category '${pkg.category}' is not available to Standard subscribers`
-        })
         
         return shouldShow
       }
@@ -305,15 +288,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       return true
     })
     
-    console.log('✅ filterPackagesByEntitlement result:', {
-      originalCount: packages.length,
-      filteredCount: filtered.length,
-      filteredPackages: filtered.map(pkg => ({
-        name: pkg.name,
-        category: pkg.category,
-        entitlement: pkg.entitlement
-      }))
-    })
     
     return filtered
   }, [customerEntitlement])
@@ -476,19 +450,11 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
 
   // Update customer entitlement when subscription status changes
   useEffect(() => {
-    console.log('🔄 Subscription status changed:', {
-      isSubscribed: subscriptionStatus.isSubscribed,
-      entitlements: subscriptionStatus.entitlements,
-      isLoading: subscriptionStatus.isLoading,
-      error: subscriptionStatus.error
-    })
     const entitlement = getCustomerEntitlement(subscriptionStatus)
-    console.log('🔄 Calculated entitlement:', entitlement)
     setCustomerEntitlement(entitlement)
     
     // Re-filter packages when entitlement changes
     if (originalPackagesRef.current.length > 0) {
-      console.log('🔄 Re-filtering packages due to entitlement change')
       const filtered = filterPackagesByEntitlement(originalPackagesRef.current)
       setPackages(filtered)
     }
@@ -855,7 +821,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       fetch(`/api/packages/post/${postId}`)
         .then(res => res.json())
         .then(data => {
-          console.log('📦 Raw packages from API:', data.packages)
           
           // Filter packages inline to avoid dependency issues
           const filtered = (data.packages || []).filter((pkg: Package) => {
@@ -899,32 +864,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
             return true
           })
           
-          console.log('📦 Filtered packages:', filtered.map((pkg: Package) => ({
-            name: pkg.name,
-            category: pkg.category,
-            entitlement: pkg.entitlement,
-            revenueCatId: pkg.revenueCatId,
-            source: pkg.source,
-            isEnabled: pkg.isEnabled
-          })))
-          console.log('👤 Current customer entitlement:', customerEntitlement)
-          console.log('🎯 3-Tier System Debug:', {
-            tier: customerEntitlement === 'none' ? 'Tier 1 (Non-subscriber)' : 
-                  customerEntitlement === 'standard' ? 'Tier 2 (Standard)' : 
-                  'Tier 3 (Pro)',
-            shouldSeeHosted: customerEntitlement === 'none' || customerEntitlement === 'pro',
-            shouldSeeStandard: customerEntitlement === 'standard' || customerEntitlement === 'pro',
-            shouldSeeSpecial: customerEntitlement === 'none' || customerEntitlement === 'pro'
-          })
           
-          console.log('🎯 Setting packages state:', {
-            filteredCount: filtered.length,
-            filteredPackages: filtered.map((pkg: Package) => ({
-              name: pkg.name,
-              category: pkg.category,
-              entitlement: pkg.entitlement
-            }))
-          })
           
           // Store original packages for re-filtering
           originalPackagesRef.current = data.packages || []

@@ -33,13 +33,6 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       try {
         setIsLoading(true)
         
-        // Debug user information
-        console.log('RevenueCat Debug - Current user:', {
-          hasUser: !!currentUser,
-          userId: currentUser?.id ? '[REDACTED]' : 'none',
-          userIdType: typeof currentUser?.id,
-          userIdValid: currentUser?.id && currentUser.id !== '[Not provided]'
-        })
         
         if (!process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_SDK_KEY) {
           throw new Error('RevenueCat public SDK key is not defined')
@@ -53,13 +46,10 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         // Only add appUserId if we have a valid user ID
         if (currentUser?.id && currentUser.id !== '[Not provided]' && currentUser.id !== '') {
           configOptions.appUserId = String(currentUser.id)
-          console.log('Setting RevenueCat appUserId: [REDACTED]')
         } else {
-          console.log('No valid user ID for RevenueCat, using anonymous user')
         }
         
         const purchases = await Purchases.configure(configOptions)
-        console.log('Purchases instance:', purchases)
         
         // If no user ID was provided, RevenueCat will use an anonymous user
         // This is valid and should not cause errors
@@ -76,7 +66,6 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         
         try {
           const info = await purchases.getCustomerInfo()
-          console.log('Customer info: [REDACTED - contains sensitive subscription data]')
           setCustomerInfo(info)
           setError(null)
         } catch (customerInfoError) {
