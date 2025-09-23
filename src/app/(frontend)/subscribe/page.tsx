@@ -327,7 +327,7 @@ export default function SubscribePage() {
                     <li className="flex gap-x-3">Share your plek booking with guests</li>
                     <li className="flex gap-x-3">Suggested capped pricing for your packages</li>
                     <li className="flex gap-x-3">Reoccuring payments for your masterclass</li>
-                    <li className="flex gap-x-3">Join the network of simple pleks and their garden community</li>
+                    <li className="flex gap-x-3">Join the network of simple pleks and their masterclass community</li>
                   </ul>
                   <button
                     onClick={() => handlePurchase(professional_plan)}
