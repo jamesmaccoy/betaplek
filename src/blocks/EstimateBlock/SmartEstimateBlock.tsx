@@ -49,52 +49,33 @@ interface SmartEstimateBlockProps {
 }
 
 const QuickActions = ({ onAction }: { onAction: (action: string, data?: any) => void }) => (
-  <div className="flex flex-wrap gap-2 mb-4">
-    <Button 
-      variant="outline" 
-      size="sm" 
-      onClick={() => onAction('select_dates')}
-      className="text-xs"
-    >
-      <Calendar className="h-3 w-3 mr-1" />
-      Select Dates
-    </Button>
-    <Button 
-      variant="outline" 
-      size="sm" 
-      onClick={() => onAction('suggest_duration')}
-      className="text-xs"
-    >
-      <Calendar className="h-3 w-3 mr-1" />
-      When should I visit?
-    </Button>
-    <Button 
-      variant="outline" 
-      size="sm" 
-      onClick={() => onAction('show_packages')}
-      className="text-xs"
-    >
-      <Package className="h-3 w-3 mr-1" />
-      What packages are available?
-    </Button>
-    <Button 
-      variant="outline" 
-      size="sm" 
-      onClick={() => onAction('debug_packages')}
-      className="text-xs"
-    >
-      <Package className="h-3 w-3 mr-1" />
-      Debug Packages
-    </Button>
-    <Button 
-      variant="outline" 
-      size="sm" 
-      onClick={() => onAction('get_recommendation')}
-      className="text-xs"
-    >
-      <Sparkles className="h-3 w-3 mr-1" />
-      Recommend something for me
-    </Button>
+  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+    <p className="text-sm text-blue-800 mb-2">
+      🤖 <strong>AI Assistant Available</strong>
+    </p>
+    <p className="text-xs text-blue-700 mb-3">
+      For comprehensive AI assistance including package recommendations, debug information, and booking help, please use the AI Assistant in the bottom right corner.
+    </p>
+    <div className="flex flex-wrap gap-2">
+      <Button 
+        variant="outline" 
+        size="sm" 
+        onClick={() => onAction('ai_assistant')}
+        className="text-xs bg-white"
+      >
+        <Bot className="h-3 w-3 mr-1" />
+        Use AI Assistant
+      </Button>
+      <Button 
+        variant="outline" 
+        size="sm" 
+        onClick={() => onAction('debug_packages')}
+        className="text-xs bg-white"
+      >
+        <Package className="h-3 w-3 mr-1" />
+        Debug Packages
+      </Button>
+    </div>
   </div>
 )
 
@@ -880,76 +861,8 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   }, [messages])
   
   const handleQuickAction = (action: string, data?: any) => {
-    let message = ''
-    
-    switch (action) {
-      case 'select_dates':
-        // If dates are already populated, acknowledge them
-        if (startDate && endDate) {
-          const acknowledgmentMessage: Message = {
-            role: 'assistant',
-            content: `I see you already have dates selected: ${format(startDate, 'MMM dd')} to ${format(endDate, 'MMM dd, yyyy')} (${duration} ${duration === 1 ? 'night' : 'nights'}). You can modify them below or ask me to suggest packages for these dates.`,
-            type: 'text'
-          }
-          setMessages(prev => [...prev, acknowledgmentMessage])
-        }
-        
-        const dateMessage: Message = {
-          role: 'assistant',
-          content: startDate && endDate ? 
-            'You can modify your dates below if needed:' : 
-            'Please select your check-in and check-out dates:',
-          type: 'date_selection'
-        }
-        setMessages(prev => [...prev, dateMessage])
-        return
-      case 'suggest_duration':
-        message = `For ${postTitle}, I'd recommend considering these durations:\n\n` +
-          `• 1-2 nights: Perfect for a quick getaway\n` +
-          `• 3-5 nights: Ideal for a relaxing break\n` +
-          `• 7+ nights: Great for a longer vacation\n\n` +
-          `What duration are you thinking of? I can help you find the perfect package.`
-        break
-      case 'show_packages':
-        if (startDate && endDate) {
-          showAvailablePackages()
-          return
-        } else {
-          message = `I'd love to show you the best packages! To give you personalized recommendations, please select your dates first using the "Select Dates" button above.`
-        }
-        break
-      case 'get_recommendation':
-        if (startDate && endDate) {
-          message = `Based on your ${duration} ${duration === 1 ? 'night' : 'nights'} stay at ${postTitle}, here are my top recommendations:\n\n` +
-            `• For couples: Romantic packages with premium amenities\n` +
-            `• For families: Spacious options with kid-friendly features\n` +
-            `• For business: Professional packages with work amenities\n\n` +
-            `Let me show you the specific packages available for your dates!`
-          
-          const assistantMessage: Message = { role: 'assistant', content: message, type: 'text' }
-          setMessages(prev => [...prev, assistantMessage])
-          
-          // Show packages after the recommendation message
-          setTimeout(() => showAvailablePackages(), 1000)
-          return
-        } else {
-          message = `I'd love to give you personalized recommendations! To suggest the best packages for your needs, please select your travel dates first using the "Select Dates" button above.`
-        }
-        break
-      case 'debug_packages':
-        console.log('🐛 DEBUG: Current state:', {
-          packages: packages,
-          packagesLength: packages.length,
-          customerEntitlement,
-          startDate,
-          endDate,
-          duration
-        })
-        message = `Debug info logged to console. Packages loaded: ${packages.length}, Entitlement: ${customerEntitlement}`
-        break
-      default:
-        message = 'I can help you with that! What would you like to know?'
-    }
+    // Direct users to the main AI Assistant for all interactions
+    const message = `Please use the AI Assistant (bottom right corner) for all interactions including package recommendations, debug information, and booking assistance. The main AI Assistant provides comprehensive support with authentication and context awareness.`
     
     const assistantMessage: Message = { role: 'assistant', content: message, type: 'text' }
     setMessages(prev => [...prev, assistantMessage])

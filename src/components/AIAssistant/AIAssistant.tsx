@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Bot, Send, X, Mic, MicOff } from 'lucide-react'
+import { Bot, Send, X, Mic, MicOff, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useUserContext } from '@/context/UserContext'
 
 interface SpeechRecognitionEvent extends Event {
   results: SpeechRecognitionResultList
@@ -79,6 +80,9 @@ const LoadingDots = () => {
 }
 
 export const AIAssistant = () => {
+  const { currentUser } = useUserContext()
+  const isLoggedIn = !!currentUser
+  
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -97,6 +101,12 @@ export const AIAssistant = () => {
   useEffect(() => {
     // Listen for custom events to open AI Assistant with context
     const handleOpenAIAssistant = (event: CustomEvent) => {
+      if (!isLoggedIn) {
+        // Redirect to login if not authenticated
+        window.location.href = '/login'
+        return
+      }
+      
       setIsOpen(true)
       setCurrentContext(event.detail)
       
@@ -128,7 +138,7 @@ export const AIAssistant = () => {
       window.removeEventListener('openAIAssistant', handleOpenAIAssistant as EventListener)
       clearTimeout(timeoutId)
     }
-  }, [])
+  }, [isLoggedIn])
 
   useEffect(() => {
     // Initialize speech recognition
@@ -262,6 +272,17 @@ export const AIAssistant = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Check authentication before processing
+    if (!isLoggedIn) {
+      const authMessage: Message = { 
+        role: 'assistant', 
+        content: 'Please log in to use the AI Assistant. This feature requires authentication for security.' 
+      }
+      setMessages((prev) => [...prev, authMessage])
+      return
+    }
+    
     const messageToSend = finalTranscriptRef.current || input
     if (!messageToSend.trim()) return
 
@@ -458,6 +479,76 @@ ${JSON.stringify(postContext.post?.content || 'No content available')}
         const assistantMessage: Message = { role: 'assistant', content: data.message }
         setMessages((prev) => [...prev, assistantMessage])
         speak(data.message)
+      } else if (messageToSend.toLowerCase().includes('debug packages') || 
+                 messageToSend.toLowerCase().includes('debug') ||
+                 messageToSend.toLowerCase().includes('show packages')) {
+        // Handle debug packages request
+        try {
+          // Get postId from context
+          const postId = currentContext?.post?.id || currentContext?.property?.id
+          
+          if (postId) {
+            const response = await fetch(`/api/packages/post/${postId}`)
+            if (response.ok) {
+              const data = await response.json()
+              const packages = data.packages || []
+              
+              // Get user's subscription status for entitlement info
+              const userEntitlement = currentUser?.role === 'admin' ? 'pro' : 
+                                     currentUser?.subscriptionStatus?.plan || 'none'
+              
+              const debugInfo = `
+**Debug Package Information:**
+- Total packages found: ${packages.length}
+- User role: ${currentUser?.role || 'guest'}
+- Subscription plan: ${currentUser?.subscriptionStatus?.plan || 'none'}
+- Entitlement level: ${userEntitlement}
+
+**Available Packages:**
+${packages.map((pkg: any, index: number) => 
+  `${index + 1}. **${pkg.name}**
+     - Category: ${pkg.category || 'N/A'}
+     - Entitlement: ${pkg.entitlement || 'N/A'}
+     - Enabled: ${pkg.isEnabled ? 'Yes' : 'No'}
+     - Min/Max nights: ${pkg.minNights}-${pkg.maxNights}
+     - Multiplier: ${pkg.multiplier}x
+     - RevenueCat ID: ${pkg.revenueCatId || 'N/A'}
+     - Features: ${pkg.features?.length || 0} features`
+).join('\n\n')}
+
+**Filtering Logic:**
+- Non-subscribers see: hosted, special packages only
+- Standard subscribers see: standard, hosted, special packages
+- Pro subscribers see: all packages
+- Addon packages are filtered out (booking page only)
+              `
+              
+              const assistantMessage: Message = { 
+                role: 'assistant', 
+                content: debugInfo
+              }
+              setMessages((prev) => [...prev, assistantMessage])
+              speak('Here\'s the debug information for packages and entitlements.')
+            } else {
+              throw new Error('Failed to fetch packages')
+            }
+          } else {
+            const assistantMessage: Message = { 
+              role: 'assistant', 
+              content: 'No post context available for debugging packages. Please navigate to a property page first.'
+            }
+            setMessages((prev) => [...prev, assistantMessage])
+            speak('No property context available for debugging.')
+          }
+        } catch (error) {
+          console.error('Debug packages error:', error)
+          const assistantMessage: Message = { 
+            role: 'assistant', 
+            content: 'Sorry, I encountered an error while fetching debug information. Please try again.'
+          }
+          setMessages((prev) => [...prev, assistantMessage])
+          speak('Error fetching debug information.')
+        }
       } else {
         // Regular chat API call
         const response = await fetch('/api/chat', {
@@ -502,7 +593,15 @@ ${JSON.stringify(postContext.post?.content || 'No content available')}
       {isOpen && (
         <Card className="absolute bottom-16 right-0 w-[400px] shadow-lg">
           <div className="p-4 border-b">
-            <h3 className="font-semibold">AI Assistant</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">AI Assistant</h3>
+              {!isLoggedIn && (
+                <div className="flex items-center gap-1 text-xs text-amber-600">
+                  <Lock className="h-3 w-3" />
+                  <span>Login Required</span>
+                </div>
+              )}
+            </div>
             {currentContext?.context === 'package-suggestions' && (
               <p className="text-xs text-muted-foreground">Package suggestions mode</p>
             )}
@@ -512,9 +611,54 @@ ${JSON.stringify(postContext.post?.content || 'No content available')}
             {currentContext?.context === 'post-article' && (
               <p className="text-xs text-muted-foreground">Article assistant - I can help you explore and understand this article content</p>
             )}
+            {!currentContext && (
+              <p className="text-xs text-muted-foreground">Ask me about packages, bookings, or use "debug packages" to see entitlements</p>
+            )}
           </div>
           
           <ScrollArea ref={scrollRef} className="h-[300px] p-4">
+            {/* Quick Actions */}
+            {isLoggedIn && messages.length === 0 && (
+              <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+                <p className="text-xs text-muted-foreground mb-2">Quick Actions:</p>
+                <div className="flex flex-wrap gap-1">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-xs h-6 px-2"
+                    onClick={() => {
+                      setInput('debug packages')
+                      handleSubmit(new Event('submit') as any)
+                    }}
+                  >
+                    Debug Packages
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-xs h-6 px-2"
+                    onClick={() => {
+                      setInput('show me available packages')
+                      handleSubmit(new Event('submit') as any)
+                    }}
+                  >
+                    Show Packages
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-xs h-6 px-2"
+                    onClick={() => {
+                      setInput('help me understand my entitlements')
+                      handleSubmit(new Event('submit') as any)
+                    }}
+                  >
+                    My Entitlements
+                  </Button>
+                </div>
+              </div>
+            )}
+            
             {messages.map((message, index) => (
               <div
                 key={index}
@@ -583,25 +727,38 @@ ${JSON.stringify(postContext.post?.content || 'No content available')}
           )}
           
           <form onSubmit={handleSubmit} className="border-t p-4">
+            {!isLoggedIn && (
+              <div className="mb-3 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-xs text-amber-800 mb-2">
+                  Authentication required to use AI Assistant
+                </p>
+                <Button size="sm" className="text-xs h-6" asChild>
+                  <a href="/login">Log In</a>
+                </Button>
+              </div>
+            )}
             <div className="flex gap-2">
               <Input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={isListening ? "I'm listening..." : 'Type your message...'}
+                placeholder={
+                  !isLoggedIn ? "Please log in to use AI Assistant..." :
+                  isListening ? "I'm listening..." : 'Type your message...'
+                }
                 className="flex-1"
-                disabled={isLoading || isListening}
+                disabled={isLoading || isListening || !isLoggedIn}
               />
               <Button
                 type="button"
                 size="icon"
                 variant={isListening ? 'destructive' : 'outline'}
                 onClick={isListening ? stopListening : startListening}
-                disabled={isLoading || isSpeaking || !!micError}
+                disabled={isLoading || isSpeaking || !!micError || !isLoggedIn}
                 title={micError || (isListening ? 'Stop listening' : 'Start listening')}
               >
                 {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               </Button>
-              <Button type="submit" size="icon" disabled={isLoading || isListening}>
+              <Button type="submit" size="icon" disabled={isLoading || isListening || !isLoggedIn}>
                 <Send className="h-4 w-4" />
               </Button>
             </div>
