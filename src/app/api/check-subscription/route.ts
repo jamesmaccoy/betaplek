@@ -33,17 +33,6 @@ export async function GET(request: NextRequest) {
     const activeEntitlements = Object.keys(customerInfo.entitlements.active || {});
     const hasActiveSubscription = activeEntitlements.length > 0;
     
-    console.log('🔍 Subscription Check Debug:', {
-      userId,
-      activeEntitlements,
-      hasActiveSubscription,
-      allEntitlements: customerInfo.entitlements,
-      customerInfo: {
-        originalAppUserId: customerInfo.originalAppUserId,
-        firstSeen: customerInfo.firstSeen,
-        originalPurchaseDate: customerInfo.originalPurchaseDate
-      }
-    });
 
     // Set the RevenueCat customer ID in a cookie for cross-device sync
     const response = NextResponse.json({ 
@@ -62,8 +51,6 @@ export async function GET(request: NextRequest) {
 
     // Fetch offerings
     const offerings = await purchases.getOfferings()
-    console.log("All available package identifiers:", offerings.current?.availablePackages.map(pkg => pkg.identifier));
-    console.log("All available webBillingProduct identifiers:", offerings.current?.availablePackages.map(pkg => pkg.webBillingProduct?.identifier));
 
     return response
   } catch (error) {

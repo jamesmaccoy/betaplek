@@ -122,7 +122,7 @@ export async function PATCH(
       }
     }
     
-    console.log('PATCH request for package:', { id, body, user: user?.id || 'admin' })
+    console.log('PATCH request for package:', { id, body, user: user?.id ? '[REDACTED]' : 'admin' })
     console.log('Request body keys:', Object.keys(body))
     console.log('Request body values:', Object.entries(body).map(([key, value]) => `${key}: ${typeof value} = ${JSON.stringify(value)}`))
     console.log('Environment:', process.env.NODE_ENV)

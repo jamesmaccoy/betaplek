@@ -36,11 +36,8 @@ export default function SubscribePage() {
   const loadOfferings = async () => {
     setLoadingOfferings(true)
     try {
-      console.log('RevenueCat API Key:', process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_SDK_KEY)
-      console.log('Current User:', currentUser)
       const purchases = await Purchases.getSharedInstance()
       const fetchedOfferings = await purchases.getOfferings()
-      console.log("Fetched Offerings Object:", fetchedOfferings)
       if (fetchedOfferings.all) {
         setOfferings(Object.values(fetchedOfferings.all))
       } else {
@@ -193,7 +190,7 @@ export default function SubscribePage() {
                 <ul role="list" className="mt-10 space-y-4 text-base leading-6 text-muted-foreground">
                   <li className="flex gap-x-3 items-center">
                     <span className="text-primary text-xl">🧘</span>
-                    <span>Booking access for a week to a garden class</span>
+                    <span>Masterclass including Booking access for a week</span>
                   </li>
                   <li className="flex gap-x-3 items-center">
                     <span className="text-primary text-xl">🥂</span>
@@ -201,7 +198,7 @@ export default function SubscribePage() {
                   </li>
                   <li className="flex gap-x-3 items-center">
                     <span className="text-primary text-xl">🎯</span>
-                    <span>Curated selection of the capes finest wines</span>
+                    <span>A weekly bottle of Curated selection of the capes finest wines</span>
                   </li>
                   <li className="flex gap-x-3 items-center">
                     <span className="text-primary text-xl">📝</span>
@@ -209,7 +206,7 @@ export default function SubscribePage() {
                   </li>
                   <li className="flex gap-x-3 items-center">
                     <span className="text-primary text-xl">🍷</span>
-                    <span>Weekly sessions with wine makers, and materclass Garden community</span>
+                    <span>Weekly sessions with wine makers, and servant in their journey</span>
                   </li>
                 </ul>
                 
@@ -330,7 +327,7 @@ export default function SubscribePage() {
                     <li className="flex gap-x-3">Share your plek booking with guests</li>
                     <li className="flex gap-x-3">Suggested capped pricing for your packages</li>
                     <li className="flex gap-x-3">Reoccuring payments for your masterclass</li>
-                    <li className="flex gap-x-3">Join the network of simple pleks and their garden community</li>
+                    <li className="flex gap-x-3">Join the network of simple pleks and their masterclass community</li>
                   </ul>
                   <button
                     onClick={() => handlePurchase(professional_plan)}

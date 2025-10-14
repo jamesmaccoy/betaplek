@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
-import { Bot, Send, Calendar, Package, Sparkles, Mic, MicOff, Loader2 } from 'lucide-react'
+import { Bot, Send, Calendar, Package, Sparkles, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { useUserContext } from '@/context/UserContext'
 import { useSubscription } from '@/hooks/useSubscription'
@@ -16,6 +16,7 @@ import { calculateTotal } from '@/lib/calculateTotal'
 import { useRevenueCat } from '@/providers/RevenueCat'
 import { Purchases, type Package as RevenueCatPackage, ErrorCode } from '@revenuecat/purchases-js'
 import { useRouter } from 'next/navigation'
+import { Mic, MicOff } from 'lucide-react'
 
 interface Package {
   id: string
@@ -94,6 +95,15 @@ const QuickActions = ({ onAction }: { onAction: (action: string, data?: any) => 
     >
       <Sparkles className="h-3 w-3 mr-1" />
       Recommend something for me
+    </Button>
+    <Button 
+      variant="outline" 
+      size="sm" 
+      onClick={() => onAction('check_availability')}
+      className="text-xs"
+    >
+      <Calendar className="h-3 w-3 mr-1" />
+      Check Availability
     </Button>
   </div>
 )
@@ -197,6 +207,8 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [endDate, setEndDate] = useState<Date | null>(null)
   const [isListening, setIsListening] = useState(false)
+  const [isSpeaking, setIsSpeaking] = useState(false)
+  const [micError, setMicError] = useState<string | null>(null)
   
   // Booking states
   const [isBooking, setIsBooking] = useState(false)
@@ -242,21 +254,14 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   
   const scrollRef = useRef<HTMLDivElement>(null)
   const recognitionRef = useRef<any>(null)
+  const synthRef = useRef<SpeechSynthesis | null>(null)
+  const isProcessingRef = useRef(false)
+  const finalTranscriptRef = useRef('')
 
   // Helper function to filter packages based on customer entitlement
   // This ensures that pro-only packages are only shown to pro users
   // Also filters out addon packages which should only appear on the booking page
   const filterPackagesByEntitlement = useCallback((packages: Package[]): Package[] => {
-    console.log('🔍 filterPackagesByEntitlement called with:', {
-      totalPackages: packages.length,
-      customerEntitlement,
-      packages: packages.map(pkg => ({
-        name: pkg.name,
-        category: pkg.category,
-        entitlement: pkg.entitlement,
-        isEnabled: pkg.isEnabled
-      }))
-    })
     
     const filtered = packages.filter((pkg: Package) => {
       if (!pkg.isEnabled) {
@@ -280,13 +285,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         // Standard subscribers get more than non-subscribers
         const shouldShow = ['standard', 'hosted', 'special'].includes(pkg.category)
         
-        console.log('🔍 Standard subscriber package check:', {
-          packageName: pkg.name,
-          packageCategory: pkg.category,
-          packageEntitlement: pkg.entitlement,
-          shouldShow,
-          reason: shouldShow ? `Package category '${pkg.category}' is available to Standard subscribers` : `Package category '${pkg.category}' is not available to Standard subscribers`
-        })
         
         return shouldShow
       }
@@ -305,15 +303,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       return true
     })
     
-    console.log('✅ filterPackagesByEntitlement result:', {
-      originalCount: packages.length,
-      filteredCount: filtered.length,
-      filteredPackages: filtered.map(pkg => ({
-        name: pkg.name,
-        category: pkg.category,
-        entitlement: pkg.entitlement
-      }))
-    })
     
     return filtered
   }, [customerEntitlement])
@@ -339,11 +328,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
     setAvailabilityError(null)
     
     try {
-      console.log('Checking availability for dates:', {
-        fromDate: fromDate.toISOString(),
-        toDate: toDate.toISOString(),
-        postId
-      })
       
       const response = await fetch(
         `/api/bookings/check-availability?postId=${postId}&startDate=${fromDate.toISOString()}&endDate=${toDate.toISOString()}`
@@ -352,7 +336,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       if (response.ok) {
         const data = await response.json()
         const isAvailable = data.isAvailable
-        console.log('Availability check result:', { isAvailable, data })
         
         setAreDatesAvailable(isAvailable)
         
@@ -476,19 +459,11 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
 
   // Update customer entitlement when subscription status changes
   useEffect(() => {
-    console.log('🔄 Subscription status changed:', {
-      isSubscribed: subscriptionStatus.isSubscribed,
-      entitlements: subscriptionStatus.entitlements,
-      isLoading: subscriptionStatus.isLoading,
-      error: subscriptionStatus.error
-    })
     const entitlement = getCustomerEntitlement(subscriptionStatus)
-    console.log('🔄 Calculated entitlement:', entitlement)
     setCustomerEntitlement(entitlement)
     
     // Re-filter packages when entitlement changes
     if (originalPackagesRef.current.length > 0) {
-      console.log('🔄 Re-filtering packages due to entitlement change')
       const filtered = filterPackagesByEntitlement(originalPackagesRef.current)
       setPackages(filtered)
     }
@@ -500,6 +475,136 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       loadOfferings()
     }
   }, [isInitialized])
+
+  // Initialize speech recognition and synthesis
+  useEffect(() => {
+    // Initialize speech recognition
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+      if (SpeechRecognition) {
+        try {
+          recognitionRef.current = new SpeechRecognition()
+          recognitionRef.current.continuous = true
+          recognitionRef.current.interimResults = true
+          recognitionRef.current.lang = 'en-US'
+
+          recognitionRef.current.onresult = async (event: any) => {
+            let interimTranscript = ''
+            let finalTranscript = ''
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              const result = event.results[i]
+              if (result && result[0]) {
+                const transcript = result[0].transcript
+                if (result.isFinal) {
+                  finalTranscript += transcript
+                } else {
+                  interimTranscript += transcript
+                }
+              }
+            }
+
+            // Update input with interim results
+            setInput(interimTranscript || finalTranscript)
+
+            // If we have a final transcript and we're not already processing
+            if (finalTranscript && !isProcessingRef.current) {
+              isProcessingRef.current = true
+              finalTranscriptRef.current = finalTranscript
+              await handleAIRequest(finalTranscript)
+              isProcessingRef.current = false
+            }
+          }
+
+          recognitionRef.current.onend = () => {
+            if (isListening) {
+              try {
+                recognitionRef.current?.start()
+              } catch (error) {
+                console.error('Error restarting speech recognition:', error)
+                setIsListening(false)
+                setMicError('Error with speech recognition. Please try again.')
+              }
+            }
+          }
+
+          recognitionRef.current.onerror = (event: any) => {
+            console.error('Speech recognition error:', event)
+            setMicError('Error with speech recognition. Please try again.')
+            setIsListening(false)
+          }
+        } catch (error) {
+          console.error('Error initializing speech recognition:', error)
+          setMicError('Speech recognition is not supported in your browser.')
+        }
+      } else {
+        setMicError('Speech recognition is not supported in your browser.')
+      }
+    }
+
+    // Initialize speech synthesis
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      synthRef.current = window.speechSynthesis
+    }
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop()
+      }
+      if (synthRef.current) {
+        synthRef.current.cancel()
+      }
+    }
+  }, [isListening])
+
+  const startListening = () => {
+    if (!recognitionRef.current) {
+      setMicError('Speech recognition is not available.')
+      return
+    }
+
+    try {
+      setMicError(null)
+      finalTranscriptRef.current = ''
+      recognitionRef.current.start()
+      setIsListening(true)
+    } catch (error) {
+      console.error('Error starting speech recognition:', error)
+      setMicError('Failed to start speech recognition. Please try again.')
+      setIsListening(false)
+    }
+  }
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop()
+        setIsListening(false)
+      } catch (error) {
+        console.error('Error stopping speech recognition:', error)
+        setMicError('Error stopping speech recognition.')
+      }
+    }
+  }
+
+  const speak = (text: string) => {
+    if (synthRef.current) {
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.onstart = () => setIsSpeaking(true)
+      utterance.onend = () => {
+        setIsSpeaking(false)
+        // If we're still listening, restart recognition after speaking
+        if (isListening && recognitionRef.current) {
+          try {
+            recognitionRef.current.start()
+          } catch (error) {
+            console.error('Error restarting speech recognition after speaking:', error)
+          }
+        }
+      }
+      synthRef.current.speak(utterance)
+    }
+  }
 
   const loadOfferings = async () => {
     try {
@@ -855,7 +960,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       fetch(`/api/packages/post/${postId}`)
         .then(res => res.json())
         .then(data => {
-          console.log('📦 Raw packages from API:', data.packages)
           
           // Filter packages inline to avoid dependency issues
           const filtered = (data.packages || []).filter((pkg: Package) => {
@@ -899,32 +1003,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
             return true
           })
           
-          console.log('📦 Filtered packages:', filtered.map((pkg: Package) => ({
-            name: pkg.name,
-            category: pkg.category,
-            entitlement: pkg.entitlement,
-            revenueCatId: pkg.revenueCatId,
-            source: pkg.source,
-            isEnabled: pkg.isEnabled
-          })))
-          console.log('👤 Current customer entitlement:', customerEntitlement)
-          console.log('🎯 3-Tier System Debug:', {
-            tier: customerEntitlement === 'none' ? 'Tier 1 (Non-subscriber)' : 
-                  customerEntitlement === 'standard' ? 'Tier 2 (Standard)' : 
-                  'Tier 3 (Pro)',
-            shouldSeeHosted: customerEntitlement === 'none' || customerEntitlement === 'pro',
-            shouldSeeStandard: customerEntitlement === 'standard' || customerEntitlement === 'pro',
-            shouldSeeSpecial: customerEntitlement === 'none' || customerEntitlement === 'pro'
-          })
           
-          console.log('🎯 Setting packages state:', {
-            filteredCount: filtered.length,
-            filteredPackages: filtered.map((pkg: Package) => ({
-              name: pkg.name,
-              category: pkg.category,
-              entitlement: pkg.entitlement
-            }))
-          })
           
           // Store original packages for re-filtering
           originalPackagesRef.current = data.packages || []
@@ -1013,6 +1092,24 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         })
         message = `Debug info logged to console. Packages loaded: ${packages.length}, Entitlement: ${customerEntitlement}`
         break
+      case 'check_availability':
+        if (startDate && endDate) {
+          // Check availability and provide feedback
+          checkDateAvailability(startDate, endDate).then((isAvailable) => {
+            const availabilityMessage: Message = {
+              role: 'assistant',
+              content: isAvailable ? 
+                `✅ Great news! Your selected dates (${format(startDate, 'MMM dd')} to ${format(endDate, 'MMM dd, yyyy')}) are available for booking.` :
+                `❌ Unfortunately, your selected dates (${format(startDate, 'MMM dd')} to ${format(endDate, 'MMM dd, yyyy')}) are not available. Please select different dates.`,
+              type: 'text'
+            }
+            setMessages(prev => [...prev, availabilityMessage])
+          })
+          return
+        } else {
+          message = `To check availability, please select your dates first using the "Select Dates" button above.`
+        }
+        break
       default:
         message = 'I can help you with that! What would you like to know?'
     }
@@ -1022,29 +1119,11 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   }
 
   const showAvailablePackages = () => {
-    console.log('🎯 showAvailablePackages called with:', {
-      packagesLength: packages.length,
-      packages: packages.map(pkg => ({
-        name: pkg.name,
-        category: pkg.category,
-        entitlement: pkg.entitlement,
-        isEnabled: pkg.isEnabled
-      })),
-      customerEntitlement
-    })
     
     // Use existing packages instead of making new API calls
     if (packages.length > 0) {
       // Apply entitlement filtering first
       const filteredPackages = filterPackagesByEntitlement(packages)
-      console.log('🎯 After entitlement filtering:', {
-        filteredCount: filteredPackages.length,
-        filteredPackages: filteredPackages.map(pkg => ({
-          name: pkg.name,
-          category: pkg.category,
-          entitlement: pkg.entitlement
-        }))
-      })
       
       // Filter packages by duration if dates are selected
       let suitablePackages = filteredPackages
@@ -1067,19 +1146,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       
       // Sort packages by relevance and select top 3
       const sortedPackages = suitablePackages.sort((a: any, b: any) => {
-        // Debug logging for package sorting
-        console.log('🔍 Sorting package A:', { 
-          name: a.name, 
-          category: a.category, 
-          revenueCatId: a.revenueCatId,
-          source: a.source 
-        })
-        console.log('🔍 Sorting package B:', { 
-          name: b.name, 
-          category: b.category, 
-          revenueCatId: b.revenueCatId,
-          source: b.source 
-        })
         
         // Prioritize packages that exactly match the duration
         const aExactMatch = startDate && endDate ? 
@@ -1097,7 +1163,6 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         const aPriority = a.category ? categoryPriority[a.category as string] || 1 : 1
         const bPriority = b.category ? categoryPriority[b.category as string] || 1 : 1
         
-        console.log('🔍 Category priorities:', { aPriority, bPriority })
         
         if (aPriority !== bPriority) return bPriority - aPriority
         
@@ -1214,6 +1279,69 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
     setIsLoading(true)
     
     try {
+      // Check for debug packages request
+      if (message.toLowerCase().includes('debug packages') || 
+          message.toLowerCase().includes('debug') ||
+          message.toLowerCase().includes('show packages')) {
+        
+        // Handle debug packages request
+        try {
+          const response = await fetch(`/api/packages/post/${postId}`)
+          if (response.ok) {
+            const data = await response.json()
+            const packages = data.packages || []
+            
+            // Get user's subscription status for entitlement info
+            const userEntitlement = currentUser?.role === 'admin' ? 'pro' : 
+                                   currentUser?.subscriptionStatus?.plan || 'none'
+            
+            const debugInfo = `
+**Debug Package Information:**
+- Total packages found: ${packages.length}
+- User role: ${currentUser?.role || 'guest'}
+- Subscription plan: ${currentUser?.subscriptionStatus?.plan || 'none'}
+- Entitlement level: ${userEntitlement}
+
+**Available Packages:**
+${packages.map((pkg: any, index: number) => 
+  `${index + 1}. **${pkg.name}**
+     - Category: ${pkg.category || 'N/A'}
+     - Entitlement: ${pkg.entitlement || 'N/A'}
+     - Enabled: ${pkg.isEnabled ? 'Yes' : 'No'}
+     - Min/Max nights: ${pkg.minNights}-${pkg.maxNights}
+     - Multiplier: ${pkg.multiplier}x
+     - RevenueCat ID: ${pkg.revenueCatId || 'N/A'}
+     - Features: ${pkg.features?.length || 0} features`
+).join('\n\n')}
+
+**Filtering Logic:**
+- Non-subscribers see: hosted, special packages only
+- Standard subscribers see: standard, hosted, special packages
+- Pro subscribers see: all packages
+- Addon packages are filtered out (booking page only)
+            `
+            
+            const assistantMessage: Message = { 
+              role: 'assistant', 
+              content: debugInfo
+            }
+            setMessages(prev => [...prev, assistantMessage])
+            speak('Here\'s the debug information for packages and entitlements.')
+            setIsLoading(false)
+            return
+          }
+        } catch (error) {
+          console.error('Debug packages error:', error)
+          const assistantMessage: Message = { 
+            role: 'assistant', 
+            content: 'Sorry, I encountered an error while fetching debug information. Please try again.'
+          }
+          setMessages(prev => [...prev, assistantMessage])
+          setIsLoading(false)
+          return
+        }
+      }
+      
       // If user is not logged in, provide basic responses without API call
       if (!isLoggedIn) {
         let response = ''
@@ -1246,24 +1374,33 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         return
       }
       
-      // For logged-in users, use the full AI API
+      // For logged-in users, use the full AI API with enhanced context
+      const contextString = `
+Property Context:
+- Title: ${postTitle}
+- Description: ${postDescription}
+- Base Rate: R${baseRate}
+- Post ID: ${postId}
+
+Current Booking State:
+- Selected Package: ${selectedPackage?.name || 'None'}
+- Duration: ${duration} ${duration === 1 ? 'night' : 'nights'}
+- Start Date: ${startDate ? format(startDate, 'MMM dd, yyyy') : 'Not selected'}
+- End Date: ${endDate ? format(endDate, 'MMM dd, yyyy') : 'Not selected'}
+- Available Packages: ${packages.length}
+- User Entitlement: ${customerEntitlement}
+
+Availability Status:
+- Are dates available: ${areDatesAvailable ? 'Yes' : 'No'}
+- Currently checking availability: ${isCheckingAvailability ? 'Yes' : 'No'}
+      `
+      
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          message,
-          bookingContext: {
-            postId,
-            postTitle,
-            postDescription,
-            baseRate,
-            duration,
-            packages: packages.length,
-            customerEntitlement,
-            selectedPackage: selectedPackage?.name,
-            fromDate: startDate?.toISOString(),
-            toDate: endDate?.toISOString()
-          }
+          message: `${contextString}\n\nUser question: ${message}`,
+          context: 'smart-estimate'
         })
       })
       
@@ -1286,6 +1423,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         type: 'text'
       }
       setMessages(prev => [...prev, assistantMessage])
+      speak(data.message)
       
       // Check if AI suggests showing packages (with null check)
       if (data.message && typeof data.message === 'string' && 
@@ -1301,6 +1439,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         type: 'text'
       }
       setMessages(prev => [...prev, errorMessage])
+      speak(error instanceof Error ? error.message : 'Sorry, I encountered an error.')
     } finally {
       setIsLoading(false)
     }
@@ -1778,12 +1917,23 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
                     : "Ask about packages (log in for full AI assistance)..."
               }
               className="flex-1"
-              disabled={isLoading}
+              disabled={isLoading || isListening}
             />
-            <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
+            <Button
+              type="button"
+              size="icon"
+              variant={isListening ? 'destructive' : 'outline'}
+              onClick={isListening ? stopListening : startListening}
+              disabled={isLoading || isSpeaking || !!micError}
+              title={micError || (isListening ? 'Stop listening' : 'Start listening')}
+            >
+              {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </Button>
+            <Button type="submit" size="icon" disabled={isLoading || isListening || !input.trim()}>
               <Send className="h-4 w-4" />
             </Button>
           </form>
+          {micError && <p className="text-sm text-destructive mt-2">{micError}</p>}
         </div>
       </CardContent>
     </Card>

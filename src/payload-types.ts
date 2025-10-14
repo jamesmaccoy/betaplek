@@ -75,6 +75,7 @@ export interface Config {
     categories: Category;
     users: User;
     packages: Package;
+    authRequests: AuthRequest;
     redirects: Redirect;
     forms: Form;
     'form-submissions': FormSubmission;
@@ -94,6 +95,7 @@ export interface Config {
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     packages: PackagesSelect<false> | PackagesSelect<true>;
+    authRequests: AuthRequestsSelect<false> | AuthRequestsSelect<true>;
     redirects: RedirectsSelect<false> | RedirectsSelect<true>;
     forms: FormsSelect<false> | FormsSelect<true>;
     'form-submissions': FormSubmissionsSelect<false> | FormSubmissionsSelect<true>;
@@ -157,12 +159,19 @@ export interface Booking {
   customer?: (string | null) | User;
   token?: string | null;
   guests?: (string | User)[] | null;
+  total: number;
+  selectedPackage?: {
+    package?: (string | null) | Package;
+    customName?: string | null;
+    enabled?: boolean | null;
+  };
   slug?: string | null;
   slugLock?: boolean | null;
   post: string | Post;
   paymentStatus?: ('paid' | 'unpaid') | null;
   fromDate: string;
   toDate: string;
+  packageType?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -208,6 +217,36 @@ export interface User {
   loginAttempts?: number | null;
   lockUntil?: string | null;
   password?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "packages".
+ */
+export interface Package {
+  id: string;
+  post: string | Post;
+  name: string;
+  description?: string | null;
+  multiplier?: number | null;
+  features?:
+    | {
+        feature?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  category?: ('standard' | 'hosted' | 'addon' | 'special') | null;
+  entitlement?: ('standard' | 'pro') | null;
+  minNights?: number | null;
+  maxNights?: number | null;
+  revenueCatId?: string | null;
+  /**
+   * Link to a page containing sensitive information like check-in instructions or house manual
+   */
+  relatedPage?: (string | null) | Page;
+  isEnabled?: boolean | null;
+  baseRate?: number | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -378,36 +417,6 @@ export interface Category {
         id?: string | null;
       }[]
     | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "packages".
- */
-export interface Package {
-  id: string;
-  post: string | Post;
-  name: string;
-  description?: string | null;
-  multiplier?: number | null;
-  features?:
-    | {
-        feature?: string | null;
-        id?: string | null;
-      }[]
-    | null;
-  category?: ('standard' | 'hosted' | 'addon' | 'special') | null;
-  entitlement?: ('standard' | 'pro') | null;
-  minNights?: number | null;
-  maxNights?: number | null;
-  revenueCatId?: string | null;
-  /**
-   * Link to a page containing sensitive information like check-in instructions or house manual
-   */
-  relatedPage?: (string | null) | Page;
-  isEnabled?: boolean | null;
-  baseRate?: number | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -847,6 +856,18 @@ export interface Estimate {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "authRequests".
+ */
+export interface AuthRequest {
+  id: string;
+  email: string;
+  code: string;
+  expiresAt: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "redirects".
  */
 export interface Redirect {
@@ -1051,6 +1072,10 @@ export interface PayloadLockedDocument {
         value: string | Package;
       } | null)
     | ({
+        relationTo: 'authRequests';
+        value: string | AuthRequest;
+      } | null)
+    | ({
         relationTo: 'redirects';
         value: string | Redirect;
       } | null)
@@ -1121,12 +1146,21 @@ export interface BookingsSelect<T extends boolean = true> {
   customer?: T;
   token?: T;
   guests?: T;
+  total?: T;
+  selectedPackage?:
+    | T
+    | {
+        package?: T;
+        customName?: T;
+        enabled?: T;
+      };
   slug?: T;
   slugLock?: T;
   post?: T;
   paymentStatus?: T;
   fromDate?: T;
   toDate?: T;
+  packageType?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1515,6 +1549,17 @@ export interface PackagesSelect<T extends boolean = true> {
   relatedPage?: T;
   isEnabled?: T;
   baseRate?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "authRequests_select".
+ */
+export interface AuthRequestsSelect<T extends boolean = true> {
+  email?: T;
+  code?: T;
+  expiresAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }
