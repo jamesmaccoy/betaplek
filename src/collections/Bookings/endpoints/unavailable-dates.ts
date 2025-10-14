@@ -1,3 +1,4 @@
+import { Purchases } from '@revenuecat/purchases-js'
 import { Endpoint } from 'payload'
 
 export const unavailableDates: Endpoint = {
@@ -8,6 +9,18 @@ export const unavailableDates: Endpoint = {
 
     if (!slug && !postId) {
       return Response.json({ message: 'Post slug or ID is required' }, { status: 400 })
+    }
+
+    if (!req.user) {
+      return Response.json({ message: 'Unauthorized' }, { status: 401 })
+    }
+
+    const isSubscribed = await hasSubscription(req.user.id)
+
+    if (!isSubscribed) {
+      return Response.json({
+        unavailableDates: [],
+      })
     }
 
     try {
@@ -77,4 +90,44 @@ export const unavailableDates: Endpoint = {
       return Response.json({ message: 'Error fetching unavailable dates' }, { status: 500 })
     }
   },
+}
+
+const apiKey = process.env.REVENUECAT_SECRET_API_KEY
+
+const hasSubscription = async (userId: string) => {
+  if (!apiKey) {
+    throw new Error('Please add REVENUECAT_SECRET_API_KEY to your env variables')
+  }
+
+  const response = await fetch(
+    `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(userId)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+    },
+  )
+
+  if (!response.ok) return false
+
+  const data = await response.json()
+
+  const entitlements = data?.subscriber?.entitlements ?? {}
+
+  const isActive = (entitlement: unknown) => {
+    if (!entitlement || typeof entitlement !== 'object' || !('expires_date' in entitlement))
+      return false
+
+    const exp = entitlement?.expires_date
+    if (!exp) return true // lifetime subscription when expires_date is null according to the docs
+
+    // To Fix type error, according to the docs, it can only ever be of type string or null.
+    if (typeof exp !== 'string') return false
+
+    const expDate = new Date(exp)
+
+    return expDate.getTime() > Date.now()
+  }
+
+  return Object.values(entitlements).some(isActive)
 }

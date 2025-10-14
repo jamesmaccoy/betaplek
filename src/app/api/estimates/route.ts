@@ -16,9 +16,10 @@ export async function POST(request: NextRequest) {
     const { postId, fromDate, toDate, guests, title, packageType, total } = body
 
     console.log('Looking for package:', { postId, packageType })
+    console.log('Package type (original):', packageType)
+    console.log('Package type (lowercase):', packageType.toLowerCase())
     let pkg: any = null
     let multiplier = 1
-    let baseRate = 150
     let customName: string | null = null // Store custom name from package settings
 
     // Get the post data to access packageSettings for custom names
@@ -31,6 +32,21 @@ export async function POST(request: NextRequest) {
       })
     } catch (error) {
       console.log('Failed to fetch post data:', error)
+    }
+
+    // Initialize baseRate with post's baseRate or default
+    let baseRate = postData?.baseRate || 150
+
+    // Helper function to check if package is enabled for this post
+    const isPackageEnabledForPost = (packageId: string) => {
+      if (!postData?.packageSettings || !Array.isArray(postData.packageSettings)) {
+        return true // Default to enabled if no settings exist
+      }
+      const packageSetting = postData.packageSettings.find((setting: any) => {
+        const pkgId = typeof setting.package === 'object' ? setting.package.id : setting.package
+        return pkgId === packageId
+      })
+      return packageSetting?.enabled !== false // Default to true if not explicitly set to false
     }
 
     // First, get all available packages for this post (including RevenueCat)
@@ -60,7 +76,7 @@ export async function POST(request: NextRequest) {
           maxNights: pkg.maxNights,
           revenueCatId: pkg.revenueCatId,
           baseRate: pkg.baseRate,
-          isEnabled: pkg.isEnabled,
+          isEnabled: pkg.isEnabled && isPackageEnabledForPost(pkg.id),
           features: pkg.features?.map((f: any) => f.feature) || [],
           source: 'database'
         })),
@@ -74,21 +90,32 @@ export async function POST(request: NextRequest) {
           maxNights: product.period === 'hour' ? 1 : product.periodCount,
           revenueCatId: product.id,
           baseRate: product.price,
-          isEnabled: product.isEnabled,
+          isEnabled: product.isEnabled && isPackageEnabledForPost(product.id),
           features: product.features,
           source: 'revenuecat'
         }))
-      ]
+      ].filter(pkg => pkg.isEnabled) // Only include enabled packages
 
-      // Find the package by ID (works for both database and RevenueCat packages)
-      pkg = allPackages.find((p: any) => p.id === packageType)
+      console.log('Available packages:', allPackages.map(p => ({ id: p.id, name: p.name, source: p.source, revenueCatId: p.revenueCatId })))
+      console.log('Looking for packageType:', packageType)
+
+      // Find the package by ID or revenueCatId (works for both database and RevenueCat packages)
+      // Use case-insensitive comparison for package lookup
+      pkg = allPackages.find((p: any) => 
+        p.id.toLowerCase() === packageType.toLowerCase() || 
+        p.id === packageType ||
+        (p.revenueCatId && p.revenueCatId.toLowerCase() === packageType.toLowerCase()) ||
+        (p.revenueCatId && p.revenueCatId === packageType)
+      )
       
       if (pkg) {
         console.log('Found package:', {
           id: pkg.id,
           name: pkg.name,
           source: pkg.source,
-          packageType
+          revenueCatId: pkg.revenueCatId,
+          packageType,
+          matchedBy: pkg.id === packageType ? 'id' : pkg.revenueCatId === packageType ? 'revenueCatId' : 'case-insensitive'
         })
         multiplier = pkg.multiplier || 1
         baseRate = pkg.baseRate || 150
@@ -124,7 +151,7 @@ export async function POST(request: NextRequest) {
           }
           if (pkg) {
             multiplier = typeof pkg.multiplier === 'number' ? pkg.multiplier : 1
-            baseRate = typeof pkg.baseRate === 'number' ? pkg.baseRate : 150
+            baseRate = typeof pkg.baseRate === 'number' ? pkg.baseRate : (postData?.baseRate || 150)
             
             // Check for custom name in packageSettings
             if (postData?.packageSettings && Array.isArray(postData.packageSettings)) {
@@ -165,7 +192,7 @@ export async function POST(request: NextRequest) {
         }
         if (pkg) {
           multiplier = typeof pkg.multiplier === 'number' ? pkg.multiplier : 1
-          baseRate = typeof pkg.baseRate === 'number' ? pkg.baseRate : 150
+          baseRate = typeof pkg.baseRate === 'number' ? pkg.baseRate : (postData?.baseRate || 150)
           
           // Check for custom name in packageSettings
           if (postData?.packageSettings && Array.isArray(postData.packageSettings)) {
@@ -188,7 +215,10 @@ export async function POST(request: NextRequest) {
     if (!pkg) {
       try {
         const revenueCatProducts = await revenueCatService.getProducts()
-        const revenueCatProduct = revenueCatProducts.find(product => product.id === packageType)
+        const revenueCatProduct = revenueCatProducts.find(product => 
+          product.id.toLowerCase() === packageType.toLowerCase() || 
+          product.id === packageType
+        )
         
         if (revenueCatProduct) {
           pkg = {
@@ -201,7 +231,7 @@ export async function POST(request: NextRequest) {
             minNights: revenueCatProduct.period === 'hour' ? 1 : revenueCatProduct.periodCount,
             maxNights: revenueCatProduct.period === 'hour' ? 1 : revenueCatProduct.periodCount,
             revenueCatId: revenueCatProduct.id,
-            isEnabled: revenueCatProduct.isEnabled,
+            isEnabled: revenueCatProduct.isEnabled && isPackageEnabledForPost(revenueCatProduct.id),
             features: revenueCatProduct.features,
             source: 'revenuecat'
           }

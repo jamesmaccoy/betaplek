@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils"
 import { useUserContext } from '@/context/UserContext'
 import { useSubscription } from '@/hooks/useSubscription'
 import { AIAssistant } from '@/components/AIAssistant/AIAssistant'
+import { formatAmountToZAR } from "@/lib/currency"
 
 // Add type for RevenueCat error with code
 interface RevenueCatError extends Error {
@@ -22,7 +23,7 @@ interface RevenueCatError extends Error {
 }
 
 // Add type for RevenueCat product with additional properties
-interface RevenueCatProduct extends Product {
+interface RevenueCatProduct extends Omit<Product, 'price'> {
   price?: number;
   priceString?: string;
   currencyCode?: string;
@@ -315,11 +316,11 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
   useEffect(() => {
     if (!selectedPackage) return
 
-    const selectedPackageDetails = packageDetails[selectedPackage]
+    const selectedPackageDetails = packageDetails[selectedPackage as keyof typeof packageDetails]
     if (!selectedPackageDetails) return
 
     const basePrice = Number(bookingTotal)
-    const multiplier = selectedPackageDetails.multiplier
+    const multiplier = typeof selectedPackageDetails.multiplier === "number" ? selectedPackageDetails.multiplier : 1
     const discountedPerNight = basePrice * multiplier
     const discountedTotal = discountedPerNight * selectedDuration
     setPackagePrice(discountedPerNight)
@@ -345,7 +346,7 @@ export default function EstimateClient({ bookingTotal = 'N/A', bookingDuration =
   // Format price with proper decimal places
   const formatPrice = (price: number | null) => {
     if (price === null) return "N/A"
-    return `R${price.toFixed(2)}`
+    return formatAmountToZAR(price)
   }
 
   useEffect(() => {

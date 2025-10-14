@@ -59,9 +59,6 @@ export const useSubscription = (entitlementId?: string): SubscriptionStatus => {
           credentials: 'include',
         })
 
-        // DETAILED LOGGING START
-        console.log('useSubscription - API Response Status:', response.status);
-        console.log('useSubscription - API Response OK:', response.ok);
         
         const responseData = await response.json();
         

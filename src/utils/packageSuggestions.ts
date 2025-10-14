@@ -158,16 +158,16 @@ export const allPackages: SuggestedPackage[] = [
   // Gathering monthly package (special) - Pro only
   {
     id: 'gathering_monthly',
-    title: '🏘️ Starter Pack',
-    description: 'Perfect for group events and gatherings',
+    title: '🏘️ Annual agreement',
+    description: 'Your booking is locked in for the year',
     minNights: 1,
     maxNights: 30,
     multiplier: 1.0,
     features: [
-      'Team building',
-      'Quad bike tour',
-      'Catering support',
-      'Entertainment setup',
+      'Month to month agreement',
+      'No cancellation fees',
+      'No minimum stay',
+      'No lock in period',
     ],
     revenueCatId: 'gathering_monthly',
     entitlementRequired: 'pro',

@@ -11,14 +11,18 @@ import { buttonVariants } from '@/components/ui/button'
 import { useUserContext } from '@/context/UserContext'
 import { AdminLink } from '@/components/AdminLink'
 import { EditPostsLink } from '@/components/EditPostsLink'
+import { useSubscription } from '@/hooks/useSubscription'
+import { getCustomerEntitlement } from '@/utils/packageSuggestions'
 
 export const HeaderNav: React.FC<{ data: HeaderType }> = ({ data }) => {
   const navItems = data?.navItems || []
 
   const { currentUser } = useUserContext()
+  const subscriptionStatus = useSubscription()
+  const customerEntitlement = getCustomerEntitlement(subscriptionStatus)
 
-  // Check if user is a customer or admin
-  const isCustomerOrAdmin = currentUser?.role?.includes('customer') || currentUser?.role?.includes('admin')
+  // Check if user has standard or pro entitlement, or is admin
+  const canManagePlek = customerEntitlement === 'standard' || customerEntitlement === 'pro' || currentUser?.role?.includes('admin')
 
   return (
     <nav className="flex gap-3 items-center">
@@ -33,8 +37,8 @@ export const HeaderNav: React.FC<{ data: HeaderType }> = ({ data }) => {
         return <CMSLink key={i} {...link} appearance="link" />
       })}
       
-      {/* Add Plek Management link for customers and admins */}
-      {isCustomerOrAdmin && (
+      {/* Add Plek Management link for standard/pro subscribers and admins */}
+      {canManagePlek && (
         <Link 
           href="/manage/packages" 
           className={buttonVariants({ variant: "link" })}
