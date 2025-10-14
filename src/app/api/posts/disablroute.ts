@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
     console.log('POST /api/posts request details:')
     console.log('Content-Type:', contentType)
     console.log('Request body:', JSON.stringify(body, null, 2))
-    console.log('User:', { id: user.id, role: user.role })
+    console.log('User:', { id: '[REDACTED]', role: user.role })
 
     // Check if this is a query/search request from admin interface
     if (body.where || body.limit || body.depth || body.sort || body.page) {

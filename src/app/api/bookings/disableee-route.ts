@@ -59,6 +59,17 @@ export async function POST(req: Request) {
 
       // Create booking in Payload CMS with the post relationship
       console.log('Creating booking with post:', { postId: post.id, title: post.title })
+      console.log('Booking data being sent:', {
+        title: post.title,
+        post: post.id,
+        fromDate,
+        toDate,
+        customer: currentUser.user.id,
+        paymentStatus: 'paid'
+      })
+      
+      // Check if this is a valid paid booking (should come from estimate confirmation)
+      const paymentStatus = data.paymentStatus || 'pending'
       
       const booking = await payload.create({
         collection: "bookings",
@@ -69,7 +80,7 @@ export async function POST(req: Request) {
           toDate,
           customer: currentUser.user.id,
           token: Math.random().toString(36).substring(2, 15),
-          paymentStatus: 'paid' // Set as paid since payment was successful
+          paymentStatus: paymentStatus // Use provided payment status or default to pending
         },
       })
 

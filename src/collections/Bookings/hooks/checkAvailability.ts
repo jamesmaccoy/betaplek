@@ -5,7 +5,12 @@ export const checkAvailabilityHook: CollectionBeforeChangeHook = async ({
   data,
   req: { payload },
   req,
+  operation,
 }) => {
+  if (operation === 'update') {
+    return data
+  }
+
   if (!('fromDate' in data && 'toDate' in data && 'post' in data)) {
     throw new APIError('Start date, end date, and post are required.', 400, undefined, true)
   }
@@ -29,9 +34,12 @@ export const checkAvailabilityHook: CollectionBeforeChangeHook = async ({
         { toDate: { greater_than_equal: formattedFromDate } },
       ],
     },
-    limit: 1,
+    limit: 10, // Get more bookings for debugging
     select: {
       slug: true,
+      fromDate: true,
+      toDate: true,
+      title: true,
     },
     depth: 0,
     req,

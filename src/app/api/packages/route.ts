@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const packages = await payload.find({
       collection: 'packages',
       where: Object.keys(where).length > 0 ? where : undefined,
-      depth: 1,
+      depth: 2, // Increased depth to include related page data
     })
     
     return NextResponse.json(packages)
@@ -82,7 +82,7 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const ids = searchParams.getAll('where[id][in][]')
     
-    console.log('DELETE request for packages:', { ids, user: user?.id || 'admin' })
+    console.log('DELETE request for packages:', { ids, user: user?.id ? '[REDACTED]' : 'admin' })
     
     if (!ids || ids.length === 0) {
       return NextResponse.json(

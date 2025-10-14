@@ -19,6 +19,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ est
       return NextResponse.json({ error: 'Estimate not found' }, { status: 404 })
     }
 
+    // Validate that payment was actually processed
+    if (!body.paymentValidated) {
+      return NextResponse.json({ error: 'Payment validation required' }, { status: 400 })
+    }
+
     // Update the estimate with confirmation data
     const updatedEstimate = await payload.update({
       collection: 'estimates',
@@ -27,6 +32,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ est
         paymentStatus: 'paid',
         packageType: body.packageType,
         total: body.baseRate,
+        confirmedAt: new Date().toISOString(),
       },
     })
 

@@ -33,38 +33,47 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       try {
         setIsLoading(true)
         
+        
         if (!process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_SDK_KEY) {
           throw new Error('RevenueCat public SDK key is not defined')
         }
 
-        // Configure RevenueCat with user ID or anonymous ID
-        let userId: string
-        if (currentUser?.id) {
-          userId = String(currentUser.id)
-        } else {
-          // Generate an anonymous ID if no user is logged in
-          userId = Purchases.generateRevenueCatAnonymousAppUserId()
+        // Configure RevenueCat with the new API v2 and currency settings
+        const configOptions: any = {
+          apiKey: process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_SDK_KEY,
         }
         
-        // Initialize RevenueCat with the public key and user ID
-        const purchases = Purchases.configure(
-          process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_SDK_KEY,
-          userId
-        )
-        console.log('Purchases instance:', purchases)
+        // Only add appUserId if we have a valid user ID
+        if (currentUser?.id && currentUser.id !== '[Not provided]' && currentUser.id !== '') {
+          configOptions.appUserId = String(currentUser.id)
+        } else {
+        }
+        
+        const purchases = await Purchases.configure(configOptions)
+        
+        // If no user ID was provided, RevenueCat will use an anonymous user
+        // This is valid and should not cause errors
         
         setIsInitialized(true)
 
-        // Only try to get customer info if user is authenticated
-        if (!currentUser) {
+        // Only try to get customer info if user is authenticated and has valid ID
+        if (!currentUser || !currentUser.id || currentUser.id === '[Not provided]' || currentUser.id === '') {
+          console.log('No valid user for RevenueCat customer info')
           setCustomerInfo(null)
           setError(null)
           return
         }
-        const info = await purchases.getCustomerInfo()
-        console.log('Customer info:', info)
-        setCustomerInfo(info)
-        setError(null)
+        
+        try {
+          const info = await purchases.getCustomerInfo()
+          setCustomerInfo(info)
+          setError(null)
+        } catch (customerInfoError) {
+          console.error('Failed to get customer info:', customerInfoError)
+          // Don't set this as a fatal error - just log it
+          setCustomerInfo(null)
+          setError(null) // Clear error since this is expected for unauthenticated users
+        }
       } catch (err) {
         console.error('RevenueCat getCustomerInfo error:', err)
         setError(err instanceof Error ? err : new Error('Failed to load customer info'))
@@ -82,7 +91,7 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     try {
       setIsLoading(true)
-      const purchases = Purchases.getSharedInstance()
+      const purchases = await Purchases.getSharedInstance()
       const info = await purchases.getCustomerInfo()
       setCustomerInfo(info)
       return info
@@ -99,7 +108,7 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     
     try {
       setIsLoading(true)
-      const purchases = Purchases.getSharedInstance()
+      const purchases = await Purchases.getSharedInstance()
       const info = await purchases.getCustomerInfo()
       setCustomerInfo(info)
       return info

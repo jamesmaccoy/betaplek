@@ -33,11 +33,46 @@ export async function GET() {
       depth: 2,
     })
 
-    // Extract unique guests from all bookings
+    // Get all estimates where the current user is either the customer or a guest
+    const estimates = await payload.find({
+      collection: 'estimates',
+      where: {
+        or: [
+          {
+            customer: {
+              equals: currentUser.user.id,
+            },
+          },
+          {
+            guests: {
+              contains: currentUser.user.id,
+            },
+          },
+        ],
+      },
+      depth: 2,
+    })
+
+    // Extract unique guests from all bookings and estimates
     const allGuests = new Set<string>()
+    
+    // Add guests from bookings
     bookings.docs.forEach((booking) => {
       if (booking.guests) {
         booking.guests.forEach((guest) => {
+          if (typeof guest === 'string') {
+            allGuests.add(guest)
+          } else {
+            allGuests.add(guest.id)
+          }
+        })
+      }
+    })
+
+    // Add guests from estimates
+    estimates.docs.forEach((estimate) => {
+      if (estimate.guests) {
+        estimate.guests.forEach((guest) => {
           if (typeof guest === 'string') {
             allGuests.add(guest)
           } else {

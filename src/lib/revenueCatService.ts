@@ -42,7 +42,6 @@ class RevenueCatService {
       
       // For web implementation, we'll use REST API calls instead of the JS SDK
       // The purchases-js SDK is mainly for actual purchase flows
-      console.log('RevenueCat service initialized with API key')
       this.initialized = true
     } catch (error) {
       console.error('Failed to initialize RevenueCat:', error)
@@ -56,7 +55,6 @@ class RevenueCatService {
     
     try {
       // Always return RevenueCat products, never fallback products
-      console.log('Fetching products from RevenueCat...')
       return await this.getRevenueCatProducts()
     } catch (error) {
       console.error('Failed to fetch RevenueCat products:', error)
@@ -93,6 +91,20 @@ class RevenueCatService {
           isEnabled: true,
           entitlement: 'standard' as const,
           icon: '⏰',
+        },
+        {
+          id: 'virtual_wine',
+          title: '🍷 Virtual Wine Experience',
+          description: 'Weekly virtual wine tasting and experience package',
+          price: 5.00,
+          currency: 'USD',
+          period: 'day' as const,
+          periodCount: 7,
+          category: 'standard' as const,
+          features: ['Pre order wine', 'Curation of the Cape finest', 'Mix and match', 'In app purchases', 'Wine sommelier on request'],
+          isEnabled: true,
+          entitlement: 'standard' as const,
+          icon: '🍷',
         },
         {
           id: 'per_hour_guest',
@@ -222,14 +234,14 @@ class RevenueCatService {
         },
         {
           id: 'gathering_monthly',
-          title: '🏘️ Starter Pack',
-          description: 'Perfect for group events and gatherings',
+          title: '🏘️ Annual agreement',
+          description: 'Your booking is locked in for the year',
           price: 5000.00,
           currency: 'USD',
-          period: 'day' as const,
+          period: 'month' as const,
           periodCount: 1,
           category: 'special' as const,
-          features: ['Team building', 'Quad bike tour', 'Catering support', 'Entertainment setup'],
+          features: ['Month to month agreement', 'No cancellation fees', 'No minimum stay', 'No lock in period'],
           isEnabled: true,
           entitlement: 'pro' as const,
           icon: '🏘️',
@@ -306,7 +318,6 @@ class RevenueCatService {
         },
       ]
 
-      console.log(`Loaded ${actualProducts.length} products from RevenueCat configuration`)
       return actualProducts
     } catch (error) {
       console.error('Failed to fetch from RevenueCat API:', error)
@@ -320,14 +331,14 @@ class RevenueCatService {
     return [
       {
         id: 'gathering_monthly',
-        title: '🏘️ Starter Pack',
-        description: 'Perfect for group events and gatherings',
+        title: '🏘️ Annual agreement',
+        description: 'Your booking is locked in for the year',
         price: 5000.00,
         currency: 'USD',
-        period: 'day' as const,
+        period: 'month' as const,
         periodCount: 1,
         category: 'special' as const,
-        features: ['Team building', 'Quad bike tour', 'Catering support', 'Entertainment setup'],
+        features: ['Month to month agreement', 'No cancellation fees', 'No minimum stay', 'No lock in period'],
         isEnabled: true,
         entitlement: 'pro' as const,
         icon: '🏘️',
@@ -436,6 +447,20 @@ class RevenueCatService {
         entitlement: 'pro',
         icon: '📅',
       },
+      'wine': {
+        id: 'virtual_wine',
+        title: '🍷 Virtual Wine Experience',
+        description: 'Weekly virtual wine tasting and experience package',
+        price: 5.00,
+        currency: 'USD',
+        period: 'day',
+        periodCount: 7,
+        category: 'standard',
+        features: ['Pre order wine', 'Curation of the Cape finest', 'Mix and match', 'In app purchases', 'Wine sommelier on request'],
+        isEnabled: true,
+        entitlement: 'standard',
+        icon: '🍷',
+      },
       'hosted7nights': {
         id: 'hosted7nights',
         title: '👑 Royal Suite Experience',
@@ -536,14 +561,14 @@ class RevenueCatService {
       },
       'monthly_gathering': {
         id: 'gathering_monthly',
-        title: '🏘️ Starter Pack',
-        description: 'Perfect for group events and gatherings',
+        title: '🏘️ Annual agreement',
+        description: 'Your booking is locked in for the year',
         price: 5000.00,
         currency: 'USD',
         period: 'day',
         periodCount: 1,
         category: 'special',
-        features: ['Team building', 'Quad bike tour', 'Catering support', 'Entertainment setup'],
+        features: ['Month to month agreement', 'No cancellation fees', 'No minimum stay', 'No lock in period'],
         isEnabled: true,
         entitlement: 'pro',
         icon: '🏘️',
@@ -591,7 +616,7 @@ class RevenueCatService {
       const customerInfo = await this.getCustomerInfo(userId)
       
       if (!customerInfo) {
-        console.log(`No customer info found for user: ${userId}`)
+        console.log(`No customer info found for user: [REDACTED]`)
         return false
       }
 
@@ -600,7 +625,7 @@ class RevenueCatService {
       
       // For now, return true for mock purposes
       // In production, this would check against actual RevenueCat data
-      console.log(`Validating subscription for user ${userId}, product ${productId}: ${hasProduct}`)
+      console.log(`Validating subscription for user [REDACTED], product ${productId}: ${hasProduct}`)
       return true // Mock: always return true for testing
     } catch (error) {
       console.error('Failed to validate subscription:', error)

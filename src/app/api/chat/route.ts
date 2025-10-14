@@ -9,7 +9,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 export async function POST(req: Request) {
   try {
-    const { message, bookingContext } = await req.json()
+    const { message, bookingContext, context, packageId, postId } = await req.json()
     const { user } = await getMeUser()
 
     if (!user) {
@@ -131,6 +131,81 @@ export async function POST(req: Request) {
     // Get the generative model
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
+    // Handle package update context
+    if (context === 'package-update' && packageId && postId) {
+      try {
+        // Fetch the specific package to update
+        const packageToUpdate = await payload.findByID({
+          collection: 'packages',
+          id: packageId,
+          depth: 1
+        })
+
+        // Fetch post details
+        const post = await payload.findByID({
+          collection: 'posts',
+          id: postId,
+          depth: 1
+        })
+
+        const systemPrompt = `You are an AI assistant helping a host update a package for their property.
+
+CURRENT PACKAGE:
+- Name: ${packageToUpdate.name}
+- Category: ${packageToUpdate.category}
+- Description: ${packageToUpdate.description || 'No description'}
+- Base Rate: ${packageToUpdate.baseRate ? `R${packageToUpdate.baseRate}` : 'Not set'}
+- Features: ${packageToUpdate.features?.map((f: any) => typeof f === 'string' ? f : f.feature).join(', ') || 'No features'}
+- RevenueCat ID: ${packageToUpdate.revenueCatId}
+- Enabled: ${packageToUpdate.isEnabled}
+
+PROPERTY CONTEXT:
+- Property: ${post.title}
+- Description: ${post.meta?.description || 'No description'}
+
+AVAILABLE CATEGORIES:
+- standard: Regular accommodation packages
+- hosted: Packages with host services/concierge
+- addon: One-time services or extras (cleaning, wine, guided tours, etc.)
+- special: Unique or promotional packages
+
+INSTRUCTIONS:
+1. Analyze the user's request for package updates
+2. If they want to change the category to 'addon', suggest appropriate changes:
+   - Update category to 'addon'
+   - Suggest appropriate base rate for addon services
+   - Update features to reflect addon nature
+   - Update description to focus on the service/extra
+3. Provide specific, actionable suggestions
+4. Include reasoning for your recommendations
+5. Be helpful and professional
+
+Respond with clear, specific suggestions for updating the package.`
+
+        const chat = model.startChat({
+          history: [
+            {
+              role: 'user',
+              parts: [{ text: systemPrompt }],
+            },
+            {
+              role: 'model',
+              parts: [{ text: 'I understand. I\'m ready to help you update this package.' }],
+            },
+          ],
+        })
+
+        const result = await chat.sendMessage(message)
+        const response = await result.response
+        const text = response.text()
+
+        return NextResponse.json({ response: text })
+      } catch (error) {
+        console.error('Error in package update:', error)
+        return NextResponse.json({ response: 'Sorry, I encountered an error while updating the package. Please try again.' })
+      }
+    }
+
     // Create enhanced prompt for booking assistant
     const systemPrompt = bookingContext ? `You are a helpful AI booking assistant for ${userContext.currentBooking?.postTitle}. 
 
@@ -155,19 +230,26 @@ ${packagesInfo.filter(pkg => pkg.isEnabled).map(pkg =>
   `- ${pkg.name} (${pkg.durationText}): ${pkg.description} - Features: ${pkg.features.join(', ')}`
 ).join('\n')}
 
+ENTITLEMENT INFORMATION:
+- Customer has ${userContext.currentBooking?.customerEntitlement} entitlement
+- Pro-only packages (like "🏘️ Annual agreement", hosted experiences) require pro subscription
+- Standard packages are available to all customers
+- Guests can see all packages but need to log in to book
+
 INSTRUCTIONS:
 1. Be conversational and helpful
 2. If dates are already selected, acknowledge them and focus on package recommendations or other aspects
 3. If dates are not selected, guide users to select dates first
 4. Recommend packages based on duration and customer needs
 5. Explain package benefits clearly
-6. For pro-only packages (like "🏘️ Starter Pack"), mention they require a pro subscription if user isn't pro
+6. For pro-only packages (like "🏘️ Annual agreement"), mention they require a pro subscription if user isn't pro
 7. Help with date selection and duration planning when needed
 8. Provide pricing estimates when relevant
 9. Guide users through the booking process step by step
 10. Keep responses concise but informative
 11. Use emojis sparingly for a friendly tone
 12. When user asks about packages without dates, suggest they select dates first for better recommendations
+13. If user asks about pro packages but has standard entitlement, suggest upgrading to pro
 
 Respond to the user's message naturally, as if you're a knowledgeable booking assistant who knows this property well.` 
     : 
