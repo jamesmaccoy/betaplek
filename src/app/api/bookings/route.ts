@@ -14,9 +14,9 @@ export async function POST(req: Request) {
     const payload = await getPayload({ config: configPromise })
     const data = await req.json()
     
-    const { postId, fromDate, toDate, total } = data
+    const { postId, fromDate, toDate } = data
 
-    console.log('Creating booking with data:', { postId, fromDate, toDate, total })
+    console.log('Creating booking with data:', { postId, fromDate, toDate })
 
     if (!postId) {
       console.error('No postId provided in request')
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
       let post
       if (postBySlug.docs.length > 0) {
         post = postBySlug.docs[0]
-        console.log('Found post by slug:', { id: post?.id, title: post?.title })
+        console.log('Found post by slug:', { id: post.id, title: post.title })
       } else {
         // If not found by slug, try by ID
         post = await payload.findByID({
@@ -80,8 +80,7 @@ export async function POST(req: Request) {
           toDate,
           customer: currentUser.user.id,
           token: Math.random().toString(36).substring(2, 15),
-          paymentStatus: paymentStatus, // Use provided payment status or default to pending
-          total: total || 0 // Include total field, default to 0 if not provided
+          paymentStatus: paymentStatus // Use provided payment status or default to pending
         },
       })
 
@@ -100,9 +99,9 @@ export async function POST(req: Request) {
     } catch (error) {
       console.error('Error in post/booking operation:', error)
       console.error('Error details:', {
-        message: (error as Error).message,
-        stack: (error as Error).stack,
-        name: (error as Error).name,
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
         postId: postId
       })
       return NextResponse.json(

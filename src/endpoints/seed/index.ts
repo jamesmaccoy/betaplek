@@ -9,8 +9,6 @@ import { imageHero1 } from './image-hero-1'
 import { post1 } from './post-1'
 import { post2 } from './post-2'
 import { post3 } from './post-3'
-import { testFormWithDatePicker } from './test-form-with-datepicker'
-import { testPage } from './test-page-with-datepicker'
 
 const collections: CollectionSlug[] = [
   'categories',
@@ -267,17 +265,9 @@ export const seed = async ({
     data: contactFormData,
   })
 
-  payload.logger.info(`— Seeding test form with date picker...`)
-
-  const testForm = await payload.create({
-    collection: 'forms',
-    depth: 0,
-    data: testFormWithDatePicker,
-  })
-
   payload.logger.info(`— Seeding pages...`)
 
-  const [_, contactPage, testPageDoc] = await Promise.all([
+  const [_, contactPage] = await Promise.all([
     payload.create({
       collection: 'pages',
       depth: 0,
@@ -287,11 +277,6 @@ export const seed = async ({
       collection: 'pages',
       depth: 0,
       data: contactPageData({ contactForm: contactForm }),
-    }),
-    payload.create({
-      collection: 'pages',
-      depth: 0,
-      data: testPage({ testForm: testForm }),
     }),
   ])
 
