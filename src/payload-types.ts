@@ -157,6 +157,7 @@ export interface Booking {
   customer?: (string | null) | User;
   token?: string | null;
   guests?: (string | User)[] | null;
+  total: number;
   slug?: string | null;
   slugLock?: boolean | null;
   post: string | Post;
@@ -759,6 +760,16 @@ export interface Form {
             blockName?: string | null;
             blockType: 'textarea';
           }
+        | {
+            name: string;
+            label?: string | null;
+            width?: number | null;
+            maxDays?: number | null;
+            required?: boolean | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'datePicker';
+          }
       )[]
     | null;
   submitButtonLabel?: string | null;
@@ -1121,6 +1132,7 @@ export interface BookingsSelect<T extends boolean = true> {
   customer?: T;
   token?: T;
   guests?: T;
+  total?: T;
   slug?: T;
   slugLock?: T;
   post?: T;
@@ -1639,6 +1651,17 @@ export interface FormsSelect<T extends boolean = true> {
               label?: T;
               width?: T;
               defaultValue?: T;
+              required?: T;
+              id?: T;
+              blockName?: T;
+            };
+        datePicker?:
+          | T
+          | {
+              name?: T;
+              label?: T;
+              width?: T;
+              maxDays?: T;
               required?: T;
               id?: T;
               blockName?: T;

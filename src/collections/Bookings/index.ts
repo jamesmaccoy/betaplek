@@ -525,6 +525,14 @@ export const Booking: CollectionConfig = {
         isSortable: true,
       },
     },
+    {
+      name: 'total',
+      type: 'number',
+      required: true,
+      access: {
+        update: isAdminField,
+      },
+    },
     ...slugField('title', {
       checkboxOverrides: {
         access: {
