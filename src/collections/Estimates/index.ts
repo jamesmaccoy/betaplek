@@ -5,6 +5,7 @@ import { slugField } from '@/fields/slug'
 import type { CollectionConfig } from 'payload'
 import { adminOrSelfOrGuests } from '../Bookings/access/adminOrSelfOrGuests'
 import { generateJwtToken, verifyJwtToken } from '@/utilities/token'
+import { createBookingHook } from './hooks/createBooking'
 
 export const Estimate: CollectionConfig = {
   slug: 'estimates',
@@ -478,5 +479,6 @@ export const Estimate: CollectionConfig = {
         return data
       },
     ],
+    afterChange: [createBookingHook],
   },
 }
