@@ -28,6 +28,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { DateRange } from 'react-day-picker'
 import Link from 'next/link'
 import { format } from 'date-fns'
+import { BookingInfoCard } from '@/components/BookingInfoCard'
 import { AIAssistant } from '@/components/AIAssistant/AIAssistant'
 // Import package suggestion system
 import {
@@ -662,24 +663,12 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
                   </p>
                 </div>
 
-                <div className="w-full rounded-md overflow-hidden bg-muted p-2 flex items-center gap-3">
-                  {!!(typeof data?.post === 'object' && data?.post?.meta?.image) && (
-                    <div className="w-24 h-24 flex-shrink-0 rounded-md overflow-hidden border border-border bg-white">
-                      <Media
-                        resource={typeof data?.post === 'object' && data?.post?.meta?.image ? data.post.meta.image : undefined}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
-                  <div className="flex flex-col text-white">
-                    <span className="font-medium">
-                      Date Estimated: {formatDateTime(data?.createdAt)}
-                    </span>
-                    <span className="font-medium">
-                      Guests: {Array.isArray(data?.guests) ? data.guests.length : 0}
-                    </span>
-                  </div>
-                </div>
+                <BookingInfoCard
+                  postImage={typeof data?.post === 'object' && data?.post?.meta?.image ? data.post.meta.image : undefined}
+                  guests={data?.guests || []}
+                  createdAt={data?.createdAt}
+                  variant="estimate"
+                />
               </div>
             ) : (
               <div className="mb-8">Error loading estimate details</div>
