@@ -17,6 +17,7 @@ import { useRevenueCat } from '@/providers/RevenueCat'
 import { Purchases, type Package as RevenueCatPackage, ErrorCode } from '@revenuecat/purchases-js'
 import { useRouter } from 'next/navigation'
 import { Mic, MicOff } from 'lucide-react'
+import { PackageDisplay } from '@/components/PackageDisplay'
 
 interface Package {
   id: string
@@ -1813,96 +1814,32 @@ Availability Status:
           )}
           
           {selectedPackage && (
-            <div className="mb-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium text-sm">{selectedPackage.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {duration} {duration === 1 ? 'night' : 'nights'} • {selectedPackage.features.slice(0, 2).join(', ')}
-                  </p>
-                  {startDate && endDate && (
-                    <div className="mt-1">
-                      <p className="text-xs text-muted-foreground">
-                        {format(startDate, 'MMM dd')} - {format(endDate, 'MMM dd, yyyy')}
-                      </p>
-                      {isCheckingAvailability ? (
-                        <p className="text-xs text-blue-600 flex items-center gap-1">
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          Checking availability...
-                        </p>
-                      ) : !areDatesAvailable ? (
-                        <p className="text-xs text-red-600 flex items-center gap-1">
-                          ❌ Dates not available
-                        </p>
-                      ) : (
-                        <p className="text-xs text-green-600 flex items-center gap-1">
-                          ✅ Dates available
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-primary">
-                    R{(selectedPackage.baseRate || calculateTotal(baseRate, duration, selectedPackage.multiplier)).toFixed(0)}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    R{(selectedPackage.baseRate ? baseRate : (calculateTotal(baseRate, duration, selectedPackage.multiplier) / duration)).toFixed(0)}/night
-                  </div>
-                  {!selectedPackage.baseRate && selectedPackage.multiplier !== 1 && (
-                    <div className="text-xs text-muted-foreground">
-                      {selectedPackage.multiplier > 1 ? '+' : ''}{((selectedPackage.multiplier - 1) * 100).toFixed(0)}% rate
-                    </div>
-                  )}
-                  {isLoggedIn ? (
-                    <Button 
-                      size="sm" 
-                      className="mt-1" 
-                      onClick={handleBooking}
-                      disabled={isBooking || !startDate || !endDate || !areDatesAvailable || isCheckingAvailability}
-                    >
-                      {isBooking ? (
-                        <>
-                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                          Processing...
-                        </>
-                      ) : !startDate || !endDate ? (
-                        'Select Dates'
-                      ) : !areDatesAvailable ? (
-                        'Dates Unavailable'
-                      ) : isCheckingAvailability ? (
-                        <>
-                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                          Checking...
-                        </>
-                      ) : (
-                        'Book Now'
-                      )}
-                    </Button>
-                  ) : (
-                    <Button size="sm" variant="outline" className="mt-1" asChild>
-                      <a href="/login">Log In to Book</a>
-                    </Button>
-                  )}
-                  {/* Secondary action to create booking via estimate page */}
-                  <Button size="sm" variant="ghost" className="mt-1 ml-2" onClick={handleGoToEstimate} disabled={isCreatingEstimate}>
-                    {isCreatingEstimate ? (
-                      <>
-                        <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                        Opening...
-                      </>
-                    ) : (
-                      'Share Estimate'
-                    )}
-                  </Button>
-                </div>
-              </div>
-              {bookingError && (
-                <div className="mt-2 p-2 text-xs text-destructive bg-destructive/10 rounded">
-                  {bookingError}
-                </div>
-              )}
-            </div>
+            <PackageDisplay
+              packageData={{
+                name: selectedPackage.name,
+                description: selectedPackage.description,
+                features: selectedPackage.features,
+                category: selectedPackage.category,
+                minNights: selectedPackage.minNights,
+                maxNights: selectedPackage.maxNights,
+                baseRate: selectedPackage.baseRate,
+                multiplier: selectedPackage.multiplier
+              }}
+              duration={duration}
+              baseRate={baseRate}
+              startDate={startDate}
+              endDate={endDate}
+              variant="estimate"
+              className="mb-4"
+              isCheckingAvailability={isCheckingAvailability}
+              areDatesAvailable={areDatesAvailable}
+              isBooking={isBooking}
+              bookingError={bookingError}
+              isLoggedIn={isLoggedIn}
+              onBooking={handleBooking}
+              onGoToEstimate={handleGoToEstimate}
+              isCreatingEstimate={isCreatingEstimate}
+            />
           )}
           
           <form onSubmit={handleSubmit} className="flex gap-2">
