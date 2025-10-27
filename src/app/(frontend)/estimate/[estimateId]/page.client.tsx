@@ -29,6 +29,7 @@ import { DateRange } from 'react-day-picker'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { BookingInfoCard } from '@/components/BookingInfoCard'
+import { PackageDisplay } from '@/components/PackageDisplay'
 import { AIAssistant } from '@/components/AIAssistant/AIAssistant'
 // Import package suggestion system
 import {
@@ -794,6 +795,28 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
                 )}
               </div>
             </div>
+
+            {/* Selected Package Display */}
+            {selectedPackage && (
+              <div className="mb-8">
+                <h2 className="text-2xl font-semibold mb-4">Selected Package</h2>
+                <PackageDisplay
+                  packageData={{
+                    name: selectedPackage.name,
+                    description: selectedPackage.description,
+                    features: selectedPackage.features?.map((f: any) => f.feature || f) || [],
+                    category: selectedPackage.category,
+                    minNights: selectedPackage.minNights,
+                    maxNights: selectedPackage.maxNights,
+                    baseRate: selectedPackage.baseRate,
+                    multiplier: selectedPackage.multiplier
+                  }}
+                  total={packagePrice ?? undefined}
+                  duration={_bookingDuration}
+                  variant="booking"
+                />
+              </div>
+            )}
 
             {/* Date Selection */}
             <div className="mb-8">

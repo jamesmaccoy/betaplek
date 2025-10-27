@@ -93,7 +93,7 @@ export const BookingInfoCard: React.FC<BookingInfoCardProps> = ({
 
   const getEstimateButtonText = () => {
     if (variant === 'booking') {
-      return 'Request new estimate for different dates'
+      return 'Reschedule Booking'
     }
     return 'Create new estimate for different dates'
   }
