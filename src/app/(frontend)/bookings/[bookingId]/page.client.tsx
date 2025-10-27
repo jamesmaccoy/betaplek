@@ -262,6 +262,15 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
                 <div className="md:py-5 py-3">
                   <h1 className="text-4xl mb-3 font-bold">{data?.post.title}</h1>
                   <div className="flex flex-col gap-2">
+                    <label className="text-lg font-medium">Booking Details:</label>
+                    <div className="text-muted-foreground text-sm">
+                      {data?.selectedPackage && data.selectedPackage.package && typeof data.selectedPackage.package === 'object' 
+                        ? `Package: ${data.selectedPackage.customName || data.selectedPackage.package.name || 'Package'}`
+                        : data?.selectedPackage && data.selectedPackage.customName
+                        ? `Package: ${data.selectedPackage.customName}`
+                        : 'Package: No package assigned'
+                      }
+                    </div>
                     <label className="text-lg font-medium">Booking Dates:</label>
                     <Calendar
                       mode="range"
