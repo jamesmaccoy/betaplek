@@ -668,6 +668,7 @@ export default function EstimateDetailsClientPage({ data, user }: Props) {
                   guests={data?.guests || []}
                   createdAt={data?.createdAt}
                   variant="estimate"
+                  postUrl={typeof data?.post === 'object' ? `/posts/${data.post.slug}` : undefined}
                 />
               </div>
             ) : (

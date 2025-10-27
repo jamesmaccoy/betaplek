@@ -9,6 +9,7 @@ import { format } from 'date-fns'
 import { formatDateTime } from '@/utilities/formatDateTime'
 import { useRouter } from 'next/navigation'
 import { calculateTotal } from '@/lib/calculateTotal'
+import Link from 'next/link'
 
 interface BookingInfoCardProps {
   // Common props
@@ -16,6 +17,7 @@ interface BookingInfoCardProps {
   guests?: any[]
   createdAt?: string
   variant: 'booking' | 'estimate'
+  postUrl?: string
   
   // Estimate-specific props
   onEstimateRequest?: (dates: { from: Date; to: Date }) => Promise<void>
@@ -32,6 +34,7 @@ export const BookingInfoCard: React.FC<BookingInfoCardProps> = ({
   guests = [],
   createdAt,
   variant,
+  postUrl,
   onEstimateRequest,
   isSubmittingEstimate = false,
   estimateError = null,
@@ -100,15 +103,24 @@ export const BookingInfoCard: React.FC<BookingInfoCardProps> = ({
       {/* Property Image */}
       {postImage && (
         <div className="w-24 h-24 flex-shrink-0 rounded-md overflow-hidden border border-border bg-white">
-          <Media
-            resource={postImage}
-            className="w-full h-full object-cover"
-          />
+          {postUrl ? (
+            <Link href={postUrl} className="block w-full h-full">
+              <Media
+                resource={postImage}
+                className="w-full h-full object-cover hover:opacity-90 transition-opacity cursor-pointer"
+              />
+            </Link>
+          ) : (
+            <Media
+              resource={postImage}
+              className="w-full h-full object-cover"
+            />
+          )}
         </div>
       )}
       
       {/* Content */}
-      <div className="flex flex-col text-white flex-1">
+      <div className="flex flex-col flex-1">
         <span className="font-medium">
           {getDateLabel()}: {createdAt ? formatDateTime(createdAt) : 'N/A'}
         </span>

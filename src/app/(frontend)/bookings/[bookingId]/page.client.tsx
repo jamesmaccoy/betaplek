@@ -306,6 +306,7 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
                   guests={data?.guests || []}
                   createdAt={data?.post.createdAt}
                   variant="booking"
+                  postUrl={typeof data?.post === 'object' ? `/posts/${data.post.slug}` : undefined}
                   onEstimateRequest={async (dates) => {
                     setIsSubmittingEstimate(true)
                     setEstimateError(null)
