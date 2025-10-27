@@ -280,23 +280,43 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
                     </div>
                     
                     {/* Package Information Display */}
-                    {data?.selectedPackage && typeof data.selectedPackage.package === 'object' && data.selectedPackage.package && (
-                      <PackageDisplay
-                        packageData={{
-                          name: data.selectedPackage.package.name || 'Package',
-                          description: data.selectedPackage.package.description || null,
-                          features: data.selectedPackage.package.features?.map((f: any) => f.feature || f) || null,
-                          category: data.selectedPackage.package.category || null,
-                          minNights: data.selectedPackage.package.minNights || null,
-                          maxNights: data.selectedPackage.package.maxNights || null,
-                          baseRate: data.selectedPackage.package.baseRate || null,
-                          multiplier: data.selectedPackage.package.multiplier || null
-                        }}
-                        customName={data.selectedPackage.customName || null}
-                        total={data.total}
-                        variant="booking"
-                      />
-                    )}
+                    <div className="mt-4">
+                      <label className="text-lg font-medium mb-2 block">Purchased Package:</label>
+                      {data?.selectedPackage && data.selectedPackage.package && typeof data.selectedPackage.package === 'object' ? (
+                        <PackageDisplay
+                          packageData={{
+                            name: data.selectedPackage.package.name || 'Package',
+                            description: data.selectedPackage.package.description || null,
+                            features: data.selectedPackage.package.features?.map((f: any) => f.feature || f) || null,
+                            category: data.selectedPackage.package.category || null,
+                            minNights: data.selectedPackage.package.minNights || null,
+                            maxNights: data.selectedPackage.package.maxNights || null,
+                            baseRate: data.selectedPackage.package.baseRate || null,
+                            multiplier: data.selectedPackage.package.multiplier || null
+                          }}
+                          customName={data.selectedPackage.customName || null}
+                          total={data.total}
+                          variant="booking"
+                        />
+                      ) : data?.selectedPackage && data.selectedPackage.customName ? (
+                        <div className="p-4 bg-muted/50 rounded-lg border">
+                          <div className="flex items-center gap-2">
+                            <Package className="h-5 w-5 text-primary" />
+                            <div>
+                              <div className="font-medium">{data.selectedPackage.customName}</div>
+                              <div className="text-sm text-muted-foreground">Custom package name (no package details available)</div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-4 bg-muted/50 rounded-lg border border-dashed border-muted-foreground/25">
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Package className="h-5 w-5" />
+                            <span className="text-sm">No package assigned to this booking</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
                 
