@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 			features: t.features.map(f => f.label).join(', ')
 		}))
 
-		const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+		const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 		const prompt = `You are helping a host choose booking packages from a fixed catalog.\n${hostContext ? 'The requester is a host or admin.' : ''}
 ${postTitle || postDescription || baseRate ? `\nPROPERTY CONTEXT:\n- Title: ${postTitle || 'N/A'}\n- Description: ${postDescription || 'N/A'}\n- Base rate: ${baseRate ? `R${baseRate}/night` : 'Unknown'}\n` : ''}
 Here is the catalog of packages (id = revenueCatId):
@@ -150,6 +150,13 @@ Rules:
 		return NextResponse.json({ recommendations: finalRecommendations })
 	} catch (error) {
 		console.error('Suggest API error:', error)
-		return NextResponse.json({ recommendations: [] }, { status: 200 })
+		const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+		console.error('Error details:', errorMessage)
+		console.error('Error stack:', error instanceof Error ? error.stack : undefined)
+		return NextResponse.json({
+			recommendations: [],
+			error: errorMessage,
+			details: error instanceof Error ? error.stack : undefined
+		}, { status: 500 })
 	}
 } 

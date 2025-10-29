@@ -129,7 +129,7 @@ export async function POST(req: Request) {
     }
 
     // Get the generative model
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
     // Handle package update context
     if (context === 'package-update' && packageId && postId) {
@@ -284,6 +284,11 @@ Be helpful, concise, and guide users to make great booking decisions.`
     return NextResponse.json({ message: text })
   } catch (error) {
     console.error('Error in chat API:', error)
-    return NextResponse.json({ error: 'Failed to process your request' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({
+      error: 'Failed to process your request',
+      message: `Error: ${errorMessage}`,
+      details: error instanceof Error ? error.stack : undefined
+    }, { status: 500 })
   }
 }
