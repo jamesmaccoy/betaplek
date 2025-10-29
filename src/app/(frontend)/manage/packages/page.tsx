@@ -5,6 +5,9 @@ import { getPayload } from 'payload'
 import configPromise from '@/payload.config'
 import type { Post } from '@/payload-types'
 
+// Force dynamic rendering for Cloudflare D1 compatibility
+export const dynamic = 'force-dynamic'
+
 export default async function PackageManagePage() {
   const meUser = await getMeUser()
   if (!meUser?.user) {

@@ -5,6 +5,9 @@ import { getMeUser } from '@/utilities/getMeUser'
 import { notFound, redirect } from 'next/navigation'
 import BookingDetailsClientPage from './page.client'
 
+// Force dynamic rendering for Cloudflare D1 compatibility
+export const dynamic = 'force-dynamic'
+
 type Params = Promise<{
   bookingId: string
 }>

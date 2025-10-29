@@ -8,6 +8,9 @@ import {
   CardFooter,
 } from '@/components/ui/card'
 import { getMeUser } from '@/utilities/getMeUser'
+
+// Force dynamic rendering for Cloudflare D1 compatibility
+export const dynamic = 'force-dynamic'
 import { headers } from 'next/headers'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'

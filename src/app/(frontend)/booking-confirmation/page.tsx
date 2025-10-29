@@ -6,6 +6,9 @@ import { headers } from 'next/headers'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 
+// Force dynamic rendering for Cloudflare D1 compatibility
+export const dynamic = 'force-dynamic'
+
 export default async function BookingConfirmationPage({
   searchParams,
 }: {
