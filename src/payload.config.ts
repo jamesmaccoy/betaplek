@@ -1,5 +1,5 @@
 // storage-adapter-import-placeholder
-import { mongooseAdapter } from '@payloadcms/db-mongodb'
+import { sqliteD1Adapter } from '@payloadcms/db-d1-sqlite'
 import { s3Storage } from '@payloadcms/storage-s3'
 import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 
@@ -67,8 +67,33 @@ export default buildConfig({
   },
   // This config helps us configure global or default features that the other editors can inherit
   editor: defaultLexical,
-  db: mongooseAdapter({
-    url: process.env.DATABASE_URI || '',
+  db: sqliteD1Adapter({
+    // For Cloudflare Workers/Pages, the D1 binding is passed via runtime context
+    // In Cloudflare Workers: the binding is available as `env.DB` 
+    // In Cloudflare Pages (Next.js): bindings may be available through Cloudflare runtime
+    // Note: For local development with Wrangler, set the binding in wrangler.toml
+    binding: (() => {
+      // Try to get binding from Cloudflare runtime context
+      // In Cloudflare Workers: env.DB is passed to the worker handler
+      // In Cloudflare Pages: bindings are available through request context
+      // For now, we'll try to access it from process.env or globalThis
+      // The actual binding should be passed when initializing Payload in Cloudflare runtime
+      if (typeof process !== 'undefined' && (process.env as any).DB) {
+        return (process.env as any).DB
+      }
+      // Try globalThis for Cloudflare runtime (for Workers/Pages)
+      if (typeof globalThis !== 'undefined' && (globalThis as any).DB) {
+        return (globalThis as any).DB
+      }
+      // For Cloudflare Pages/Workers, the binding is typically passed through env
+      // This will need to be configured in your Cloudflare deployment settings
+      // Local development: use wrangler.toml to bind the D1 database
+      throw new Error(
+        'D1 database binding not found. ' +
+        'For Cloudflare Workers/Pages, ensure the DB binding is configured in your Cloudflare settings. ' +
+        'For local development, configure it in wrangler.toml.'
+      )
+    })(),
   }),
   email: process.env.SMTP_HOST
     ? nodemailerAdapter({
