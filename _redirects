@@ -1,0 +1,9 @@
+# Cloudflare Pages redirects configuration
+# API routes
+/api/* /api/:splat 200
+
+# Admin routes
+/admin/* /admin/:splat 200
+
+# Fallback for SPA routing (if needed)
+/* /index.html 200
