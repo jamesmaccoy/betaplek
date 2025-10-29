@@ -67,76 +67,47 @@ export default buildConfig({
   },
   // This config helps us configure global or default features that the other editors can inherit
   editor: defaultLexical,
-  db: (() => {
-    // Check if we're in a build context where D1 binding might not be available
-    const isBuildTime = process.env.NODE_ENV === 'production' && !process.env.CF_PAGES
-    const isCloudflarePages = process.env.CF_PAGES === '1'
-    
-    // For Cloudflare Pages, we need to handle the binding differently
-    if (isCloudflarePages) {
-      // In Cloudflare Pages, the binding will be available at runtime through the middleware
-      // Return a mock binding for build time that will be replaced at runtime
-      return sqliteD1Adapter({
-        binding: {
-          prepare: () => Promise.resolve({ run: () => Promise.resolve(), all: () => Promise.resolve([]) }),
-          run: () => Promise.resolve(),
-          all: () => Promise.resolve([]),
-          batch: () => Promise.resolve([]),
-          exec: () => Promise.resolve()
-        } as any
-      })
-    }
-    
-    // For local development or when binding is available
-    try {
+  db: sqliteD1Adapter({
+    // For Cloudflare Workers/Pages, the D1 binding is passed via runtime context
+    // In Cloudflare Workers: the binding is available as `env.DB` 
+    // In Cloudflare Pages (Next.js): bindings may be available through Cloudflare runtime
+    // Note: For local development with Wrangler, set the binding in wrangler.toml
+    binding: (() => {
       // Try to get binding from Cloudflare runtime context
-      let binding = null
-      
+      // In Cloudflare Workers: env.DB is passed to the worker handler
+      // In Cloudflare Pages: bindings are available through request context
+      // For now, we'll try to access it from process.env or globalThis
+      // The actual binding should be passed when initializing Payload in Cloudflare runtime
       if (typeof process !== 'undefined' && (process.env as any).DB) {
-        binding = (process.env as any).DB
-      } else if (typeof globalThis !== 'undefined' && (globalThis as any).DB) {
-        binding = (globalThis as any).DB
+        return (process.env as any).DB
+      }
+      // Try globalThis for Cloudflare runtime (for Workers/Pages)
+      if (typeof globalThis !== 'undefined' && (globalThis as any).DB) {
+        return (globalThis as any).DB
       }
       
-      if (binding) {
-        return sqliteD1Adapter({ binding })
-      }
-      
-      // If no binding found and not in build context, throw error
-      if (!isBuildTime) {
-        throw new Error(
-          'D1 database binding not found. ' +
-          'For local development, run: npm run dev:cloudflare ' +
-          'For Cloudflare deployment, ensure the DB binding is configured in your Cloudflare settings.'
-        )
-      }
-      
-      // For build time, return a mock adapter
-      return sqliteD1Adapter({
-        binding: {
+      // For build time, we need to provide a mock binding to prevent build failures
+      // This will be replaced with the actual binding at runtime
+      if (process.env.NODE_ENV === 'production' || process.env.CF_PAGES) {
+        // In Cloudflare Pages, the binding will be available at runtime
+        // Return a mock object that will be replaced by the middleware
+        return {
           prepare: () => Promise.resolve({ run: () => Promise.resolve(), all: () => Promise.resolve([]) }),
           run: () => Promise.resolve(),
           all: () => Promise.resolve([]),
           batch: () => Promise.resolve([]),
           exec: () => Promise.resolve()
         } as any
-      })
-    } catch (error) {
-      // If we're in build context, return a mock adapter
-      if (isBuildTime) {
-        return sqliteD1Adapter({
-          binding: {
-            prepare: () => Promise.resolve({ run: () => Promise.resolve(), all: () => Promise.resolve([]) }),
-            run: () => Promise.resolve(),
-            all: () => Promise.resolve([]),
-            batch: () => Promise.resolve([]),
-            exec: () => Promise.resolve()
-          } as any
-        })
       }
-      throw error
-    }
-  })(),
+      
+      // For local development, try to get from environment or throw helpful error
+      throw new Error(
+        'D1 database binding not found. ' +
+        'For local development, run: npm run dev:cloudflare ' +
+        'For Cloudflare deployment, ensure the DB binding is configured in your Cloudflare settings.'
+      )
+    })(),
+  }),
   email: process.env.SMTP_HOST
     ? nodemailerAdapter({
         defaultFromAddress: process.env.EMAIL_FROM_ADDRESS || 'no-reply@localhost',
