@@ -6,6 +6,9 @@ import { redirect } from 'next/navigation'
 
 import configPromise from '@payload-config'
 
+// Force dynamic rendering for Cloudflare D1 compatibility
+export const dynamic = 'force-dynamic'
+
 export async function GET(
   req: {
     cookies: {

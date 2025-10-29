@@ -2,6 +2,9 @@ import React from 'react'
 import { getMeUser } from '@/utilities/getMeUser'
 import AccountClient from './page.client'
 
+// Force dynamic rendering for Cloudflare D1 compatibility
+export const dynamic = 'force-dynamic'
+
 export default async function Account() {
   let user = null
 

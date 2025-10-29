@@ -67,48 +67,104 @@ export default buildConfig({
   },
   // This config helps us configure global or default features that the other editors can inherit
   editor: defaultLexical,
-  db: sqliteD1Adapter({
-    // For Cloudflare Workers/Pages, the D1 binding is passed via runtime context
-    // In Cloudflare Workers: the binding is available as `env.DB` 
-    // In Cloudflare Pages (Next.js): bindings may be available through Cloudflare runtime
-    // Note: For local development with Wrangler, set the binding in wrangler.toml
-    binding: (() => {
-      // Try to get binding from Cloudflare runtime context
-      // In Cloudflare Workers: env.DB is passed to the worker handler
-      // In Cloudflare Pages: bindings are available through request context
-      // For now, we'll try to access it from process.env or globalThis
-      // The actual binding should be passed when initializing Payload in Cloudflare runtime
-      if (typeof process !== 'undefined' && (process.env as any).DB) {
-        return (process.env as any).DB
-      }
-      // Try globalThis for Cloudflare runtime (for Workers/Pages)
-      if (typeof globalThis !== 'undefined' && (globalThis as any).DB) {
-        return (globalThis as any).DB
-      }
-      
-      // For build time, we need to provide a mock binding to prevent build failures
-      // This will be replaced with the actual binding at runtime
-      if (process.env.NODE_ENV === 'production' || process.env.CF_PAGES) {
-        // In Cloudflare Pages, the binding will be available at runtime
-        // Return a mock object that will be replaced by the middleware
+  db: (() => {
+      // For build time, use a fallback adapter to prevent build failures
+      if (process.env.NODE_ENV === 'production' && !process.env.CF_PAGES) {
+        // Use a mock adapter for build time only - no actual database connection
         return {
-          prepare: () => Promise.resolve({ run: () => Promise.resolve(), all: () => Promise.resolve([]) }),
-          run: () => Promise.resolve(),
-          all: () => Promise.resolve([]),
-          batch: () => Promise.resolve([]),
-          exec: () => Promise.resolve()
+          init: () => Promise.resolve(),
+          connect: () => Promise.resolve(),
+          disconnect: () => Promise.resolve(),
+          query: () => Promise.resolve([]),
+          find: () => Promise.resolve([]),
+          findOne: () => Promise.resolve(null),
+          create: () => Promise.resolve({}),
+          update: () => Promise.resolve({}),
+          delete: () => Promise.resolve({}),
+          count: () => Promise.resolve(0),
+          paginate: () => Promise.resolve({ docs: [], totalDocs: 0, limit: 0, page: 0, totalPages: 0, hasNextPage: false, hasPrevPage: false, nextPage: null, prevPage: null }),
+          aggregate: () => Promise.resolve([]),
+          transaction: () => Promise.resolve({}),
+          session: () => Promise.resolve({}),
+          destroy: () => Promise.resolve(),
+          drop: () => Promise.resolve(),
+          migrate: () => Promise.resolve(),
+          migrateStatus: () => Promise.resolve({ pending: [], completed: [] }),
+          seed: () => Promise.resolve(),
+          health: () => Promise.resolve({ status: 'ok' }),
         } as any
       }
-      
-      // For local development, try to get from environment or throw helpful error
-      throw new Error(
-        'D1 database binding not found. ' +
-        'For local development, run: npm run dev:cloudflare ' +
-        'For Cloudflare deployment, ensure the DB binding is configured in your Cloudflare settings.'
-      )
-    })(),
-  }),
-  email: process.env.SMTP_HOST
+    
+    // For Cloudflare Pages, use D1 adapter
+    return sqliteD1Adapter({
+      // For Cloudflare Workers/Pages, the D1 binding is passed via runtime context
+      // In Cloudflare Workers: the binding is available as `env.DB` 
+      // In Cloudflare Pages (Next.js): bindings may be available through Cloudflare runtime
+      // Note: For local development with Wrangler, set the binding in wrangler.toml
+      binding: (() => {
+        // Try to get binding from Cloudflare runtime context
+        // In Cloudflare Workers: env.DB is passed to the worker handler
+        // In Cloudflare Pages: bindings are available through request context
+        // For now, we'll try to access it from process.env or globalThis
+        // The actual binding should be passed when initializing Payload in Cloudflare runtime
+        if (typeof process !== 'undefined' && (process.env as any).DB) {
+          return (process.env as any).DB
+        }
+        // Try globalThis for Cloudflare runtime (for Workers/Pages)
+        if (typeof globalThis !== 'undefined' && (globalThis as any).DB) {
+          return (globalThis as any).DB
+        }
+        
+        // For build time, we need to provide a mock binding to prevent build failures
+        // This will be replaced with the actual binding at runtime
+        if (process.env.NODE_ENV === 'production' || process.env.CF_PAGES) {
+          // In Cloudflare Pages, the binding will be available at runtime
+          // Return a comprehensive mock object that handles all Drizzle ORM methods
+          return {
+            prepare: (sql: string) => ({
+              bind: (...params: any[]) => ({
+                run: () => Promise.resolve({ success: true, meta: { changes: 0, last_row_id: 0 } }),
+                all: () => Promise.resolve({ results: [] }),
+                first: () => Promise.resolve(null),
+                raw: () => Promise.resolve([]),
+                get: () => Promise.resolve(null),
+                values: () => Promise.resolve([])
+              }),
+              run: (...params: any[]) => Promise.resolve({ success: true, meta: { changes: 0, last_row_id: 0 } }),
+              all: (...params: any[]) => Promise.resolve({ results: [] }),
+              first: (...params: any[]) => Promise.resolve(null),
+              raw: (...params: any[]) => Promise.resolve([]),
+              get: (...params: any[]) => Promise.resolve(null),
+              values: (...params: any[]) => Promise.resolve([])
+            }),
+            run: (sql: string, ...params: any[]) => Promise.resolve({ success: true, meta: { changes: 0, last_row_id: 0 } }),
+            all: (sql: string, ...params: any[]) => Promise.resolve({ results: [] }),
+            first: (sql: string, ...params: any[]) => Promise.resolve(null),
+            batch: (statements: any[]) => Promise.resolve([]),
+            exec: (sql: string) => Promise.resolve({ success: true, meta: { changes: 0, last_row_id: 0 } }),
+            raw: (sql: string, ...params: any[]) => Promise.resolve([]),
+            get: (sql: string, ...params: any[]) => Promise.resolve(null),
+            values: (sql: string, ...params: any[]) => Promise.resolve([])
+          } as any
+        }
+        
+        // For local development, try to get from environment or throw helpful error
+        throw new Error(
+          'D1 database binding not found. ' +
+          'For local development, run: npm run dev:cloudflare ' +
+          'For Cloudflare deployment, ensure the DB binding is configured in your Cloudflare settings.'
+        )
+      })(),
+    })
+  })(),
+  email: (() => {
+    // For build time, use a simple nodemailer adapter without SMTP verification
+    if (process.env.NODE_ENV === 'production' && !process.env.CF_PAGES) {
+      return nodemailerAdapter()
+    }
+    
+    // For runtime, use configured SMTP if available
+    return process.env.SMTP_HOST
     ? nodemailerAdapter({
         defaultFromAddress: process.env.EMAIL_FROM_ADDRESS || 'no-reply@localhost',
         defaultFromName: process.env.EMAIL_FROM_NAME || 'Betaplek',
@@ -122,7 +178,8 @@ export default buildConfig({
           },
         },
       })
-    : nodemailerAdapter(),
+      : nodemailerAdapter()
+  })(),
   collections: [Booking, Estimate, Pages, Posts, Media, Categories, Users, Packages, AuthRequests],
   cors: [getServerSideURL()].filter(Boolean),
   globals: [Header, Footer],

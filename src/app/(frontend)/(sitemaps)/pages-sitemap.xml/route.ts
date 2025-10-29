@@ -3,6 +3,9 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 import { unstable_cache } from 'next/cache'
 
+// Force dynamic rendering for Cloudflare D1 compatibility
+export const dynamic = 'force-dynamic'
+
 const getPagesSitemap = unstable_cache(
   async () => {
     const payload = await getPayload({ config })

@@ -1,6 +1,9 @@
 import { redirect } from 'next/navigation'
 import { getMeUser } from '@/utilities/getMeUser'
 
+// Force dynamic rendering for Cloudflare D1 compatibility
+export const dynamic = 'force-dynamic'
+
 export default async function ManagePage() {
   const meUser = await getMeUser()
   

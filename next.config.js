@@ -32,6 +32,7 @@ const nextConfig = {
   experimental: {
     esmExternals: true,
   },
+  serverExternalPackages: ['@payloadcms/db-d1-sqlite'],
   reactStrictMode: true,
   redirects,
 }

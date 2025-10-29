@@ -2,6 +2,9 @@ import { getMeUser } from '@/utilities/getMeUser'
 import { redirect } from 'next/navigation'
 import ManagePackagesForPost from './page.client'
 
+// Force dynamic rendering for Cloudflare D1 compatibility
+export const dynamic = 'force-dynamic'
+
 interface Props {
   params: Promise<{ postId: string }>
 }
