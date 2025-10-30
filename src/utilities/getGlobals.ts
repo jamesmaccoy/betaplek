@@ -7,6 +7,10 @@ import { unstable_cache } from 'next/cache'
 type Global = keyof Config['globals']
 
 async function getGlobal(slug: Global, depth = 0) {
+    // Skip entirely during build if BUILD_TIME=1 set in env
+    if (process.env.BUILD_TIME === '1') {
+      return {} as any
+    }
   try {
     const payload = await getPayload({ config: configPromise })
 
