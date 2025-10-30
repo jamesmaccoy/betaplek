@@ -7,14 +7,33 @@ import { unstable_cache } from 'next/cache'
 type Global = keyof Config['globals']
 
 async function getGlobal(slug: Global, depth = 0) {
-  const payload = await getPayload({ config: configPromise })
+  try {
+    const payload = await getPayload({ config: configPromise })
 
-  const global = await payload.findGlobal({
-    slug,
-    depth,
-  })
+    // Check if Payload is properly initialized
+    if (!payload || typeof payload.findGlobal !== 'function') {
+      // During build time, return empty/default data
+      if (process.env.NODE_ENV === 'production' && !process.env.CF_PAGES) {
+        console.warn(`Skipping Payload global fetch for ${slug} during build time`)
+        return {} as any
+      }
+    }
 
-  return global
+    const global = await payload.findGlobal({
+      slug,
+      depth,
+    })
+
+    return global
+  } catch (error) {
+    // During build time, return empty/default data if Payload initialization fails
+    if (process.env.NODE_ENV === 'production' && !process.env.CF_PAGES) {
+      console.warn(`Failed to fetch Payload global ${slug} during build:`, error)
+      return {} as any
+    }
+    // At runtime, re-throw the error
+    throw error
+  }
 }
 
 /**

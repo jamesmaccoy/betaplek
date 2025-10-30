@@ -11,6 +11,7 @@ import { Logo } from '@/components/Logo/Logo'
 export async function Footer() {
   const footerData: Footer = await getCachedGlobal('footer', 1)()
 
+  // Handle empty data gracefully during build time
   const navItems = footerData?.navItems || []
 
   return (
