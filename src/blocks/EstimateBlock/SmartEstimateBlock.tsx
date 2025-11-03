@@ -721,28 +721,53 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
             `${selectedPackage.name} - ${postTitle}`
           )
           
-          // Confirm the estimate with payment link
-          const confirmResponse = await fetch(`/api/estimates/${estimate.id}/confirm`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
+          // Check if this is a mock payment link (testing mode)
+          const isMockMode = paymentLink.url.includes('mock-payment')
+          
+          if (isMockMode) {
+            // In mock mode, we can directly confirm since no real payment is needed
+            console.log('🧪 Mock mode detected - simulating successful payment')
+            
+            const confirmResponse = await fetch(`/api/estimates/${estimate.id}/confirm`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                packageType: yocoProduct.id,
+                baseRate: total,
+                paymentValidated: true, // Mock mode: auto-validate
+                yocoPaymentId: paymentLink.id
+              }),
+            })
+            
+            if (!confirmResponse.ok) {
+              const errorData = await confirmResponse.json()
+              throw new Error(errorData.error || 'Failed to confirm estimate')
+            }
+            
+            // Create booking record in mock mode
+            const booking = await createBookingRecord(total)
+            console.log('✅ Mock booking created:', booking)
+            
+            // Redirect to confirmation page
+            router.push(`/booking-confirmation?id=${booking.id}&mock=true`)
+            return
+          } else {
+            // Production mode: redirect to real Yoco payment page
+            // Store payment intent in localStorage for callback handling
+            localStorage.setItem('pendingPayment', JSON.stringify({
+              estimateId: estimate.id,
               packageType: yocoProduct.id,
               baseRate: total,
-              paymentValidated: false, // Will be validated after Yoco payment
-              yocoPaymentId: paymentLink.id
-            }),
-          })
-          
-          if (!confirmResponse.ok) {
-            const errorData = await confirmResponse.json()
-            throw new Error(errorData.error || 'Failed to confirm estimate')
+              yocoPaymentId: paymentLink.id,
+              timestamp: new Date().toISOString()
+            }))
+            
+            // Redirect to Yoco payment page
+            window.location.href = paymentLink.url
+            return
           }
-          
-          // Redirect to Yoco payment page
-          window.location.href = paymentLink.url
-          return
           
         } catch (purchaseError: any) {
           console.error('Yoco Payment Error:', purchaseError)
