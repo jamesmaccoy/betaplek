@@ -33,8 +33,8 @@ import {
   DialogTitle,
   DialogTrigger
 } from "@/components/ui/dialog"
-import { useRevenueCat } from "@/providers/RevenueCat"
-import { Purchases, type Package as RevenueCatPackage } from "@revenuecat/purchases-js"
+import { useYoco as useRevenueCat } from "@/providers/Yoco"
+import { Purchases, type Package as RevenueCatPackage } from "@/lib/revenuecat-compat"
 import { 
   BASE_PACKAGE_TEMPLATES,
   getPackagesByCategory,

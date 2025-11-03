@@ -1,4 +1,4 @@
-import { Purchases } from '@revenuecat/purchases-js'
+import { Purchases } from './revenuecat-compat'
 
 export interface RevenueCatProduct {
   id: string
