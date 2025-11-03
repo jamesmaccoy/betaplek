@@ -238,7 +238,18 @@ export interface Package {
   entitlement?: ('standard' | 'pro') | null;
   minNights?: number | null;
   maxNights?: number | null;
+  /**
+   * Legacy RevenueCat product ID (deprecated, use yocoId instead)
+   */
   revenueCatId?: string | null;
+  /**
+   * Yoco product ID for payment processing
+   */
+  yocoId?: string | null;
+  /**
+   * Payment provider for this package
+   */
+  source?: ('yoco' | 'revenuecat') | null;
   /**
    * Link to a page containing sensitive information like check-in instructions or house manual
    */
@@ -767,6 +778,16 @@ export interface Form {
             id?: string | null;
             blockName?: string | null;
             blockType: 'textarea';
+          }
+        | {
+            name: string;
+            label?: string | null;
+            width?: number | null;
+            maxDays?: number | null;
+            required?: boolean | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'datePicker';
           }
       )[]
     | null;
@@ -1546,6 +1567,8 @@ export interface PackagesSelect<T extends boolean = true> {
   minNights?: T;
   maxNights?: T;
   revenueCatId?: T;
+  yocoId?: T;
+  source?: T;
   relatedPage?: T;
   isEnabled?: T;
   baseRate?: T;
@@ -1684,6 +1707,17 @@ export interface FormsSelect<T extends boolean = true> {
               label?: T;
               width?: T;
               defaultValue?: T;
+              required?: T;
+              id?: T;
+              blockName?: T;
+            };
+        datePicker?:
+          | T
+          | {
+              name?: T;
+              label?: T;
+              width?: T;
+              maxDays?: T;
               required?: T;
               id?: T;
               blockName?: T;

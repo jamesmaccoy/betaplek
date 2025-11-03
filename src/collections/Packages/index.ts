@@ -83,7 +83,32 @@ const Packages: CollectionConfig = {
       defaultValue: 7, 
       min: 1 
     },
-    { name: 'revenueCatId', type: 'text' },
+    { 
+      name: 'revenueCatId', 
+      type: 'text',
+      admin: {
+        description: 'Legacy RevenueCat product ID (deprecated, use yocoId instead)'
+      }
+    },
+    { 
+      name: 'yocoId', 
+      type: 'text',
+      admin: {
+        description: 'Yoco product ID for payment processing'
+      }
+    },
+    {
+      name: 'source',
+      type: 'select',
+      options: [
+        { label: 'Yoco', value: 'yoco' },
+        { label: 'RevenueCat (Legacy)', value: 'revenuecat' },
+      ],
+      defaultValue: 'yoco',
+      admin: {
+        description: 'Payment provider for this package'
+      }
+    },
     {
       name: 'relatedPage',
       type: 'relationship',

@@ -13,8 +13,8 @@ import { useUserContext } from '@/context/UserContext'
 import { useSubscription } from '@/hooks/useSubscription'
 import { getCustomerEntitlement, type CustomerEntitlement } from '@/utils/packageSuggestions'
 import { calculateTotal } from '@/lib/calculateTotal'
-import { useRevenueCat } from '@/providers/RevenueCat'
-import { Purchases, type Package as RevenueCatPackage, ErrorCode } from '@revenuecat/purchases-js'
+import { useYoco } from '@/providers/Yoco'
+import { yocoService, type YocoProduct } from '@/lib/yocoService'
 import { useRouter } from 'next/navigation'
 import { Mic, MicOff } from 'lucide-react'
 
@@ -168,7 +168,11 @@ const PackageCard = ({
             {pkg.features.slice(0, 3).map((feature, idx) => (
               <div key={idx} className="flex items-center text-sm">
                 <span className="w-1.5 h-1.5 bg-primary rounded-full mr-2" />
-                {typeof feature === 'string' ? feature : (feature as any).feature}
+                {typeof feature === 'string' 
+                  ? feature 
+                  : feature !== null && typeof feature === 'object' && 'feature' in feature 
+                    ? (feature as any).feature 
+                    : String(feature || '')}
               </div>
             ))}
             {pkg.features.length > 3 && (
@@ -193,7 +197,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   const { currentUser } = useUserContext()
   const isLoggedIn = !!currentUser
   const router = useRouter()
-  const { isInitialized } = useRevenueCat()
+  const { isInitialized } = useYoco()
   
   // Session storage key for this specific post
   const sessionKey = `booking_journey_${postId}_${currentUser?.id || 'guest'}`
@@ -213,7 +217,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   // Booking states
   const [isBooking, setIsBooking] = useState(false)
   const [bookingError, setBookingError] = useState<string | null>(null)
-  const [offerings, setOfferings] = useState<RevenueCatPackage[]>([])
+  const [offerings, setOfferings] = useState<YocoProduct[]>([])
   const [isCreatingEstimate, setIsCreatingEstimate] = useState(false)
   
   // Availability checking states
@@ -469,7 +473,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
     }
   }, [subscriptionStatus, filterPackagesByEntitlement])
 
-  // Load RevenueCat offerings when initialized
+  // Load Yoco products when initialized
   useEffect(() => {
     if (isInitialized) {
       loadOfferings()
@@ -608,29 +612,10 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
 
   const loadOfferings = async () => {
     try {
-      const purchases = await Purchases.getSharedInstance()
-      const fetchedOfferings = await purchases.getOfferings()
-      
-      // Collect all packages from all offerings
-      const allPackages: RevenueCatPackage[] = []
-      
-      if (fetchedOfferings.current && fetchedOfferings.current.availablePackages.length > 0) {
-        allPackages.push(...fetchedOfferings.current.availablePackages)
-      }
-      
-      Object.values(fetchedOfferings.all).forEach(offering => {
-        if (offering && offering.availablePackages.length > 0) {
-          allPackages.push(...offering.availablePackages)
-        }
-      })
-      
-      const uniquePackages = allPackages.filter((pkg, index, self) => 
-        index === self.findIndex(p => p.webBillingProduct?.identifier === pkg.webBillingProduct?.identifier)
-      )
-      
-      setOfferings(uniquePackages)
+      const products = await yocoService.getProducts()
+      setOfferings(products)
     } catch (err) {
-      console.error('Error loading offerings:', err)
+      console.error('Error loading products:', err)
     }
   }
 
@@ -692,76 +677,61 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       
       const estimate = await estimateResponse.json()
       
-      console.log('Available RevenueCat offerings:', offerings.map(pkg => ({
-        identifier: pkg.webBillingProduct?.identifier,
-        title: pkg.webBillingProduct?.title
+      console.log('Available Yoco products:', offerings.map(product => ({
+        id: product.id,
+        title: product.title
       })))
-      console.log('Looking for package with revenueCatId:', selectedPackage.revenueCatId)
+      console.log('Looking for package with yocoId:', selectedPackage.yocoId || selectedPackage.revenueCatId)
       console.log('Selected package details:', {
         id: selectedPackage.id,
         name: selectedPackage.name,
+        yocoId: selectedPackage.yocoId,
         revenueCatId: selectedPackage.revenueCatId,
         source: selectedPackage.source
       })
       
-      // Log all available package mappings for debugging
-      console.log('📋 Available package mappings:', {
-        'per_night': 'per_night_customer',
-        'Weekly': 'weekly_customer', 
-        'week_x2_customer': 'week_x2_customer'
-      })
-      
-      // Handle known package ID mismatches between database and RevenueCat
-      const getRevenueCatPackageId = (revenueCatId: string) => {
+      // Handle known package ID mismatches between database and Yoco
+      const getYocoPackageId = (packageId: string) => {
         const mappings: Record<string, string> = {
-          'per_night': 'per_night_customer', // Database has per_night, RevenueCat has per_night_customer
-          'Weekly': 'weekly_customer', // Database has Weekly, RevenueCat has weekly_customer (Standard Weekly)
-          'week_x2_customer': 'week_x2_customer', // Database has week_x2_customer, RevenueCat has week_x2_customer
+          'per_night': 'per_night_customer',
+          'Weekly': 'weekly_customer',
+          'week_x2_customer': 'week_x2_customer'
         }
-        return mappings[revenueCatId] || revenueCatId
+        return mappings[packageId] || packageId
       }
       
-      // Find the package in RevenueCat offerings (case-insensitive + mapping)
-      const revenueCatPackage = offerings.find((pkg) => {
-        const identifier = pkg.webBillingProduct?.identifier
-        const revenueCatId = selectedPackage.revenueCatId
-        const mappedRevenueCatId = revenueCatId ? getRevenueCatPackageId(revenueCatId) : undefined
-        
-        console.log('Checking RevenueCat package:', {
-          identifier,
-          revenueCatId,
-          mappedRevenueCatId,
-          matches: identifier === revenueCatId || 
-                   identifier === mappedRevenueCatId ||
-                   (identifier && revenueCatId && identifier.toLowerCase() === revenueCatId.toLowerCase()) ||
-                   (identifier && mappedRevenueCatId && identifier.toLowerCase() === mappedRevenueCatId.toLowerCase())
-        })
-        
-        return identifier === revenueCatId || 
-               identifier === mappedRevenueCatId ||
-               (identifier && revenueCatId && identifier.toLowerCase() === revenueCatId.toLowerCase()) ||
-               (identifier && mappedRevenueCatId && identifier.toLowerCase() === mappedRevenueCatId.toLowerCase())
+      // Find the package in Yoco products (case-insensitive + mapping)
+      const yocoPackageId = selectedPackage.yocoId || selectedPackage.revenueCatId || selectedPackage.id
+      const mappedYocoId = getYocoPackageId(yocoPackageId)
+      
+      const yocoProduct = offerings.find((product) => {
+        return product.id === yocoPackageId || 
+               product.id === mappedYocoId ||
+               (product.id && yocoPackageId && product.id.toLowerCase() === yocoPackageId.toLowerCase()) ||
+               (product.id && mappedYocoId && product.id.toLowerCase() === mappedYocoId.toLowerCase())
       })
       
-      if (revenueCatPackage) {
+      if (yocoProduct) {
         
         try {
-          const purchases = await Purchases.getSharedInstance()
-          const purchaseResult = await purchases.purchase({
-            rcPackage: revenueCatPackage,
-          })
+          // Create Yoco payment link
+          const paymentLink = await yocoService.createPaymentLink(
+            yocoProduct.id,
+            total,
+            `${selectedPackage.name} - ${postTitle}`
+          )
           
-          // Confirm the estimate with payment validation after successful purchase
+          // Confirm the estimate with payment link
           const confirmResponse = await fetch(`/api/estimates/${estimate.id}/confirm`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              packageType: selectedPackage.revenueCatId || selectedPackage.id,
+              packageType: yocoProduct.id,
               baseRate: total,
-              paymentValidated: true, // Mark that payment was successfully processed
-              revenueCatPurchaseId: purchaseResult.customerInfo.originalPurchaseDate // Use purchase info as validation
+              paymentValidated: false, // Will be validated after Yoco payment
+              yocoPaymentId: paymentLink.id
             }),
           })
           
@@ -770,69 +740,21 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
             throw new Error(errorData.error || 'Failed to confirm estimate')
           }
           
-          // Create booking record after successful payment and estimate confirmation
-          await createBookingRecord()
-          
-          const confirmedEstimate = await confirmResponse.json()
-          
-          // Clear booking journey after successful booking
-          clearBookingJourney()
-          
-          // Redirect to booking confirmation
-          router.push(`/booking-confirmation?total=${total}&duration=${duration}`)
+          // Redirect to Yoco payment page
+          window.location.href = paymentLink.url
+          return
           
         } catch (purchaseError: any) {
-          console.error('RevenueCat Purchase Error:', purchaseError)
-          
-          // Handle specific payment errors
-          if (purchaseError.code === ErrorCode.UserCancelledError) {
-            console.log('User cancelled the purchase flow.')
-            return
-          }
-          
-          // Check if it's a test card in live mode error
-          if (purchaseError.message && purchaseError.message.includes('live_mode_test_card')) {
-            console.log('Test card used in live mode, proceeding with fallback for demo purposes')
-            
-            // For demo purposes, confirm estimate and create booking
-            const confirmResponse = await fetch(`/api/estimates/${estimate.id}/confirm`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                packageType: selectedPackage.revenueCatId || selectedPackage.id,
-                baseRate: total,
-                paymentValidated: true, // Mark that payment was successfully processed (demo fallback)
-                revenueCatPurchaseId: new Date().toISOString() // Use current timestamp as fallback validation
-              }),
-            })
-            
-            if (!confirmResponse.ok) {
-              const errorData = await confirmResponse.json()
-              throw new Error(errorData.error || 'Failed to confirm estimate')
-            }
-            
-            // Create booking record AFTER successful estimate confirmation
-            await createBookingRecord()
-            
-            // Clear booking journey after successful booking
-            clearBookingJourney()
-            
-            // Redirect to booking confirmation
-            router.push(`/booking-confirmation?total=${total}&duration=${duration}`)
-            return
-          }
-          
-          throw new Error('Payment failed. Please try again with a valid payment method.')
+          console.error('Yoco Payment Error:', purchaseError)
+          setBookingError('Failed to create payment link. Please try again or contact support.')
+          throw purchaseError
         }
       } else {
-        // Fallback: simulate payment success and confirm estimate first
-        console.log('❌ Package not found in RevenueCat offerings, using fallback payment flow')
-        console.log('❌ This means the payment modal will be bypassed!')
-        console.log('❌ Available offerings:', offerings.map(pkg => pkg.webBillingProduct?.identifier))
-        console.log('❌ Looking for:', selectedPackage.revenueCatId)
-        console.log('❌ Mapped to:', selectedPackage.revenueCatId ? getRevenueCatPackageId(selectedPackage.revenueCatId) : 'undefined')
+        // Fallback: Package not found in Yoco products
+        console.log('❌ Package not found in Yoco products, using fallback payment flow')
+        console.log('❌ Available products:', offerings.map(product => product.id))
+        console.log('❌ Looking for:', yocoPackageId)
+        console.log('❌ Mapped to:', mappedYocoId)
         
         // Confirm the estimate with payment validation (for fallback case)
         const confirmResponse = await fetch(`/api/estimates/${estimate.id}/confirm`, {
@@ -841,10 +763,10 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            packageType: selectedPackage.revenueCatId || selectedPackage.id,
+            packageType: yocoPackageId,
             baseRate: total,
             paymentValidated: true, // Mark that payment was successfully processed (fallback case)
-            revenueCatPurchaseId: new Date().toISOString() // Use current timestamp as fallback validation
+            yocoPaymentId: new Date().toISOString() // Use current timestamp as fallback validation
           }),
         })
         
@@ -856,7 +778,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         const confirmedEstimate = await confirmResponse.json()
         
         // Create booking record AFTER successful estimate confirmation
-        await createBookingRecord()
+        await createBookingRecord(total)
         
         // Clear booking journey after successful booking
         clearBookingJourney()
@@ -874,7 +796,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   }
 
   // Create booking record in the database
-  const createBookingRecord = async () => {
+  const createBookingRecord = async (bookingTotal: number) => {
     if (!startDate || !endDate) {
       throw new Error('Start and end dates are required')
     }
@@ -883,6 +805,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
       postId,
       fromDate: startDate.toISOString(),
       toDate: endDate.toISOString(),
+      total: bookingTotal, // Required field
       paymentStatus: 'paid', // This will be set after successful payment validation
     }
 
@@ -1158,7 +1081,7 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
         
         // Then sort by category priority (special > hosted > standard)
         // Note: addon packages are filtered out earlier and should not appear here
-        // RevenueCat packages without category field get default priority
+        // Packages without category field get default priority
         const categoryPriority: Record<string, number> = { special: 3, hosted: 2, standard: 1 }
         const aPriority = a.category ? categoryPriority[a.category as string] || 1 : 1
         const bPriority = b.category ? categoryPriority[b.category as string] || 1 : 1
@@ -1310,7 +1233,7 @@ ${packages.map((pkg: any, index: number) =>
      - Enabled: ${pkg.isEnabled ? 'Yes' : 'No'}
      - Min/Max nights: ${pkg.minNights}-${pkg.maxNights}
      - Multiplier: ${pkg.multiplier}x
-     - RevenueCat ID: ${pkg.revenueCatId || 'N/A'}
+     - Yoco ID: ${pkg.yocoId || pkg.revenueCatId || 'N/A'}
      - Features: ${pkg.features?.length || 0} features`
 ).join('\n\n')}
 
