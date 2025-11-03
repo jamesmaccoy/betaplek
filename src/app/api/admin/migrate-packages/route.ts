@@ -15,9 +15,9 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    // Check if user has admin role
-    const roles = user.user?.roles || []
-    if (!roles.includes('admin')) {
+    // Check if user has admin role (handle both 'role' string and 'roles' array)
+    const userRole = user.role || (Array.isArray(user.roles) ? user.roles[0] : null)
+    if (userRole !== 'admin') {
       return NextResponse.json(
         { error: 'Unauthorized - admin access required' },
         { status: 403 }
@@ -59,9 +59,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Check if user has admin role
-    const roles = user.user?.roles || []
-    if (!roles.includes('admin')) {
+    // Check if user has admin role (handle both 'role' string and 'roles' array)
+    const userRole = user.role || (Array.isArray(user.roles) ? user.roles[0] : null)
+    if (userRole !== 'admin') {
       return NextResponse.json(
         { error: 'Unauthorized - admin access required' },
         { status: 403 }
