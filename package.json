@@ -23,7 +23,6 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
-    "@esbuild/darwin-arm64": "^0.25.12",
     "@google/genai": "^1.0.1",
     "@google/generative-ai": "^0.24.1",
     "@payloadcms/db-mongodb": "3.39.1",
@@ -85,6 +84,9 @@
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^4.1.11"
+  },
+  "optionalDependencies": {
+    "@esbuild/darwin-arm64": "^0.25.12"
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^4.0.0-0",
