@@ -8,7 +8,7 @@ import React, { useEffect, useState } from 'react'
 import InviteUrlDialog from './_components/invite-url-dialog'
 import SimplePageRenderer from './_components/SimplePageRenderer'
 import { Button } from '@/components/ui/button'
-import { useRevenueCat } from '@/providers/RevenueCat'
+import { useYoco } from '@/providers/Yoco'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Calendar } from '@/components/ui/calendar'
 import { DateRange } from 'react-day-picker'
@@ -70,7 +70,7 @@ export default function BookingDetailsClientPage({ data, user }: Props) {
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [paymentError, setPaymentError] = useState<string | null>(null)
   const [paymentSuccess, setPaymentSuccess] = useState(false)
-  const { isInitialized } = useRevenueCat();
+  const { isInitialized } = useYoco();
 
   // Related pages state
   const [relatedPages, setRelatedPages] = useState<any[]>([])

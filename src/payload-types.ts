@@ -238,7 +238,18 @@ export interface Package {
   entitlement?: ('standard' | 'pro') | null;
   minNights?: number | null;
   maxNights?: number | null;
+  /**
+   * Legacy RevenueCat product ID (deprecated, use yocoId instead)
+   */
   revenueCatId?: string | null;
+  /**
+   * Yoco product ID for payment processing
+   */
+  yocoId?: string | null;
+  /**
+   * Payment provider for this package
+   */
+  source?: ('yoco' | 'revenuecat') | null;
   /**
    * Link to a page containing sensitive information like check-in instructions or house manual
    */
@@ -1574,6 +1585,8 @@ export interface PackagesSelect<T extends boolean = true> {
   minNights?: T;
   maxNights?: T;
   revenueCatId?: T;
+  yocoId?: T;
+  source?: T;
   relatedPage?: T;
   isEnabled?: T;
   baseRate?: T;

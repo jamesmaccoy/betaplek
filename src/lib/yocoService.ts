@@ -1,6 +1,4 @@
-import { Purchases } from './revenuecat-compat'
-
-export interface RevenueCatProduct {
+export interface YocoProduct {
   id: string
   title: string
   description: string
@@ -11,23 +9,30 @@ export interface RevenueCatProduct {
   category: 'standard' | 'hosted' | 'addon' | 'special'
   features: string[]
   isEnabled: boolean
-  entitlement?: 'standard' | 'pro' | string // Allow string for custom entitlement IDs
-  icon?: string // Added for Disney-style visual appeal
+  entitlement?: 'standard' | 'pro' | string
+  icon?: string
 }
 
-export interface RevenueCatCustomer {
+export interface YocoCustomer {
   id: string
   entitlements: any
   activeSubscriptions: string[]
   allPurchasedProductIdentifiers: string[]
 }
 
-class RevenueCatService {
+export interface YocoPaymentLinkResponse {
+  url: string
+  id: string
+}
+
+class YocoService {
   private apiKey: string
+  private apiKeyV2: string
   private initialized: boolean = false
 
   constructor() {
-    this.apiKey = process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_KEY || ''
+    this.apiKey = process.env.YOCO_SECRET_KEY || ''
+    this.apiKeyV2 = process.env.YOCO_SECRET_KEY_V2 || this.apiKey
   }
 
   async initialize() {
@@ -35,55 +40,45 @@ class RevenueCatService {
 
     try {
       if (!this.apiKey) {
-        console.warn('RevenueCat API key not configured, using mock data')
+        console.warn('Yoco API key not configured, using mock data')
         this.initialized = true
         return
       }
       
-      // For web implementation, we'll use REST API calls instead of the JS SDK
-      // The purchases-js SDK is mainly for actual purchase flows
       this.initialized = true
     } catch (error) {
-      console.error('Failed to initialize RevenueCat:', error)
+      console.error('Failed to initialize Yoco:', error)
       console.warn('Falling back to mock data')
       this.initialized = true
     }
   }
 
-  async getProducts(): Promise<RevenueCatProduct[]> {
+  async getProducts(): Promise<YocoProduct[]> {
     await this.initialize()
     
     try {
-      // Always return RevenueCat products, never fallback products
-      return await this.getRevenueCatProducts()
+      return await this.getYocoProducts()
     } catch (error) {
-      console.error('Failed to fetch RevenueCat products:', error)
-      // Return empty array instead of fallback products
+      console.error('Failed to fetch Yoco products:', error)
       return []
     }
   }
 
-  // Method to fetch from actual RevenueCat API
-  private async getRevenueCatProducts(): Promise<RevenueCatProduct[]> {
+  private async getYocoProducts(): Promise<YocoProduct[]> {
     try {
-      // If API key is not configured, return mock data
       if (!this.apiKey) {
-        console.warn('RevenueCat API key not configured, using mock data')
+        console.warn('Yoco API key not configured, using mock data')
         return this.getMockProducts()
       }
 
-      // TODO: Implement actual RevenueCat REST API call
-      // For now, return the products that should match your RevenueCat dashboard
-      
+      // Define products that match your Yoco setup
       const actualProducts = [
-        // These should match your actual RevenueCat product IDs
-       
         {
           id: 'per_hour',
           title: '⏰ Studio Space',
           description: 'Pay as you go hourly service',
           price: 25.00,
-          currency: 'USD',
+          currency: 'ZAR',
           period: 'hour' as const,
           periodCount: 1,
           category: 'standard' as const,
@@ -97,7 +92,7 @@ class RevenueCatService {
           title: '🍷 Virtual Wine Experience',
           description: 'Weekly virtual wine tasting and experience package',
           price: 5.00,
-          currency: 'USD',
+          currency: 'ZAR',
           period: 'day' as const,
           periodCount: 7,
           category: 'standard' as const,
@@ -111,7 +106,7 @@ class RevenueCatService {
           title: '🚗 Parking',
           description: 'Parking for 1 hour',
           price: 25.00,
-          currency: 'USD',
+          currency: 'ZAR',
           period: 'hour' as const,
           periodCount: 1,
           category: 'standard' as const,
@@ -125,7 +120,7 @@ class RevenueCatService {
           title: '✨ Luxury Hours',
           description: 'Premium hourly service with VIP treatment',
           price: 389.00,
-          currency: 'USD',
+          currency: 'ZAR',
           period: 'hour' as const,
           periodCount: 1,
           category: 'hosted' as const,
@@ -139,7 +134,7 @@ class RevenueCatService {
           title: '🌙 Three Night Getaway',
           description: 'Perfect weekend plus one experience',
           price: 389.99,
-          currency: 'USD',
+          currency: 'ZAR',
           period: 'day' as const,
           periodCount: 3,
           category: 'hosted' as const,
@@ -153,7 +148,7 @@ class RevenueCatService {
           title: '🌍 World Explorer',
           description: 'Ultimate weekly adventure for explorers',
           price: 1399.99,
-          currency: 'USD',
+          currency: 'ZAR',
           period: 'day' as const,
           periodCount: 7,
           category: 'special' as const,
@@ -167,7 +162,7 @@ class RevenueCatService {
           title: '🏖️ Two Week Paradise',
           description: 'Perfect for a refreshing getaway',
           price: 299.99,
-          currency: 'USD',
+          currency: 'ZAR',
           period: 'day' as const,
           periodCount: 14,
           category: 'standard' as const,
@@ -181,7 +176,7 @@ class RevenueCatService {
           title: '🌺 Three Week Adventure',
           description: 'Extended stay with amazing benefits',
           price: 399.99,
-          currency: 'USD',
+          currency: 'ZAR',
           period: 'day' as const,
           periodCount: 21,
           category: 'standard' as const,
@@ -195,7 +190,7 @@ class RevenueCatService {
           title: '🏝️ Monthly Escape',
           description: 'Ultimate monthly retreat experience',
           price: 499.99,
-          currency: 'USD',
+          currency: 'ZAR',
           period: 'day' as const,
           periodCount: 30,
           category: 'standard' as const,
@@ -209,7 +204,7 @@ class RevenueCatService {
           title: '🏠 Monthly Guest',
           description: 'Guest monthly package',
           price: 4990.99,
-          currency: 'USD',
+          currency: 'ZAR',
           period: 'day' as const,
           periodCount: 30,
           category: 'standard' as const,
@@ -223,7 +218,7 @@ class RevenueCatService {
           title: '🎉 Gathering',
           description: 'Perfect for group events and gatherings',
           price: 4999.99,
-          currency: 'USD',
+          currency: 'ZAR',
           period: 'day' as const,
           periodCount: 1,
           category: 'special' as const,
@@ -237,7 +232,7 @@ class RevenueCatService {
           title: '🏘️ Annual agreement',
           description: 'Your booking is locked in for the year',
           price: 5000.00,
-          currency: 'USD',
+          currency: 'ZAR',
           period: 'month' as const,
           periodCount: 1,
           category: 'special' as const,
@@ -251,7 +246,7 @@ class RevenueCatService {
           title: '📅 Weekly Pro',
           description: 'Professional weekly package with premium benefits',
           price: 599.99,
-          currency: 'USD',
+          currency: 'ZAR',
           period: 'week' as const,
           periodCount: 7,
           category: 'standard' as const,
@@ -265,7 +260,7 @@ class RevenueCatService {
           title: '👑 Royal Suite Experience',
           description: 'The ultimate luxury experience',
           price: 999.99,
-          currency: 'USD',
+          currency: 'ZAR',
           period: 'day' as const,
           periodCount: 7,
           category: 'special' as const,
@@ -279,7 +274,7 @@ class RevenueCatService {
           title: '👨‍👩‍👧‍👦 3 Nights for guests',
           description: 'Perfect for family adventures',
           price: 449.99,
-          currency: 'USD',
+          currency: 'ZAR',
           period: 'day' as const,
           periodCount: 3,
           category: 'special' as const,
@@ -293,7 +288,7 @@ class RevenueCatService {
           title: '💕 Romantic Escape',
           description: 'Intimate experience for couples',
           price: 349.99,
-          currency: 'USD',
+          currency: 'ZAR',
           period: 'day' as const,
           periodCount: 1,
           category: 'special' as const,
@@ -307,7 +302,7 @@ class RevenueCatService {
           title: '💼 Business Function',
           description: 'Executive package for business travelers',
           price: 500.99,
-          currency: 'USD',
+          currency: 'ZAR',
           period: 'day' as const,
           periodCount: 1,
           category: 'special' as const,
@@ -320,21 +315,174 @@ class RevenueCatService {
 
       return actualProducts
     } catch (error) {
-      console.error('Failed to fetch from RevenueCat API:', error)
-      // Fallback to mock products if API call fails
+      console.error('Failed to fetch from Yoco API:', error)
       return this.getMockProducts()
     }
   }
 
-  // Helper method to get mock products
-  private getMockProducts(): RevenueCatProduct[] {
+  private getMockProducts(): YocoProduct[] {
+    // Return all products for testing without API key
     return [
+      {
+        id: 'per_hour',
+        title: '⏰ Studio Space',
+        description: 'Pay as you go hourly service',
+        price: 25.00,
+        currency: 'ZAR',
+        period: 'hour' as const,
+        periodCount: 1,
+        category: 'standard' as const,
+        features: ['Wifi', 'Hourly pricing', 'Parking'],
+        isEnabled: true,
+        entitlement: 'standard' as const,
+        icon: '⏰',
+      },
+      {
+        id: 'virtual_wine',
+        title: '🍷 Virtual Wine Experience',
+        description: 'Weekly virtual wine tasting and experience package',
+        price: 5.00,
+        currency: 'ZAR',
+        period: 'day' as const,
+        periodCount: 7,
+        category: 'standard' as const,
+        features: ['Pre order wine', 'Curation of the Cape finest', 'Mix and match', 'In app purchases', 'Wine sommelier on request'],
+        isEnabled: true,
+        entitlement: 'standard' as const,
+        icon: '🍷',
+      },
+      {
+        id: 'per_hour_guest',
+        title: '🚗 Parking',
+        description: 'Parking for 1 hour',
+        price: 25.00,
+        currency: 'ZAR',
+        period: 'hour' as const,
+        periodCount: 1,
+        category: 'standard' as const,
+        features: ['Flexible booking', 'Hourly pricing', 'No commitment'],
+        isEnabled: true,
+        entitlement: 'standard' as const,
+        icon: '⏰',
+      },
+      {
+        id: 'per_hour_luxury',
+        title: '✨ Luxury Hours',
+        description: 'Premium hourly service with VIP treatment',
+        price: 389.00,
+        currency: 'ZAR',
+        period: 'hour' as const,
+        periodCount: 1,
+        category: 'hosted' as const,
+        features: ['Premium service', 'Enhanced amenities', 'Dedicated support', 'VIP treatment'],
+        isEnabled: true,
+        entitlement: 'pro' as const,
+        icon: '✨',
+      },
+      {
+        id: 'three_nights_customer',
+        title: '🌙 Three Night Getaway',
+        description: 'Perfect weekend plus one experience',
+        price: 389.99,
+        currency: 'ZAR',
+        period: 'day' as const,
+        periodCount: 3,
+        category: 'hosted' as const,
+        features: ['Premium accommodation', 'Concierge service', 'Breakfast included', 'Late checkout'],
+        isEnabled: true,
+        entitlement: 'pro' as const,
+        icon: '🌙',
+      },
+      {
+        id: 'weekly_customer',
+        title: '🌍 World Explorer',
+        description: 'Ultimate weekly adventure for explorers',
+        price: 1399.99,
+        currency: 'ZAR',
+        period: 'day' as const,
+        periodCount: 7,
+        category: 'special' as const,
+        features: ['Luxury accommodation', 'Personal concierge', 'Adventure planning', 'Premium transport', 'VIP experiences'],
+        isEnabled: true,
+        entitlement: 'pro' as const,
+        icon: '🌍',
+      },
+      {
+        id: 'week_x2_customer',
+        title: '🏖️ Two Week Paradise',
+        description: 'Perfect for a refreshing getaway',
+        price: 299.99,
+        currency: 'ZAR',
+        period: 'day' as const,
+        periodCount: 14,
+        category: 'standard' as const,
+        features: ['Standard accommodation', 'Basic amenities', 'Free WiFi'],
+        isEnabled: true,
+        entitlement: 'standard' as const,
+        icon: '🏖️',
+      },
+      {
+        id: 'week_x3_customer',
+        title: '🌺 Three Week Adventure',
+        description: 'Extended stay with amazing benefits',
+        price: 399.99,
+        currency: 'ZAR',
+        period: 'day' as const,
+        periodCount: 21,
+        category: 'standard' as const,
+        features: ['Standard accommodation', 'Basic amenities', 'Free WiFi'],
+        isEnabled: true,
+        entitlement: 'standard' as const,
+        icon: '🌺',
+      },
+      {
+        id: 'week_x4_customer',
+        title: '🏝️ Monthly Escape',
+        description: 'Ultimate monthly retreat experience',
+        price: 499.99,
+        currency: 'ZAR',
+        period: 'day' as const,
+        periodCount: 30,
+        category: 'standard' as const,
+        features: ['Wifi', 'Cleaning', 'Security', 'Parking', 'Greeting'],
+        isEnabled: true,
+        entitlement: 'standard' as const,
+        icon: '🏝️',
+      },
+      {
+        id: 'monthly',
+        title: '🏠 Monthly Guest',
+        description: 'Guest monthly package',
+        price: 4990.99,
+        currency: 'ZAR',
+        period: 'day' as const,
+        periodCount: 30,
+        category: 'standard' as const,
+        features: ['Wifi', 'Cleaning', 'Security', 'Parking', 'Greeting'],
+        isEnabled: true,
+        entitlement: 'standard' as const,
+        icon: '🏠',
+      },
+      {
+        id: 'gathering',
+        title: '🎉 Gathering',
+        description: 'Perfect for group events and gatherings',
+        price: 4999.99,
+        currency: 'ZAR',
+        period: 'day' as const,
+        periodCount: 1,
+        category: 'special' as const,
+        features: ['Event space', 'Group amenities', 'Catering support', 'Entertainment setup'],
+        isEnabled: true,
+        entitlement: 'standard' as const,
+        icon: '🎉',
+      },
       {
         id: 'gathering_monthly',
         title: '🏘️ Annual agreement',
         description: 'Your booking is locked in for the year',
         price: 5000.00,
-        currency: 'USD',
+        currency: 'ZAR',
         period: 'month' as const,
         periodCount: 1,
         category: 'special' as const,
@@ -343,240 +491,116 @@ class RevenueCatService {
         entitlement: 'pro' as const,
         icon: '🏘️',
       },
-      // Add other essential products here as fallback
-    ]
-  }
-
-  private getFallbackProducts(): Record<string, RevenueCatProduct> {
-    return {
-      'per_hour': {
-        id: 'per_hour',
-        title: '⏰ Studio Space',
-        description: 'Pay as you go hourly service',
-        price: 25.00,
-        currency: 'USD',
-        period: 'hour',
-        periodCount: 1,
-        category: 'standard',
-        features: ['Wifi', 'Hourly pricing', 'Parking'],
-        isEnabled: true,
-        entitlement: 'standard',
-        icon: '⏰',
-      },
-      'per_hour_luxury': {
-        id: 'per_hour_luxury',
-        title: '✨ Hosted hour',
-        description: 'Premium hourly service with VIP treatment',
-        price: 75.00,
-        currency: 'USD',
-        period: 'hour',
-        periodCount: 1,
-        category: 'hosted',
-        features: ['Premium service', 'Enhanced amenities', 'Dedicated support', 'VIP treatment'],
-        isEnabled: true,
-        entitlement: 'pro',
-        icon: '✨',
-      },
-      'per_night_luxury': {
-        id: 'per_night_luxury',
-        title: '💼 Business Function',
-        description: 'Executive package for business travelers',
-        price: 500.99,
-        currency: 'USD',
-        period: 'day',
-        periodCount: 1,
-        category: 'special',
-        features: ['Executive room', 'Business lounge', 'Meeting rooms', 'Express laundry', 'Airport transfer'],
-        isEnabled: true,
-        entitlement: 'pro',
-        icon: '💼',
-      },
-      'per_night_customer': {
-        id: 'per_night_customer',
-        title: '💕 Romantic Escape',
-        description: 'Intimate experience for couples',
-        price: 349.99,
-        currency: 'USD',
-        period: 'day',
-        periodCount: 2,
-        category: 'special',
-        features: ['Couples suite', 'Romantic dinner', 'Spa for two', 'Private balcony', 'Champagne welcome'],
-        isEnabled: true,
-        entitlement: 'pro',
-        icon: '💕',
-      },
-      'three_nights_customer': {
-        id: 'three_nights_customer',
-        title: '🌙 Three Night Getaway',
-        description: 'Perfect weekend plus one experience',
-        price: 189.99,
-        currency: 'USD',
-        period: 'day',
-        periodCount: 3,
-        category: 'hosted',
-        features: ['Wifi', 'Cleaner', 'Security', 'Parking'],
-        isEnabled: true,
-        entitlement: 'pro',
-        icon: '🌙',
-      },
-      'three_nights_guest': {
-        id: '3nights',
-        title: '🏄‍♂️ Three Night package',
-        description: 'Perfect weekend plus one experience',
-        price: 450.99,
-        currency: 'USD',
-        period: 'day',
-        periodCount: 3,
-        category: 'standard',
-        features: ['Premium accommodation', 'Concierge service', 'Breakfast included', 'Late checkout'],
-        isEnabled: true,
-        entitlement: 'pro',
-        icon: '🏄‍♂️',
-      },
-      'weekly': {
+      {
         id: 'weekly',
         title: '📅 Weekly Pro',
         description: 'Professional weekly package with premium benefits',
         price: 599.99,
-        currency: 'USD',
-        period: 'day',
+        currency: 'ZAR',
+        period: 'week' as const,
         periodCount: 7,
-        category: 'hosted',
-        features:  ['Wifi', 'Cleaning', 'Security', 'Parking', 'Greeting'],
+        category: 'standard' as const,
+        features: ['Wifi', 'Cleaning', 'Security', 'Parking', 'Privacy'],
         isEnabled: true,
-        entitlement: 'pro',
+        entitlement: 'pro' as const,
         icon: '📅',
       },
-      'wine': {
-        id: 'virtual_wine',
-        title: '🍷 Virtual Wine Experience',
-        description: 'Weekly virtual wine tasting and experience package',
-        price: 5.00,
-        currency: 'USD',
-        period: 'day',
-        periodCount: 7,
-        category: 'standard',
-        features: ['Pre order wine', 'Curation of the Cape finest', 'Mix and match', 'In app purchases', 'Wine sommelier on request'],
-        isEnabled: true,
-        entitlement: 'standard',
-        icon: '🍷',
-      },
-      'hosted7nights': {
+      {
         id: 'hosted7nights',
         title: '👑 Royal Suite Experience',
         description: 'The ultimate luxury experience',
         price: 999.99,
-        currency: 'USD',
-        period: 'day',
+        currency: 'ZAR',
+        period: 'day' as const,
         periodCount: 7,
-        category: 'special',
-        features:  ['Wifi', 'Cleaning', 'Security', 'Parking', 'Greeting'],
+        category: 'special' as const,
+        features: ['Presidential suite', 'Personal butler', 'Gourmet dining', 'Spa access', 'Private transport'],
         isEnabled: true,
-        entitlement: 'pro',
+        entitlement: 'pro' as const,
         icon: '👑',
       },
-      'hosted3nights': {
+      {
         id: 'hosted3nights',
         title: '👨‍👩‍👧‍👦 3 Nights for guests',
         description: 'Perfect for family adventures',
         price: 449.99,
-        currency: 'USD',
-        period: 'day',
+        currency: 'ZAR',
+        period: 'day' as const,
         periodCount: 3,
-        category: 'special',  
-        features:  ['Wifi', 'Cleaning', 'Security', 'Parking', 'Greeting'],
+        category: 'special' as const,
+        features: ['Baby Cot', 'Kids activities', 'Childcare services', 'Entertainment'],
         isEnabled: true,
-        entitlement: 'standard',
+        entitlement: 'standard' as const,
         icon: '👨‍👩‍👧‍👦',
       },
-      'smart_traveler': {
-        id: 'weekly_customer',
-        title: '🌍 World Explorer',
-        description: 'Ultimate weekly adventure for explorers',
-        price: 1399.99,
-        currency: 'USD',
-        period: 'day',
-        periodCount: 7,
-        category: 'special',
-        features: ['Luxury accommodation', 'Personal concierge', 'Adventure planning', 'Premium transport', 'VIP experiences'],
-        isEnabled: true,
-        entitlement: 'pro',
-        icon: '🌍',
-      },
-      'week_x2_customer': {
-        id: 'week_x2_customer',
-        title: '🏖️ Two Week Paradise',
-        description: 'Perfect for a refreshing getaway',
-        price: 299.99,
-        currency: 'USD',
-        period: 'day',
-        periodCount: 14,
-        category: 'standard',
-        features: ['Standard accommodation', 'Basic amenities', 'Free WiFi'],
-        isEnabled: true,
-        entitlement: 'standard',
-        icon: '🏖️',
-      },
-      'week_x3_customer': {
-        id: 'week_x3_customer',
-        title: '🌺 Three Week Adventure',
-        description: 'Extended stay with amazing benefits',
-        price: 399.99,
-        currency: 'USD',
-        period: 'day',
-        periodCount: 21,
-        category: 'standard',
-        features: ['Standard accommodation', 'Basic amenities', 'Free WiFi'],
-        isEnabled: true,
-        entitlement: 'standard',
-        icon: '🌺',
-      },
-      'week_x4_customer': {
-        id: 'week_x4_customer',
-        title: '🏝️ Monthly Escape',
-        description: 'Ultimate monthly retreat experience',
-        price: 499.99,
-        currency: 'USD',
-        period: 'day',
-        periodCount: 30,
-        category: 'standard',
-        features: ['Standard accommodation', 'Basic amenities', 'Free WiFi'],
-        isEnabled: true,
-        entitlement: 'standard',
-        icon: '🏝️',
-      },
-      'gathering': {
-        id: 'gathering',
-        title: '🎉 Gathering',
-        description: 'Perfect for group events and gatherings',
-        price: 4999.99,
-        currency: 'USD',
-        period: 'day',
+      {
+        id: 'per_night_customer',
+        title: '💕 Romantic Escape',
+        description: 'Intimate experience for couples',
+        price: 349.99,
+        currency: 'ZAR',
+        period: 'day' as const,
         periodCount: 1,
-        category: 'special',
-        features: ['Event space', 'Group amenities', 'Catering support', 'Entertainment setup'],
+        category: 'special' as const,
+        features: ['All inclusive breakfast & Snacks', 'Hiking tours', 'Driver', 'Butler', 'Wine sommelier'],
         isEnabled: true,
-        entitlement: 'standard',
-        icon: '🎉',
+        entitlement: 'pro' as const,
+        icon: '💕',
       },
-      'monthly_gathering': {
-        id: 'gathering_monthly',
-        title: '🏘️ Annual agreement',
-        description: 'Your booking is locked in for the year',
-        price: 5000.00,
-        currency: 'USD',
-        period: 'day',
+      {
+        id: 'per_night_luxury',
+        title: '💼 Business Function',
+        description: 'Executive package for business travelers',
+        price: 500.99,
+        currency: 'ZAR',
+        period: 'day' as const,
         periodCount: 1,
-        category: 'special',
-        features: ['Month to month agreement', 'No cancellation fees', 'No minimum stay', 'No lock in period'],
+        category: 'special' as const,
+        features: ['All inclusive breakfast & Snacks', 'Hiking tours', 'Driver', 'Butler', 'Wine sommelier'],
         isEnabled: true,
-        entitlement: 'pro',
-        icon: '🏘️',
+        entitlement: 'pro' as const,
+        icon: '💼',
       },
+    ]
+  }
+
+  async createPaymentLink(productId: string, amount: number, description: string): Promise<YocoPaymentLinkResponse> {
+    await this.initialize()
+    
+    try {
+      if (!this.apiKey) {
+        console.warn('Yoco API key not configured, returning mock payment link')
+        return {
+          url: 'https://example.com/mock-payment',
+          id: 'mock-payment-id'
+        }
+      }
+
+      // Call Yoco API to create payment link
+      const response = await fetch('/api/yoco/payment-links', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          productId,
+          amount,
+          description
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create payment link')
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error('Failed to create payment link:', error)
+      throw error
     }
   }
 
-  async getCustomerInfo(customerId: string): Promise<RevenueCatCustomer | null> {
+  async getCustomerInfo(customerId: string): Promise<YocoCustomer | null> {
     await this.initialize()
     
     try {
@@ -593,12 +617,10 @@ class RevenueCatService {
     }
   }
 
-  // Additional methods for subscription management
   async purchasePackage(packageId: string): Promise<boolean> {
     await this.initialize()
     
     try {
-      // Mock purchase for now
       console.log(`Purchasing package: ${packageId}`)
       return true
     } catch (error) {
@@ -607,12 +629,10 @@ class RevenueCatService {
     }
   }
 
-  // Validate if a user has an active subscription for a specific product
   async validateSubscription(userId: string, productId: string): Promise<boolean> {
     await this.initialize()
     
     try {
-      // Get customer info
       const customerInfo = await this.getCustomerInfo(userId)
       
       if (!customerInfo) {
@@ -620,11 +640,8 @@ class RevenueCatService {
         return false
       }
 
-      // Check if the user has purchased the specific product
       const hasProduct = customerInfo.allPurchasedProductIdentifiers.includes(productId)
       
-      // For now, return true for mock purposes
-      // In production, this would check against actual RevenueCat data
       console.log(`Validating subscription for user [REDACTED], product ${productId}: ${hasProduct}`)
       return true // Mock: always return true for testing
     } catch (error) {
@@ -634,4 +651,5 @@ class RevenueCatService {
   }
 }
 
-export const revenueCatService = new RevenueCatService() 
+export const yocoService = new YocoService()
+

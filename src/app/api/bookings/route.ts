@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     const payload = await getPayload({ config: configPromise })
     const data = await req.json()
     
-    const { postId, fromDate, toDate } = data
+    const { postId, fromDate, toDate, total } = data
 
     console.log('Creating booking with data:', { postId, fromDate, toDate })
 
@@ -64,6 +64,7 @@ export async function POST(req: Request) {
         post: post.id,
         fromDate,
         toDate,
+        total: total || 0,
         customer: currentUser.user.id,
         paymentStatus: 'paid'
       })
@@ -78,6 +79,7 @@ export async function POST(req: Request) {
           post: post.id, // Use the actual post ID here
           fromDate,
           toDate,
+          total: total || 0, // Required field
           customer: currentUser.user.id,
           token: Math.random().toString(36).substring(2, 15),
           paymentStatus: paymentStatus // Use provided payment status or default to pending

@@ -17,7 +17,9 @@ export interface BasePackageConfig {
   maxNights: number
   baseMultiplier: number
   features: PackageFeature[]
-  revenueCatId: string
+  revenueCatId: string // Legacy, use yocoId for new packages
+  yocoId?: string
+  source?: 'yoco' | 'revenuecat'
   customerTierRequired: CustomerTier
   isDefault?: boolean
   canBeRenamed?: boolean
@@ -748,6 +750,17 @@ export function getPackagesByCategory(category: PackageCategory): BasePackageCon
 
 export function getPackageByRevenueCatId(revenueCatId: string): BasePackageConfig | undefined {
   return BASE_PACKAGE_TEMPLATES.find(pkg => pkg.revenueCatId === revenueCatId)
+}
+
+export function getPackageByYocoId(yocoId: string): BasePackageConfig | undefined {
+  return BASE_PACKAGE_TEMPLATES.find(pkg => pkg.yocoId === yocoId || pkg.revenueCatId === yocoId)
+}
+
+export function getPackageByPaymentId(paymentId: string, source: 'yoco' | 'revenuecat' = 'yoco'): BasePackageConfig | undefined {
+  if (source === 'yoco') {
+    return getPackageByYocoId(paymentId)
+  }
+  return getPackageByRevenueCatId(paymentId)
 }
 
 export function createHostPackageConfig(

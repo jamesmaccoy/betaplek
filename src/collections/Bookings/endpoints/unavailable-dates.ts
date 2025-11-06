@@ -1,4 +1,3 @@
-import { Purchases } from '@revenuecat/purchases-js'
 import { Endpoint } from 'payload'
 
 export const unavailableDates: Endpoint = {
@@ -92,42 +91,9 @@ export const unavailableDates: Endpoint = {
   },
 }
 
-const apiKey = process.env.REVENUECAT_SECRET_API_KEY
-
 const hasSubscription = async (userId: string) => {
-  if (!apiKey) {
-    throw new Error('Please add REVENUECAT_SECRET_API_KEY to your env variables')
-  }
-
-  const response = await fetch(
-    `https://api.revenuecat.com/v1/subscribers/${encodeURIComponent(userId)}`,
-    {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-    },
-  )
-
-  if (!response.ok) return false
-
-  const data = await response.json()
-
-  const entitlements = data?.subscriber?.entitlements ?? {}
-
-  const isActive = (entitlement: unknown) => {
-    if (!entitlement || typeof entitlement !== 'object' || !('expires_date' in entitlement))
-      return false
-
-    const exp = entitlement?.expires_date
-    if (!exp) return true // lifetime subscription when expires_date is null according to the docs
-
-    // To Fix type error, according to the docs, it can only ever be of type string or null.
-    if (typeof exp !== 'string') return false
-
-    const expDate = new Date(exp)
-
-    return expDate.getTime() > Date.now()
-  }
-
-  return Object.values(entitlements).some(isActive)
+  // TODO: Implement Yoco subscription check
+  // For now, return true to allow all authenticated users to see unavailable dates
+  // You can implement proper Yoco subscription verification here later
+  return true
 }
