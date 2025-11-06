@@ -2,12 +2,11 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useUserContext } from '@/context/UserContext'
-import { Purchases } from '@revenuecat/purchases-js'
 
-// Define types for RevenueCat
+// Define types for Yoco
 type CustomerInfo = any
 
-type RevenueCatContextType = {
+type YocoContextType = {
   customerInfo: CustomerInfo | null
   isLoading: boolean
   isInitialized: boolean
@@ -16,9 +15,9 @@ type RevenueCatContextType = {
   restorePurchases: () => Promise<CustomerInfo | void>
 }
 
-const RevenueCatContext = createContext<RevenueCatContextType | undefined>(undefined)
+const YocoContext = createContext<YocoContextType | undefined>(undefined)
 
-export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const YocoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser } = useUserContext()
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
@@ -29,61 +28,52 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // Only run in browser
     if (typeof window === 'undefined') return
 
-    const initRevenueCat = async () => {
+    const initYoco = async () => {
       try {
         setIsLoading(true)
         
-        
-        if (!process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_SDK_KEY) {
-          throw new Error('RevenueCat public SDK key is not defined')
-        }
-
-        // Configure RevenueCat with the new API v2 and currency settings
-        const configOptions: any = {
-          apiKey: process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_SDK_KEY,
-        }
-        
-        // Only add appUserId if we have a valid user ID
-        if (currentUser?.id && currentUser.id !== '[Not provided]' && currentUser.id !== '') {
-          configOptions.appUserId = String(currentUser.id)
-        } else {
-        }
-        
-        const purchases = await Purchases.configure(configOptions)
-        
-        // If no user ID was provided, RevenueCat will use an anonymous user
-        // This is valid and should not cause errors
-        
+        // Yoco doesn't require initialization like RevenueCat
+        // We just mark it as initialized
         setIsInitialized(true)
 
         // Only try to get customer info if user is authenticated and has valid ID
         if (!currentUser || !currentUser.id || currentUser.id === '[Not provided]' || currentUser.id === '') {
-          console.log('No valid user for RevenueCat customer info')
+          console.log('No valid user for Yoco customer info')
           setCustomerInfo(null)
           setError(null)
           return
         }
         
         try {
-          const info = await purchases.getCustomerInfo()
-          setCustomerInfo(info)
-          setError(null)
+          // Fetch customer info from your backend
+          const response = await fetch('/api/yoco/customer-info', {
+            credentials: 'include',
+          })
+          
+          if (response.ok) {
+            const info = await response.json()
+            setCustomerInfo(info)
+            setError(null)
+          } else {
+            console.error('Failed to get customer info:', response.statusText)
+            setCustomerInfo(null)
+            setError(null)
+          }
         } catch (customerInfoError) {
           console.error('Failed to get customer info:', customerInfoError)
-          // Don't set this as a fatal error - just log it
           setCustomerInfo(null)
-          setError(null) // Clear error since this is expected for unauthenticated users
+          setError(null)
         }
       } catch (err) {
-        console.error('RevenueCat getCustomerInfo error:', err)
-        setError(err instanceof Error ? err : new Error('Failed to load customer info'))
+        console.error('Yoco initialization error:', err)
+        setError(err instanceof Error ? err : new Error('Failed to initialize Yoco'))
         setCustomerInfo(null)
       } finally {
         setIsLoading(false)
       }
     }
 
-    initRevenueCat()
+    initYoco()
   }, [currentUser])
 
   const refreshCustomerInfo = async () => {
@@ -91,10 +81,15 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     try {
       setIsLoading(true)
-      const purchases = await Purchases.getSharedInstance()
-      const info = await purchases.getCustomerInfo()
-      setCustomerInfo(info)
-      return info
+      const response = await fetch('/api/yoco/customer-info', {
+        credentials: 'include',
+      })
+      
+      if (response.ok) {
+        const info = await response.json()
+        setCustomerInfo(info)
+        return info
+      }
     } catch (err) {
       console.error('Failed to refresh customer info:', err)
       setError(err instanceof Error ? err : new Error('Unknown error refreshing customer info'))
@@ -108,10 +103,16 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     
     try {
       setIsLoading(true)
-      const purchases = await Purchases.getSharedInstance()
-      const info = await purchases.getCustomerInfo()
-      setCustomerInfo(info)
-      return info
+      // For Yoco, restoring purchases means fetching the latest customer info
+      const response = await fetch('/api/yoco/customer-info', {
+        credentials: 'include',
+      })
+      
+      if (response.ok) {
+        const info = await response.json()
+        setCustomerInfo(info)
+        return info
+      }
     } catch (err) {
       console.error('Failed to restore purchases:', err)
       setError(err instanceof Error ? err : new Error('Unknown error restoring purchases'))
@@ -121,7 +122,7 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }
 
   return (
-    <RevenueCatContext.Provider
+    <YocoContext.Provider
       value={{
         customerInfo,
         isLoading,
@@ -132,14 +133,19 @@ export const RevenueCatProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }}
     >
       {children}
-    </RevenueCatContext.Provider>
+    </YocoContext.Provider>
   )
 }
 
-export const useRevenueCat = () => {
-  const context = useContext(RevenueCatContext)
+export const useYoco = () => {
+  const context = useContext(YocoContext)
   if (context === undefined) {
-    throw new Error('useRevenueCat must be used within a RevenueCatProvider')
+    throw new Error('useYoco must be used within a YocoProvider')
   }
   return context
-} 
+}
+
+// Backward compatibility aliases
+export const RevenueCatProvider = YocoProvider
+export const useRevenueCat = useYoco
+

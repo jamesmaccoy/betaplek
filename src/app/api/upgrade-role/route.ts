@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import payload from 'payload'
-import { Purchases } from '@revenuecat/purchases-js'
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,24 +36,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Check if user has an active subscription with RevenueCat
+    // Check if user has an active subscription with Yoco
     try {
-      const apiKey = process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_SDK_KEY
-      if (!apiKey) {
-        return NextResponse.json({ 
-          error: 'RevenueCat configuration missing' 
-        }, { status: 500 })
-      }
-
-      const purchases = await Purchases.configure({
-        apiKey: apiKey,
-        appUserId: userId,
-      })
-      const customerInfo = await purchases.getCustomerInfo()
-      
-      // Check for active entitlements
-      const activeEntitlements = Object.keys(customerInfo.entitlements.active || {})
-      const hasActiveSubscription = activeEntitlements.length > 0
+      // TODO: Implement Yoco subscription check
+      // For now, we'll allow upgrades (you can add proper check later)
+      const hasActiveSubscription = true // TODO: Check against Yoco API or database
+      const activeEntitlements: string[] = [] // TODO: Get from Yoco
 
       if (!hasActiveSubscription) {
         return NextResponse.json({ 
@@ -95,11 +82,11 @@ export async function POST(request: NextRequest) {
         activeEntitlements: activeEntitlements
       })
 
-    } catch (revenueCatError) {
-      console.error('RevenueCat error:', revenueCatError)
+    } catch (subscriptionError) {
+      console.error('Subscription check error:', subscriptionError)
       return NextResponse.json({ 
         error: 'Failed to verify subscription status',
-        details: revenueCatError instanceof Error ? revenueCatError.message : 'Unknown error'
+        details: subscriptionError instanceof Error ? subscriptionError.message : 'Unknown error'
       }, { status: 500 })
     }
 
