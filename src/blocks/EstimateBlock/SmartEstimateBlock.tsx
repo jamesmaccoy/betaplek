@@ -328,32 +328,78 @@ export const SmartEstimateBlock: React.FC<SmartEstimateBlockProps> = ({
   // Check if selected dates are available
   const checkDateAvailability = async (fromDate: Date, toDate: Date) => {
     if (!fromDate || !toDate) return true
-    
+
     setIsCheckingAvailability(true)
     setAvailabilityError(null)
-    
+
     try {
-      
+
       const response = await fetch(
         `/api/bookings/check-availability?postId=${postId}&startDate=${fromDate.toISOString()}&endDate=${toDate.toISOString()}`
       )
-      
+
       if (response.ok) {
         const data = await response.json()
         const isAvailable = data.isAvailable
-        
+
         setAreDatesAvailable(isAvailable)
-        
-        // Add a message to inform the user about availability
+
+        // If dates are not available, fetch alternative date suggestions
         if (!isAvailable) {
-          const availabilityMessage: Message = {
-            role: 'assistant',
-            content: `I'm sorry, but the dates you selected (${format(fromDate, 'MMM dd')} to ${format(toDate, 'MMM dd, yyyy')}) are not available. Please select different dates for your stay.`,
-            type: 'text'
+          try {
+            const suggestResponse = await fetch(
+              `/api/bookings/suggest-dates?postId=${postId}&startDate=${fromDate.toISOString()}&endDate=${toDate.toISOString()}&duration=${duration}`
+            )
+
+            if (suggestResponse.ok) {
+              const suggestionData = await suggestResponse.json()
+
+              // Format suggestions for display
+              let suggestionText = `I'm sorry, but the dates you selected (${format(fromDate, 'MMM dd')} to ${format(toDate, 'MMM dd, yyyy')}) are not available.`
+
+              if (suggestionData.suggestions && suggestionData.suggestions.length > 0) {
+                suggestionText += '\n\nHere are some nearby available dates for your stay:\n\n'
+
+                suggestionData.suggestions.slice(0, 3).forEach((suggestion: any, index: number) => {
+                  const suggestStart = new Date(suggestion.startDate)
+                  const suggestEnd = new Date(suggestion.endDate)
+                  const direction = suggestion.direction === 'before' ? 'earlier' : 'later'
+
+                  suggestionText += `${index + 1}. ${format(suggestStart, 'MMM dd')} to ${format(suggestEnd, 'MMM dd, yyyy')} (${suggestion.daysFromOriginal} days ${direction})\n`
+                })
+
+                suggestionText += '\nWould you like to select one of these alternatives?'
+              } else {
+                suggestionText += '\n\nUnfortunately, I couldn\'t find any nearby available dates. Please try selecting dates further in the future.'
+              }
+
+              const availabilityMessage: Message = {
+                role: 'assistant',
+                content: suggestionText,
+                type: 'text'
+              }
+              setMessages(prev => [...prev, availabilityMessage])
+            } else {
+              // Fallback if suggestion API fails
+              const availabilityMessage: Message = {
+                role: 'assistant',
+                content: `I'm sorry, but the dates you selected (${format(fromDate, 'MMM dd')} to ${format(toDate, 'MMM dd, yyyy')}) are not available. Please select different dates for your stay.`,
+                type: 'text'
+              }
+              setMessages(prev => [...prev, availabilityMessage])
+            }
+          } catch (suggestionError) {
+            console.error('Error fetching date suggestions:', suggestionError)
+            // Fallback message without suggestions
+            const availabilityMessage: Message = {
+              role: 'assistant',
+              content: `I'm sorry, but the dates you selected (${format(fromDate, 'MMM dd')} to ${format(toDate, 'MMM dd, yyyy')}) are not available. Please select different dates for your stay.`,
+              type: 'text'
+            }
+            setMessages(prev => [...prev, availabilityMessage])
           }
-          setMessages(prev => [...prev, availabilityMessage])
         }
-        
+
         return isAvailable
       } else {
         console.error('Availability check failed:', response.status, response.statusText)
