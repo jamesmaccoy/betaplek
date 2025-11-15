@@ -111,6 +111,25 @@ const queryPostBySlug = cache(async ({ slug }: { slug: string }) => {
         equals: slug,
       },
     },
+    depth: 2, // Populate relationships like authors
+    select: {
+      title: true,
+      heroImage: true,
+      content: true,
+      relatedPosts: true,
+      categories: true,
+      meta: true,
+      publishedAt: true,
+      authors: true,
+      populatedAuthors: true,
+      baseRate: true,
+      packageSettings: true,
+      slug: true,
+      slugLock: true,
+      createdAt: true,
+      updatedAt: true,
+      _status: true,
+    },
   })
 
   return result.docs?.[0] || null

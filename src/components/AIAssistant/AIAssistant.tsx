@@ -122,9 +122,17 @@ export const AIAssistant = () => {
 
     // Check for context on page load
     const checkContext = () => {
+      console.log('[AIAssistant] Checking context:', {
+        hasBookingContext: !!(window as any).bookingContext,
+        hasPostContext: !!(window as any).postContext,
+        postContext: (window as any).postContext
+      })
+
       if ((window as any).bookingContext) {
+        console.log('[AIAssistant] Setting booking context')
         setCurrentContext((window as any).bookingContext)
       } else if ((window as any).postContext) {
+        console.log('[AIAssistant] Setting post context:', (window as any).postContext)
         setCurrentContext((window as any).postContext)
       }
     }
@@ -291,6 +299,13 @@ export const AIAssistant = () => {
     setInput('')
     finalTranscriptRef.current = ''
     setIsLoading(true)
+
+    // Debug logging
+    console.log('[AIAssistant] Submitting message:', {
+      message: messageToSend,
+      currentContext,
+      contextType: currentContext?.context
+    })
 
     try {
       // Check if this is a package suggestion request (only in package-suggestions context)
@@ -460,12 +475,37 @@ ${bookingContext.property?.content ? JSON.stringify(bookingContext.property.cont
         // Handle post article queries
         const postContext = currentContext
 
+        // Format creation/update dates
+        const createdDate = postContext.post?.createdAt
+          ? new Date(postContext.post.createdAt).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })
+          : 'Unknown'
+
+        const updatedDate = postContext.post?.updatedAt
+          ? new Date(postContext.post.updatedAt).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })
+          : 'Unknown'
+
+        // Format authors
+        const authors = postContext.post?.authors && postContext.post.authors.length > 0
+          ? postContext.post.authors.map((a: any) => a.name || 'Unknown author').join(', ')
+          : 'Unknown author'
+
         // Create a comprehensive context string for the AI
         const contextString = `
 Article Context:
 - Title: ${postContext.post?.title || 'Unknown title'}
 - Description: ${postContext.post?.description || 'No description'}
 - Base Rate: ${postContext.post?.baseRate ? `R${postContext.post.baseRate}` : 'Not set'}
+- Created: ${createdDate}
+- Last Updated: ${updatedDate}
+- Author(s): ${authors}
 - Related Posts: ${postContext.post?.relatedPosts?.map((p: any) => p.title || p).join(', ') || 'None'}
 
 Full Article Content:
