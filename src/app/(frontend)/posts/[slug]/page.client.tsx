@@ -15,6 +15,13 @@ interface PageClientProps {
     }
     baseRate?: number | null
     relatedPosts?: any[]
+    createdAt: string
+    updatedAt: string
+    authors?: any[] | any
+    populatedAuthors?: Array<{
+      id?: string | null
+      name?: string | null
+    }> | null
   }
 }
 
@@ -29,7 +36,16 @@ const PageClient: React.FC<PageClientProps> = ({ post }) => {
   // Create post context for AI Assistant
   const getPostContext = () => {
     if (!post) return null
-    
+
+    // Debug: Log what we have
+    console.log('[PageClient] Post data:', {
+      hasCreatedAt: !!post.createdAt,
+      hasUpdatedAt: !!post.updatedAt,
+      hasPopulatedAuthors: !!post.populatedAuthors,
+      populatedAuthorsLength: post.populatedAuthors?.length,
+      hasAuthors: !!post.authors
+    })
+
     return {
       context: 'post-article',
       post: {
@@ -38,28 +54,28 @@ const PageClient: React.FC<PageClientProps> = ({ post }) => {
         description: post.meta?.description || '',
         content: post.content,
         baseRate: post.baseRate,
-        relatedPosts: post.relatedPosts || []
+        relatedPosts: post.relatedPosts || [],
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        authors: post.populatedAuthors || []
       }
     }
   }
 
+  // Set post context for AI Assistant
+  useEffect(() => {
+    if (post) {
+      const context = getPostContext()
+      if (typeof window !== 'undefined') {
+        ;(window as any).postContext = context
+        console.log('[PageClient] Set post context:', context)
+      }
+    }
+  }, [post])
+
   return (
     <>
       <AIAssistant />
-      
-      {/* Set context for AI Assistant */}
-      {post && (
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.addEventListener('load', function() {
-                const context = ${JSON.stringify(getPostContext())};
-                window.postContext = context;
-              });
-            `
-          }}
-        />
-      )}
     </>
   )
 }
