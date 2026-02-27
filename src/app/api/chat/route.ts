@@ -10,6 +10,14 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 export async function POST(req: Request) {
   try {
     const { message, bookingContext, context, packageId, postId } = await req.json()
+
+    // Debug logging
+    console.log('[CHAT API] Received request:', {
+      contextType: context,
+      hasBookingContext: !!bookingContext,
+      messagePreview: message?.substring(0, 100)
+    })
+
     const { user } = await getMeUser()
 
     if (!user) {
@@ -206,8 +214,29 @@ Respond with clear, specific suggestions for updating the package.`
       }
     }
 
-    // Create enhanced prompt for booking assistant
-    const systemPrompt = bookingContext ? `You are a helpful AI booking assistant for ${userContext.currentBooking?.postTitle}. 
+    // Create enhanced prompt based on context
+    let systemPrompt = ''
+
+    // Handle post-article context
+    if (context === 'post-article') {
+      systemPrompt = `You are a helpful AI assistant for exploring and understanding article content.
+
+The user is currently viewing an article and has asked you a question about it. Use the article context provided in the user's message to answer their questions accurately.
+
+INSTRUCTIONS:
+1. Answer questions based on the article context provided
+2. When asked about creation date, author, or other metadata, extract it from the context
+3. Be conversational and helpful
+4. If the information is in the context, provide it clearly
+5. Format dates in a readable way (e.g., "January 10, 2025")
+6. Keep responses concise but informative
+7. If asked about content, summarize or explain based on the article content provided
+
+Respond to the user's question naturally, using only the information provided in the article context.`
+    }
+    // Handle booking context
+    else if (bookingContext) {
+      systemPrompt = `You are a helpful AI booking assistant for ${userContext.currentBooking?.postTitle}.
 
 CURRENT BOOKING CONTEXT:
 - Property: ${userContext.currentBooking?.postTitle}
@@ -215,8 +244,8 @@ CURRENT BOOKING CONTEXT:
 - Customer Entitlement: ${userContext.currentBooking?.customerEntitlement}
 - Available Packages: ${userContext.currentBooking?.availablePackages}
 ${userContext.currentBooking?.selectedPackage ? `- Selected Package: ${userContext.currentBooking.selectedPackage}` : ''}
-${userContext.currentBooking?.fromDate && userContext.currentBooking?.toDate ? 
-  `- Selected Dates: ${new Date(userContext.currentBooking.fromDate).toLocaleDateString()} to ${new Date(userContext.currentBooking.toDate).toLocaleDateString()} (${userContext.currentBooking.duration} ${userContext.currentBooking.duration === 1 ? 'night' : 'nights'})` : 
+${userContext.currentBooking?.fromDate && userContext.currentBooking?.toDate ?
+  `- Selected Dates: ${new Date(userContext.currentBooking.fromDate).toLocaleDateString()} to ${new Date(userContext.currentBooking.toDate).toLocaleDateString()} (${userContext.currentBooking.duration} ${userContext.currentBooking.duration === 1 ? 'night' : 'nights'})` :
   '- Dates: Not yet selected'
 }
 ${userContext.currentBooking?.postDetails?.description ? `- Description: ${userContext.currentBooking.postDetails.description}` : ''}
@@ -226,7 +255,7 @@ USER'S BOOKING HISTORY:
 - Recent Estimates: ${userContext.estimates.length}
 
 AVAILABLE PACKAGES FOR THIS PROPERTY:
-${packagesInfo.filter(pkg => pkg.isEnabled).map(pkg => 
+${packagesInfo.filter(pkg => pkg.isEnabled).map(pkg =>
   `- ${pkg.name} (${pkg.durationText}): ${pkg.description} - Features: ${pkg.features.join(', ')}`
 ).join('\n')}
 
@@ -235,6 +264,9 @@ ENTITLEMENT INFORMATION:
 - Pro-only packages (like "🏘️ Annual agreement", hosted experiences) require pro subscription
 - Standard packages are available to all customers
 - Guests can see all packages but need to log in to book
+
+DATE SUGGESTIONS:
+If dates are unavailable, I have access to an API that can suggest alternative dates. When the user mentions their dates are unavailable or when you detect a need to suggest alternative dates, inform them that you can find nearby available dates for them.
 
 INSTRUCTIONS:
 1. Be conversational and helpful
@@ -250,10 +282,14 @@ INSTRUCTIONS:
 11. Use emojis sparingly for a friendly tone
 12. When user asks about packages without dates, suggest they select dates first for better recommendations
 13. If user asks about pro packages but has standard entitlement, suggest upgrading to pro
+14. When dates are unavailable, empathize with the user and offer to find alternative dates nearby
+15. Suggest checking dates before and after their requested dates for better availability
 
-Respond to the user's message naturally, as if you're a knowledgeable booking assistant who knows this property well.` 
-    : 
-    `You are a helpful AI assistant for a booking platform. You have access to the user's booking history and can help with general questions about properties, packages, and bookings.
+Respond to the user's message naturally, as if you're a knowledgeable booking assistant who knows this property well.`
+    }
+    // Default general assistant
+    else {
+      systemPrompt = `You are a helpful AI assistant for a booking platform. You have access to the user's booking history and can help with general questions about properties, packages, and bookings.
 
 USER'S DATA:
 - Total Bookings: ${userContext.bookings.length}
@@ -261,6 +297,14 @@ USER'S DATA:
 - Available Packages: ${packagesInfo.length}
 
 Be helpful, concise, and guide users to make great booking decisions.`
+    }
+
+    // Debug logging for system prompt selection
+    console.log('[CHAT API] System prompt selected:', {
+      isPostArticle: context === 'post-article',
+      hasBookingContext: !!bookingContext,
+      promptType: context === 'post-article' ? 'post-article' : bookingContext ? 'booking' : 'general'
+    })
 
     // Create a chat context with the user's data
     const chat = model.startChat({

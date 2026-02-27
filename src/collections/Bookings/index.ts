@@ -6,6 +6,7 @@ import type { CollectionConfig } from 'payload'
 import { generateJwtToken, verifyJwtToken } from '@/utilities/token'
 import { unavailableDates } from './endpoints/unavailable-dates'
 import { checkAvailability } from './endpoints/check-availability'
+import { suggestDates } from './endpoints/suggest-dates'
 import { checkAvailabilityHook } from './hooks/checkAvailability'
 
 export const Booking: CollectionConfig = {
@@ -24,6 +25,7 @@ export const Booking: CollectionConfig = {
   endpoints: [
     unavailableDates,
     checkAvailability,
+    suggestDates,
     // This endpoint is used to generate a token for the booking
     // and return it to the customer
     {
